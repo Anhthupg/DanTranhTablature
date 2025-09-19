@@ -5909,15 +5909,17 @@
                 updateSankeyZoom();
             });
 
-            // Apply initial zoom to match tablature
-            updateSankeyZoom();
+            // Apply initial zoom to match tablature after a delay to ensure elements are rendered
+            setTimeout(() => {
+                updateSankeyZoom();
+            }, 50);
         }
 
         // Generate Sankey HTML
         function generateSankeyHTML(type, transitions, noteData, durationRanks) {
             console.log('generateSankeyHTML called for type:', type);
             const links = [];
-            const nodeWidth = type === 'pitch' ? 100 : 80;
+            const nodeWidth = type === 'pitch' ? 60 : 80;
             let svg = '';
 
             if (type === 'pitch') {
@@ -5975,19 +5977,22 @@
                     // Use actual Y position from tablature
                     const y = originalY;
 
-                    // Left side (From) - Made thicker (40px height)
-                    svg += `<rect x="20" y="${y - 20}" width="${nodeWidth}" height="40"
+                    // Extract just the pitch name (remove "String X: " prefix)
+                    const pitchName = stringKey.split(': ')[1] || stringKey;
+
+                    // Left side (From) - 60px square boxes, perfectly centered on string line
+                    svg += `<rect x="20" y="${y - 30}" width="${nodeWidth}" height="60"
                             fill="#3498db" opacity="0.8" rx="3"
                             class="sankey-node" data-node="${stringKey}" data-side="left"/>`;
-                    svg += `<text x="${20 + nodeWidth/2}" y="${y + 5}" text-anchor="middle"
-                            style="font-size: 11px; fill: white; font-weight: bold;">${stringKey}</text>`;
+                    svg += `<text x="${20 + nodeWidth/2}" y="${y + 7}" text-anchor="middle"
+                            style="font-size: 20px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
 
-                    // Right side (To) - Made thicker (40px height)
-                    svg += `<rect x="${svgWidth - nodeWidth - 20}" y="${y - 20}" width="${nodeWidth}" height="40"
+                    // Right side (To) - 60px square boxes, perfectly centered on string line
+                    svg += `<rect x="${svgWidth - nodeWidth - 20}" y="${y - 30}" width="${nodeWidth}" height="60"
                             fill="#2ecc71" opacity="0.8" rx="3"
                             class="sankey-node" data-node="${stringKey}" data-side="right"/>`;
-                    svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 5}" text-anchor="middle"
-                            style="font-size: 11px; fill: white; font-weight: bold;">${stringKey}</text>`;
+                    svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 7}" text-anchor="middle"
+                            style="font-size: 20px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
                 });
 
                 // Draw links with click handling
@@ -5999,7 +6004,7 @@
                         // Use actual Y positions from tablature
                         const scaledSourceY = sourceY;
                         const scaledTargetY = targetY;
-                        const thickness = Math.min(30, Math.max(5, link.value * 3));
+                        const thickness = Math.max(2, link.value * 2);
 
                         // Create curved path
                         const sourceX = 20 + nodeWidth;
@@ -6321,13 +6326,65 @@
             const kricSvg = document.getElementById('rhythm-sankey-svg');
 
             if (kpicSvg) {
+                // Apply zoom to the whole SVG
                 kpicSvg.style.transform = `scale(${xZoom}, ${yZoom})`;
                 kpicSvg.style.transformOrigin = 'top left';
+
+                // Keep label boxes constant size by counter-scaling them
+                const nodes = kpicSvg.querySelectorAll('.sankey-node');
+                const texts = kpicSvg.querySelectorAll('text');
+
+                nodes.forEach(node => {
+                    // Get the original center position
+                    const rect = node.getBBox();
+                    const centerX = rect.x + rect.width / 2;
+                    const centerY = rect.y + rect.height / 2;
+
+                    // Apply counter-scale with center positioning
+                    node.style.transform = `scale(${1/xZoom}, ${1/yZoom})`;
+                    node.style.transformOrigin = `${centerX}px ${centerY}px`;
+                });
+
+                texts.forEach(text => {
+                    // Get the text position
+                    const x = parseFloat(text.getAttribute('x'));
+                    const y = parseFloat(text.getAttribute('y'));
+
+                    // Apply counter-scale with text center positioning
+                    text.style.transform = `scale(${1/xZoom}, ${1/yZoom})`;
+                    text.style.transformOrigin = `${x}px ${y}px`;
+                });
             }
 
             if (kricSvg) {
+                // Apply zoom to the whole SVG
                 kricSvg.style.transform = `scale(${xZoom}, ${yZoom})`;
                 kricSvg.style.transformOrigin = 'top left';
+
+                // Keep label boxes constant size by counter-scaling them
+                const nodes = kricSvg.querySelectorAll('.sankey-node');
+                const texts = kricSvg.querySelectorAll('text');
+
+                nodes.forEach(node => {
+                    // Get the original center position
+                    const rect = node.getBBox();
+                    const centerX = rect.x + rect.width / 2;
+                    const centerY = rect.y + rect.height / 2;
+
+                    // Apply counter-scale with center positioning
+                    node.style.transform = `scale(${1/xZoom}, ${1/yZoom})`;
+                    node.style.transformOrigin = `${centerX}px ${centerY}px`;
+                });
+
+                texts.forEach(text => {
+                    // Get the text position
+                    const x = parseFloat(text.getAttribute('x'));
+                    const y = parseFloat(text.getAttribute('y'));
+
+                    // Apply counter-scale with text center positioning
+                    text.style.transform = `scale(${1/xZoom}, ${1/yZoom})`;
+                    text.style.transformOrigin = `${x}px ${y}px`;
+                });
             }
         }
 

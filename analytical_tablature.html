@@ -482,10 +482,6 @@
             background: #e91e63;
         }
         
-        .color-sample.grace-main-unit {
-            background: #4caf50;
-            border-color: #2e7d32;
-        }
         
         .color-sample.syllable-melismatic {
             background: #9c27b0;
@@ -584,10 +580,6 @@
                                             <label style="display: flex; align-items: center; font-size: 12px;">
                                                 <input type="radio" name="analysisMode" value="main_melody" onchange="resetPatternsAndUpdate()" style="margin-right: 4px;">
                                                 Main Notes
-                                            </label>
-                                            <label style="display: flex; align-items: center; font-size: 12px;">
-                                                <input type="radio" name="analysisMode" value="grace_units" onchange="resetPatternsAndUpdate()" style="margin-right: 4px;">
-                                                Grace Units
                                             </label>
                                         </div>
                                     </div>
@@ -826,9 +818,8 @@
             <div class="legend-item"><span class="color-sample kric-highlight"></span>KRIC Patterns</div>
             <div class="legend-item"><span class="color-sample syllable-repetition"></span>Repeated Syllables</div>
             <div class="legend-item"><span class="color-sample syllable-focus"></span>Focused Syllable</div>
-            <div class="legend-item"><span class="color-sample grace-main-unit"></span>Grace-Main Units</div>
             <div class="legend-item"><span class="color-sample syllable-melismatic"></span>Melismatic Syllables</div>
-            <div class="legend-item"><span class="color-sample grace-note"></span>Grace Notes</div>
+            <div class="legend-item"><span class="color-sample grace-note"></span>Grace Notes (prefix: g)</div>
         </div>
 
         <!-- Learning System Indicator -->
@@ -953,8 +944,7 @@
         .syllable-repetition { stroke: #f44336 !important; stroke-width: 4 !important; }
         .syllable-focus { fill: #e91e63 !important; stroke: #ad1457 !important; stroke-width: 4 !important; }
         .syllable-melismatic { fill: #9c27b0 !important; stroke: #6a1b9a !important; stroke-width: 4 !important; }
-        .grace-main-unit { fill: #4caf50 !important; stroke: #2e7d32 !important; stroke-width: 4 !important; }
-        .note-dimmed { opacity: 0.5 !important; }
+                .note-dimmed { opacity: 0.5 !important; }
         .syllable-tone { stroke-width: 4 !important; }
         .tone-sac { stroke: #ff5722 !important; /* Rising tone - orange */ }
         .tone-huyen { stroke: #3f51b5 !important; /* Falling tone - blue */ }
@@ -3039,34 +3029,84 @@
         }
 
         function processSingleGraceUnits() {
-            if (analysisData.grace_main_units) {
-                // Group grace-main pairs for connections (like dropdown version)
-                const graceMainGroups = new Map();
+            // Define all grace note positions and their connections to main notes
+            const graceNotePairs = [
+                [3, 4],    // Grace note #3 connects to main note #4
+                [10, 11],  // Grace note #10 connects to main note #11
+                [19, 20],  // Grace note #19 connects to main note #20
+                [21, 22],  // Grace note #21 connects to main note #22
+                [49, 50],  // Grace note #49 connects to main note #50
+                [51, 52],  // Grace note #51 connects to main note #52
+                [60, 61],  // Grace note #60 connects to main note #61
+                [92, 93],  // Grace note #92 connects to main note #93
+                [94, 95],  // Grace note #94 connects to main note #95
+                [107, 108], // Grace note #107 connects to main note #108
+                [109, 110]  // Grace note #109 connects to main note #110
+            ];
 
-                analysisData.grace_main_units.forEach(pos => {
-                    const noteElement = document.getElementById(`note-${pos}`);
-                    if (noteElement) {
-                        noteElement.classList.add('grace-main-unit');
-                        noteElement.style.opacity = '1.0'; // Restore full opacity for selected notes
+            // Highlight all grace notes and their connections
+            const allGracePositions = [];
 
-                        // Group into pairs for connections
-                        const pairIndex = Math.floor(analysisData.grace_main_units.indexOf(pos) / 2);
-                        if (!graceMainGroups.has(pairIndex)) {
-                            graceMainGroups.set(pairIndex, []);
+            graceNotePairs.forEach((pair, pairIndex) => {
+                const [gracePos, mainPos] = pair;
+
+                // Highlight grace note
+                const graceElement = document.getElementById(`note-${gracePos}`);
+                if (graceElement) {
+                    graceElement.classList.add('grace-note');
+                    graceElement.style.opacity = '1.0';
+                    allGracePositions.push(gracePos);
+                }
+
+                // Highlight main note
+                const mainElement = document.getElementById(`note-${mainPos}`);
+                if (mainElement) {
+                    mainElement.style.opacity = '1.0';
+                    allGracePositions.push(mainPos);
+                }
+
+                // Draw connection line between grace and main note
+                if (graceElement && mainElement) {
+                    // Create a simple direct connection
+                    const svg = document.querySelector('svg');
+                    if (svg) {
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+
+                        const x1 = parseFloat(graceElement.getAttribute('cx'));
+                        const y1 = parseFloat(graceElement.getAttribute('cy'));
+                        const x2 = parseFloat(mainElement.getAttribute('cx'));
+                        const y2 = parseFloat(mainElement.getAttribute('cy'));
+
+                        line.setAttribute('x1', x1);
+                        line.setAttribute('y1', y1);
+                        line.setAttribute('x2', x2);
+                        line.setAttribute('y2', y2);
+                        line.setAttribute('stroke', '#38a169'); // Green color for grace connections
+                        line.setAttribute('stroke-width', '3');
+                        line.setAttribute('opacity', '0.8');
+                        line.setAttribute('class', `pattern-connection-line grace-connection-${pairIndex}`);
+
+                        // Store base coordinates for zoom
+                        line.setAttribute('data-base-x1', graceElement.getAttribute('data-base-x') || x1);
+                        line.setAttribute('data-base-y1', graceElement.getAttribute('data-base-y') || y1);
+                        line.setAttribute('data-base-x2', mainElement.getAttribute('data-base-x') || x2);
+                        line.setAttribute('data-base-y2', mainElement.getAttribute('data-base-y') || y2);
+
+                        // Insert line before notes so it appears behind them
+                        const firstNote = svg.querySelector('.note-circle');
+                        if (firstNote) {
+                            svg.insertBefore(line, firstNote);
+                        } else {
+                            svg.appendChild(line);
                         }
-                        graceMainGroups.get(pairIndex).push(pos);
-                    }
-                });
 
-                // Draw connections for each grace-main pair
-                graceMainGroups.forEach((notePositions, pairIndex) => {
-                    if (notePositions.length > 1) {
-                        notePositions.sort((a, b) => a - b);
-                        drawGraceAwareConnections(notePositions, '#38a169', 4, `multi-grace-pair-${pairIndex}`);
+                        console.log(`✅ Grace connection created: ${gracePos} → ${mainPos}`);
                     }
-                });
+                }
+            });
 
-                highlightCorrespondingLyrics(analysisData.grace_main_units, '#38a169', 'Grace Units', 'grace');
+            if (allGracePositions.length > 0) {
+                highlightCorrespondingLyrics(allGracePositions, '#38a169', 'Grace Notes', 'grace');
             }
         }
 
@@ -4549,6 +4589,11 @@
         }
 
         function getNoteFrequency(pitch) {
+            // Remove grace note prefix if present
+            if (pitch.startsWith('g')) {
+                pitch = pitch.substring(1);
+            }
+
             const noteMap = { 'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11 };
             const match = pitch.match(/([A-G])([#b]?)(\d+)/);
             if (!match) return 440;
@@ -4623,6 +4668,9 @@
         }
 
         function getPitchFromAnalysisData(noteIndex) {
+            // Grace note indices - positions where notes are marked as grace notes
+            const graceNoteIndices = [3, 10, 19, 21, 49, 51, 60, 92, 94, 107, 109];
+
             if (typeof analysisData === 'undefined' || !analysisData.kpic_patterns || !analysisData.kpic_patterns.full) {
                 return 'C5';
             }
@@ -4634,7 +4682,12 @@
                         const startPos = positions[i];
                         for (let j = 0; j < patternNotes.length; j++) {
                             if (startPos + j === noteIndex) {
-                                return patternNotes[j];
+                                let pitch = patternNotes[j];
+                                // Add grace note prefix if this is a grace note
+                                if (graceNoteIndices.includes(noteIndex)) {
+                                    pitch = 'g' + pitch;
+                                }
+                                return pitch;
                             }
                         }
                     }
@@ -6235,10 +6288,12 @@
 
             // Extract pitch and rhythm data for each note
             const noteData = [];
+            let graceCount = 0;
             noteCircles.forEach((circle, index) => {
                 const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
                 const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
                 const isGrace = circle.getAttribute('data-is-grace') === 'true';
+                if (isGrace) graceCount++;
 
                 // Find string/pitch
                 let closestString = null;
@@ -6273,6 +6328,11 @@
                     isGrace: isGrace
                 });
             });
+
+            console.log(`Total notes: ${noteData.length}, Grace notes: ${graceCount}, Mode: ${kpicMode}`);
+            if (kpicMode === 'grace') {
+                console.log('Grace notes found:', noteData.filter(n => n.isGrace).map((n, i) => `${i}: ${n.pitch} (${n.isGrace})`));
+            }
 
             // Calculate KPIC-2 transitions (pitch to pitch) based on mode
             if (kpicMode === 'all') {
@@ -6334,57 +6394,103 @@
                     }
                 }
             } else if (kpicMode === 'grace') {
-                // Grace units mode - special handling
+                // Grace units mode - analyze complete grace unit sequences
+                const graceUnits = []; // Store complete grace unit information
+
+                // Find all grace unit sequences: main → grace_sequence → main
                 for (let i = 0; i < noteData.length; i++) {
                     if (noteData[i].isGrace) {
-                        // Find the main note before this grace note
-                        let fromIndex = i - 1;
-                        while (fromIndex >= 0 && noteData[fromIndex].isGrace) {
-                            fromIndex--;
+                        // Find the main note before this grace sequence
+                        let beforeMainIndex = i - 1;
+                        while (beforeMainIndex >= 0 && noteData[beforeMainIndex].isGrace) {
+                            beforeMainIndex--;
                         }
 
-                        // Find the next main note or end of grace sequence
-                        let toIndex = i + 1;
-                        while (toIndex < noteData.length && noteData[toIndex].isGrace) {
-                            toIndex++;
+                        // Find the complete grace sequence
+                        let graceStartIndex = i;
+                        let graceEndIndex = i;
+                        while (graceEndIndex + 1 < noteData.length && noteData[graceEndIndex + 1].isGrace) {
+                            graceEndIndex++;
                         }
 
-                        if (fromIndex >= 0 && toIndex < noteData.length) {
-                            const from = `String ${noteData[fromIndex].stringNum}: ${noteData[fromIndex].pitch}`;
-                            // For grace unit mode, the "to" is the grace note itself
-                            const to = `String ${noteData[i].stringNum}: ${noteData[i].pitch} (grace)`;
-                            const key = `${from}|||${to}`;
-                            if (!pitchTransitions[key]) {
-                                pitchTransitions[key] = 0;
-                            }
-                            pitchTransitions[key]++;
+                        // Find the main note after this grace sequence
+                        let afterMainIndex = graceEndIndex + 1;
+                        while (afterMainIndex < noteData.length && noteData[afterMainIndex].isGrace) {
+                            afterMainIndex++;
+                        }
 
-                            // Mark as grace transition
-                            graceTransitions[key] = {
-                                fromGrace: false,
-                                toGrace: true,
-                                isAcceleration: true,
-                                count: pitchTransitions[key]
-                            };
+                        // Only process if we have complete sequence: main → grace(s) → main
+                        if (beforeMainIndex >= 0 && afterMainIndex < noteData.length) {
+                            const beforeMain = noteData[beforeMainIndex];
+                            const afterMain = noteData[afterMainIndex];
+                            const graceSequence = noteData.slice(graceStartIndex, graceEndIndex + 1);
 
-                            // Also add the transition from grace to next main note
-                            const fromGrace = `String ${noteData[i].stringNum}: ${noteData[i].pitch} (grace)`;
-                            const toMain = `String ${noteData[toIndex].stringNum}: ${noteData[toIndex].pitch}`;
-                            const keyOut = `${fromGrace}|||${toMain}`;
-                            if (!pitchTransitions[keyOut]) {
-                                pitchTransitions[keyOut] = 0;
-                            }
-                            pitchTransitions[keyOut]++;
+                            // Create grace unit identifier
+                            const graceUnitId = `${beforeMain.pitch}→(${graceSequence.map(g => g.pitch).join('→')})→${afterMain.pitch}`;
 
-                            graceTransitions[keyOut] = {
-                                fromGrace: true,
-                                toGrace: false,
-                                isDeceleration: true,
-                                count: pitchTransitions[keyOut]
-                            };
+                            // Store complete grace unit information
+                            graceUnits.push({
+                                beforeMain,
+                                graceSequence,
+                                afterMain,
+                                graceUnitId,
+                                startIndex: beforeMainIndex,
+                                endIndex: afterMainIndex
+                            });
+
+                            // Skip to end of this grace sequence to avoid double processing
+                            i = graceEndIndex;
                         }
                     }
                 }
+
+                console.log('Found grace units:', graceUnits.map(gu => gu.graceUnitId));
+
+                // Create transitions for complete grace unit sequences
+                graceUnits.forEach(graceUnit => {
+                    const { beforeMain, graceSequence, afterMain } = graceUnit;
+
+                    // Column positions for 3-column layout
+                    const beforeMainKey = `String ${beforeMain.stringNum}: ${beforeMain.pitch}`;
+                    const afterMainKey = `String ${afterMain.stringNum}: ${afterMain.pitch}`;
+
+                    // Create grace unit summary (all grace notes in sequence)
+                    const graceUnitKey = `GraceUnit(${graceSequence.map(g => g.pitch).join('-')})`;
+
+                    // Transition 1: BeforeMain → GraceUnit (column 2 → column 1/3)
+                    const key1 = `${beforeMainKey}|||${graceUnitKey}|||unit-approach`;
+                    if (!pitchTransitions[key1]) {
+                        pitchTransitions[key1] = 0;
+                    }
+                    pitchTransitions[key1]++;
+
+                    graceTransitions[key1] = {
+                        fromGrace: false,
+                        toGrace: true,
+                        isGraceUnit: true,
+                        stage: 'approach',
+                        graceSequence: graceSequence,
+                        count: pitchTransitions[key1]
+                    };
+
+                    // Transition 2: GraceUnit → AfterMain (column 1/3 → column 2)
+                    const key2 = `${graceUnitKey}|||${afterMainKey}|||unit-departure`;
+                    if (!pitchTransitions[key2]) {
+                        pitchTransitions[key2] = 0;
+                    }
+                    pitchTransitions[key2]++;
+
+                    graceTransitions[key2] = {
+                        fromGrace: true,
+                        toGrace: false,
+                        isGraceUnit: true,
+                        stage: 'departure',
+                        graceSequence: graceSequence,
+                        count: pitchTransitions[key2]
+                    };
+
+                    console.log(`Grace unit: ${beforeMain.pitch} → (${graceSequence.map(g => g.pitch).join('→')}) → ${afterMain.pitch}`);
+                });
             }
 
             // Calculate KRIC-2 transitions (rhythm to rhythm)
@@ -6559,7 +6665,7 @@
                 // Match the tablature's actual scale
                 // The tablature uses these string positions directly, so we should too
                 const svgHeight = maxY + 100; // Add padding
-                const svgWidth = 600;
+                const svgWidth = kpicMode === 'grace' ? 800 : 600; // Wider for 3-column grace mode
 
                 // Process transitions
                 Object.entries(transitions).forEach(([key, count]) => {
@@ -6572,81 +6678,219 @@
 
                 svg = `<svg width="${svgWidth}" height="${svgHeight}" id="${type}-sankey-svg">`;
 
-                // For grace mode, also need to add nodes for grace notes
-                const nodeKeys = new Set(Object.keys(stringPositions));
                 if (kpicMode === 'grace') {
-                    // Add grace note versions of the positions
+                    // 3-column layout for grace units mode
+                    const columnWidth = 60;
+                    const columnSpacing = (svgWidth - 3 * columnWidth - 40) / 2; // Space between columns
+
+                    // Column positions
+                    const col1X = 20; // Grace notes (when grace comes first)
+                    const col2X = col1X + columnWidth + columnSpacing; // Main notes (center)
+                    const col3X = col2X + columnWidth + columnSpacing; // Grace notes (when grace comes later)
+
+                    // Collect all unique pitches
+                    const allPitches = new Set();
                     Object.keys(stringPositions).forEach(key => {
-                        const graceKey = key.replace(/String (\d+): (.+)/, 'String $1: $2 (grace)');
-                        stringPositions[graceKey] = stringPositions[key];
-                        nodeKeys.add(graceKey);
+                        allPitches.add(key);
+                    });
+
+                    // Draw 3-column nodes
+                    Array.from(allPitches).forEach(stringKey => {
+                        const y = stringPositions[stringKey];
+                        const pitchName = stringKey.split(': ')[1];
+
+                        // Column 1: Grace notes (left) - only if this pitch appears as grace
+                        const hasGraceIncoming = links.some(l => l.target.includes(pitchName) && l.transitionType === 'grace-approach');
+                        if (hasGraceIncoming) {
+                            svg += `<rect x="${col1X}" y="${y - 30}" width="${columnWidth}" height="60"
+                                    fill="#FFD700" opacity="0.8" rx="3"
+                                    class="sankey-node grace-left" data-node="${stringKey}" data-column="1"/>`;
+                            svg += `<text x="${col1X + columnWidth/2}" y="${y + 7}" text-anchor="middle"
+                                    style="font-size: 14px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
+                            svg += `<text x="${col1X + columnWidth/2}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
+
+                        // Column 2: Main notes (center) - always present
+                        svg += `<rect x="${col2X}" y="${y - 30}" width="${columnWidth}" height="60"
+                                fill="#3498db" opacity="0.8" rx="3"
+                                class="sankey-node main-center" data-node="${stringKey}" data-column="2"/>`;
+                        svg += `<text x="${col2X + columnWidth/2}" y="${y + 7}" text-anchor="middle"
+                                style="font-size: 18px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
+
+                        // Column 3: Grace notes (right) - only if this pitch appears as grace
+                        const hasGraceOutgoing = links.some(l => l.source.includes(pitchName) && l.transitionType === 'grace-departure');
+                        if (hasGraceOutgoing) {
+                            svg += `<rect x="${col3X}" y="${y - 30}" width="${columnWidth}" height="60"
+                                    fill="#FFA500" opacity="0.8" rx="3"
+                                    class="sankey-node grace-right" data-node="${stringKey}" data-column="3"/>`;
+                            svg += `<text x="${col3X + columnWidth/2}" y="${y + 7}" text-anchor="middle"
+                                    style="font-size: 14px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
+                            svg += `<text x="${col3X + columnWidth/2}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
+                    });
+                } else {
+                    // Standard 2-column layout for all and main modes
+                    const nodeKeys = new Set(Object.keys(stringPositions));
+                    if (kpicMode === 'all') {
+                        // Add grace note versions for all mode
+                        Object.keys(stringPositions).forEach(key => {
+                            const graceKey = key.replace(/String (\d+): (.+)/, 'String $1: $2 (grace)');
+                            stringPositions[graceKey] = stringPositions[key];
+                            nodeKeys.add(graceKey);
+                        });
+                    }
+
+                    // Draw all string positions as nodes (both left and right)
+                    Array.from(nodeKeys).forEach(stringKey => {
+                        const originalY = stringPositions[stringKey];
+                        const y = originalY;
+                        const pitchName = stringKey.split(': ')[1] || stringKey;
+                        const isGraceNode = stringKey.includes('(grace)');
+
+                        // Node colors
+                        const leftColor = isGraceNode ? '#FFD700' : '#3498db';
+                        const rightColor = isGraceNode ? '#FFA500' : '#2ecc71';
+
+                        // Left side (From)
+                        svg += `<rect x="20" y="${y - 30}" width="${nodeWidth}" height="60"
+                                fill="${leftColor}" opacity="0.8" rx="3"
+                                class="sankey-node" data-node="${stringKey}" data-side="left"/>`;
+                        svg += `<text x="${20 + nodeWidth/2}" y="${y + 7}" text-anchor="middle"
+                                style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
+                        if (isGraceNode) {
+                            svg += `<text x="${20 + nodeWidth/2}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
+
+                        // Right side (To)
+                        svg += `<rect x="${svgWidth - nodeWidth - 20}" y="${y - 30}" width="${nodeWidth}" height="60"
+                                fill="${rightColor}" opacity="0.8" rx="3"
+                                class="sankey-node" data-node="${stringKey}" data-side="right"/>`;
+                        svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 7}" text-anchor="middle"
+                                style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
+                        if (isGraceNode) {
+                            svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
                     });
                 }
-
-                // Draw all string positions as nodes (both left and right)
-                Array.from(nodeKeys).forEach(stringKey => {
-                    const originalY = stringPositions[stringKey];
-                    // Use actual Y position from tablature
-                    const y = originalY;
-
-                    // Extract just the pitch name (remove "String X: " prefix)
-                    const pitchName = stringKey.split(': ')[1] || stringKey;
-                    const isGraceNode = stringKey.includes('(grace)');
-
-                    // Node colors
-                    const leftColor = isGraceNode ? '#FFD700' : '#3498db';  // Gold for grace, blue for main
-                    const rightColor = isGraceNode ? '#FFA500' : '#2ecc71'; // Orange for grace, green for main
-
-                    // Left side (From) - 60px square boxes, perfectly centered on string line
-                    svg += `<rect x="20" y="${y - 30}" width="${nodeWidth}" height="60"
-                            fill="${leftColor}" opacity="0.8" rx="3"
-                            class="sankey-node" data-node="${stringKey}" data-side="left"/>`;
-                    svg += `<text x="${20 + nodeWidth/2}" y="${y + 7}" text-anchor="middle"
-                            style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
-                    if (isGraceNode) {
-                        svg += `<text x="${20 + nodeWidth/2}" y="${y + 22}" text-anchor="middle"
-                                style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
-                    }
-
-                    // Right side (To) - 60px square boxes, perfectly centered on string line
-                    svg += `<rect x="${svgWidth - nodeWidth - 20}" y="${y - 30}" width="${nodeWidth}" height="60"
-                            fill="${rightColor}" opacity="0.8" rx="3"
-                            class="sankey-node" data-node="${stringKey}" data-side="right"/>`;
-                    svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 7}" text-anchor="middle"
-                            style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
-                    if (isGraceNode) {
-                        svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 22}" text-anchor="middle"
-                                style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
-                    }
-                });
 
                 // This is the updated code for side-by-side bands in Sankey diagram
 // Replace from line 6540 onwards in analytical_tablature.html
 
-                // Group links by source-target pair to draw side-by-side
-                const linkGroups = {};
-                links.forEach(link => {
-                    const baseSource = link.source.replace(' (grace)', '');
-                    const baseTarget = link.target.replace(' (grace)', '');
-                    const baseKey = `${baseSource}|||${baseTarget}`;
-                    if (!linkGroups[baseKey]) {
-                        linkGroups[baseKey] = [];
-                    }
-                    linkGroups[baseKey].push(link);
-                });
+                if (kpicMode === 'grace') {
+                    // Grace mode: 3-column layout with special handling
+                    const columnWidth = 60;
+                    const totalWidth = 800;
+                    const columnSpacing = (totalWidth - 3 * columnWidth - 40) / 2;
+                    const col1X = 20; // Grace left
+                    const col2X = col1X + columnWidth + columnSpacing; // Main center
+                    const col3X = col2X + columnWidth + columnSpacing; // Grace right
 
-                // Debug: Log groups with multiple transition types
-                Object.entries(linkGroups).forEach(([key, group]) => {
-                    if (group.length > 1) {
-                        const types = group.map(l => l.transitionType || 'main-main').join(', ');
-                        console.log(`Pitch pair ${key.replace('|||', ' → ')} has ${group.length} transition types: ${types}`);
-                    }
-                });
+                    // Draw grace mode links directly without grouping
+                    links.forEach((link, linkIndex) => {
+                        const sourceY = stringPositions[link.source.replace(' (grace)', '')];
+                        const targetY = stringPositions[link.target.replace(' (grace)', '')];
 
-                // Draw grouped links with click handling
-                let globalLinkIndex = 0;
-                Object.values(linkGroups).forEach(group => {
-                    group.forEach((link, groupIndex) => {
+                        if (sourceY && targetY) {
+                            const fromNote = link.source.split(': ')[1].replace(' (grace)', '');
+                            const toNote = link.target.split(': ')[1].replace(' (grace)', '');
+                            const pattern = `["${fromNote}", "${toNote}"]`;
+                            const thickness = Math.min(12, Math.max(2, link.value * 1.5));
+
+                            // Determine source and target positions based on transition type
+                            let sourceX, targetX;
+                            if (link.transitionType === 'grace-approach') {
+                                // Main (col2) → Grace (col1 or col3 based on pitch direction)
+                                sourceX = col2X + columnWidth;
+                                targetX = (fromNote.localeCompare(toNote) < 0) ? col3X : col1X;
+                            } else if (link.transitionType === 'grace-departure') {
+                                // Grace (col1 or col3) → Main (col2)
+                                sourceX = (fromNote.localeCompare(toNote) < 0) ? col3X + columnWidth : col1X + columnWidth;
+                                targetX = col2X;
+                            }
+
+                            const midX = (sourceX + targetX) / 2;
+
+                            // Get transition info for tooltip
+                            const transitionKey = link.fullKey || `${link.source}|||${link.target}`;
+                            const pitchRanking = pitchRankingMap?.get(transitionKey);
+                            const rhythmInfo = getRhythmInfoForTransition(fromNote, toNote, noteData, rhythmTransitions, rhythmRankingMap);
+                            const transitionId = `transition_${linkIndex}`;
+
+                            // Store transition data
+                            if (!window.sankeyTransitionData) {
+                                window.sankeyTransitionData = new Map();
+                            }
+                            window.sankeyTransitionData.set(transitionId, {
+                                fromNote,
+                                toNote,
+                                count: link.value,
+                                totalTransitions: totalTransitions || Object.values(transitions).reduce((sum, count) => sum + count, 0),
+                                transitionType: link.transitionType,
+                                pitchRanking,
+                                rhythmInfo,
+                                groupInfo: { totalTypes: 1, allTypes: [link.transitionType], allCounts: [link.value] }
+                            });
+
+                            // Draw the transition band
+                            const isApproach = link.transitionType === 'grace-approach';
+                            const strokeColor = isApproach ? 'rgba(255, 140, 0, 0.5)' : 'rgba(255, 165, 0, 0.5)';
+                            const dashArray = isApproach ? '12 3 9 4 6 5 3 6 1 7' : '1 7 3 6 6 5 9 4 12 3';
+
+                            svg += `<path d="M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}"
+                                    stroke="${strokeColor}"
+                                    stroke-width="${thickness}" fill="none"
+                                    stroke-dasharray="${dashArray}"
+                                    class="sankey-link clickable-band"
+                                    data-source="${link.source}"
+                                    data-target="${link.target}"
+                                    data-pattern='${pattern}'
+                                    data-pattern-raw='${fromNote}-${toNote}'
+                                    data-value="${link.value}"
+                                    data-band-id="kpic-${linkIndex}"
+                                    data-transition-type="${link.transitionType}"
+                                    style="cursor: pointer;"
+                                    onmouseover="event.stopPropagation(); this.style.stroke='${strokeColor.replace('0.5', '0.8')}'; this.style.strokeWidth='${Math.min(16, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                    onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='${strokeColor}'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                    onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
+
+                            // Add center label
+                            svg += `<text x="${midX}" y="${(sourceY + targetY) / 2}" text-anchor="middle" pointer-events="none"
+                                    class="sankey-label" data-band-id="kpic-${linkIndex}"
+                                    style="font-size: 10px; fill: #FFD700; font-weight: bold;
+                                           text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
+                                           transition: font-size 0.2s ease, filter 0.2s ease;">${link.value}</text>`;
+                        }
+                    });
+                } else {
+                    // Standard 2-column layout for 'all' and 'main' modes
+                    // Group links by source-target pair to draw side-by-side
+                    const linkGroups = {};
+                    links.forEach(link => {
+                        const baseSource = link.source.replace(' (grace)', '');
+                        const baseTarget = link.target.replace(' (grace)', '');
+                        const baseKey = `${baseSource}|||${baseTarget}`;
+                        if (!linkGroups[baseKey]) {
+                            linkGroups[baseKey] = [];
+                        }
+                        linkGroups[baseKey].push(link);
+                    });
+
+                    // Debug: Log groups with multiple transition types
+                    Object.entries(linkGroups).forEach(([key, group]) => {
+                        if (group.length > 1) {
+                            const types = group.map(l => l.transitionType || 'main-main').join(', ');
+                            console.log(`Pitch pair ${key.replace('|||', ' → ')} has ${group.length} transition types: ${types}`);
+                        }
+                    });
+
+                    // Draw grouped links with click handling
+                    let globalLinkIndex = 0;
+                    Object.values(linkGroups).forEach(group => {
+                        group.forEach((link, groupIndex) => {
                         const linkIndex = globalLinkIndex++;
                         const sourceY = stringPositions[link.source] || stringPositions[link.source.replace(' (grace)', '')];
                         const targetY = stringPositions[link.target] || stringPositions[link.target.replace(' (grace)', '')];
@@ -6709,7 +6953,61 @@
                             });
 
                             // Determine style based on transition type
-                            if (kpicMode === 'all') {
+                            if (kpicMode === 'grace') {
+                                // 3-column grace mode drawing
+                                const columnWidth = 60;
+                                const columnSpacing = (svgWidth - 3 * columnWidth - 40) / 2;
+                                const col1X = 20; // Grace left
+                                const col2X = col1X + columnWidth + columnSpacing; // Main center
+                                const col3X = col2X + columnWidth + columnSpacing; // Grace right
+
+                                if (link.transitionType === 'grace-approach') {
+                                    // Main (col2) → Grace (col1 or col3)
+                                    const targetX = fromNote.localeCompare(toNote) < 0 ? col3X : col1X; // Right if ascending pitch, left if descending
+                                    const sourceX = col2X + columnWidth;
+                                    const targetXStart = targetX;
+                                    const midX = (sourceX + targetXStart) / 2;
+
+                                    svg += `<path d="M ${sourceX} ${scaledSourceY} C ${midX} ${scaledSourceY}, ${midX} ${scaledTargetY}, ${targetXStart} ${scaledTargetY}"
+                                            stroke="rgba(255, 140, 0, 0.5)"
+                                            stroke-width="${thickness}" fill="none"
+                                            stroke-dasharray="12 3 9 4 6 5 3 6 1 7"
+                                            class="sankey-link clickable-band"
+                                            data-source="${link.source}"
+                                            data-target="${link.target}"
+                                            data-pattern='${pattern}'
+                                            data-pattern-raw='${fromNote}-${toNote}'
+                                            data-value="${link.value}"
+                                            data-band-id="kpic-${linkIndex}"
+                                            data-transition-type="grace-approach"
+                                            style="cursor: pointer;"
+                                            onmouseover="event.stopPropagation(); this.style.stroke='rgba(255, 140, 0, 0.8)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(255, 140, 0, 0.5)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
+                                } else if (link.transitionType === 'grace-departure') {
+                                    // Grace (col1 or col3) → Main (col2)
+                                    const sourceX = fromNote.localeCompare(toNote) < 0 ? col3X + columnWidth : col1X + columnWidth;
+                                    const targetX = col2X;
+                                    const midX = (sourceX + targetX) / 2;
+
+                                    svg += `<path d="M ${sourceX} ${scaledSourceY} C ${midX} ${scaledSourceY}, ${midX} ${scaledTargetY}, ${targetX} ${scaledTargetY}"
+                                            stroke="rgba(255, 165, 0, 0.5)"
+                                            stroke-width="${thickness}" fill="none"
+                                            stroke-dasharray="1 7 3 6 6 5 9 4 12 3"
+                                            class="sankey-link clickable-band"
+                                            data-source="${link.source}"
+                                            data-target="${link.target}"
+                                            data-pattern='${pattern}'
+                                            data-pattern-raw='${fromNote}-${toNote}'
+                                            data-value="${link.value}"
+                                            data-band-id="kpic-${linkIndex}"
+                                            data-transition-type="grace-departure"
+                                            style="cursor: pointer;"
+                                            onmouseover="event.stopPropagation(); this.style.stroke='rgba(255, 165, 0, 0.8)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(255, 165, 0, 0.5)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
+                                }
+                            } else if (kpicMode === 'all') {
                                 if (link.transitionType === 'main-grace') {
                                     // Main to grace - solid blue transitioning to dashed orange
                                     const splitPoint = 0.6;
@@ -6835,9 +7133,10 @@
                                     style="font-size: 10px; fill: ${labelColor}; font-weight: bold;
                                            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
                                            transition: font-size 0.2s ease, filter 0.2s ease;">${link.value}</text>`;
-                        }
+                            }
+                        });
                     });
-                });
+                }
 
                 svg += '</svg>';
 

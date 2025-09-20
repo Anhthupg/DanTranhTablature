@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Color System Test v2 - Semantic Logic</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .concept-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .note-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .note-sample {
+            text-align: center;
+        }
+
+        .note {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .note-large {
+            width: 100px;
+            height: 100px;
+            font-size: 18px;
+        }
+
+        .note-small {
+            width: 50px;
+            height: 50px;
+            font-size: 12px;
+        }
+
+        /* Base note colors - only one! */
+        .note-base {
+            background: #008080;
+            border: 3px solid #005959;
+            color: white;
+        }
+
+        /* Pattern textures as SVG backgrounds */
+        .pattern-kpic {
+            background-image: radial-gradient(circle, rgba(0, 102, 204, 0.3) 20%, transparent 20%);
+            background-size: 10px 10px;
+            background-position: 0 0, 5px 5px;
+        }
+
+        .pattern-kpic-dense {
+            background-image: radial-gradient(circle, rgba(0, 102, 204, 0.4) 25%, transparent 25%);
+            background-size: 8px 8px;
+        }
+
+        .pattern-kpic-sparse {
+            background-image: radial-gradient(circle, rgba(0, 102, 204, 0.25) 15%, transparent 15%);
+            background-size: 15px 15px;
+        }
+
+        .pattern-kric {
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 3px,
+                rgba(39, 174, 96, 0.3) 3px,
+                rgba(39, 174, 96, 0.3) 6px
+            );
+        }
+
+        .pattern-kric-dense {
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(39, 174, 96, 0.4) 2px,
+                rgba(39, 174, 96, 0.4) 4px
+            );
+        }
+
+        .pattern-kric-sparse {
+            background-image: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 5px,
+                rgba(39, 174, 96, 0.25) 5px,
+                rgba(39, 174, 96, 0.25) 10px
+            );
+        }
+
+        /* Combined patterns */
+        .pattern-both {
+            background-image:
+                radial-gradient(circle, rgba(0, 102, 204, 0.3) 20%, transparent 20%),
+                repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 3px,
+                    rgba(39, 174, 96, 0.2) 3px,
+                    rgba(39, 174, 96, 0.2) 6px
+                );
+            background-size: 10px 10px, 100% 100%;
+            background-position: 0 0, 0 0;
+        }
+
+        /* Tone modifiers - only change outline */
+        .tone-rising {
+            border-color: #E74C3C !important;
+            border-width: 4px !important;
+        }
+
+        .tone-falling {
+            border-color: #3498DB !important;
+            border-width: 4px !important;
+        }
+
+        .tone-level {
+            border-color: #F39C12 !important;
+            border-width: 4px !important;
+        }
+
+        /* Audio states */
+        .audio-playing {
+            animation: audioPlay 0.5s ease-in-out infinite;
+        }
+
+        @keyframes audioPlay {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 107, 107, 0);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 30px rgba(255, 107, 107, 0.8);
+                border-color: #FF6B6B;
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(255, 107, 107, 0);
+            }
+        }
+
+        .audio-recent {
+            opacity: 0.7;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        .audio-upcoming {
+            opacity: 1;
+            box-shadow: 0 0 15px rgba(149, 225, 211, 0.6);
+        }
+
+        /* Selection states */
+        .selected {
+            box-shadow: 0 0 20px rgba(0, 128, 128, 0.8);
+            opacity: 1 !important;
+        }
+
+        .dimmed {
+            opacity: 0.3;
+        }
+
+        /* Demo sections */
+        .demo-row {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .demo-item {
+            text-align: center;
+        }
+
+        .label {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .explanation {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        /* Interactive SVG patterns */
+        svg.pattern-demo {
+            width: 100%;
+            max-width: 800px;
+            height: 300px;
+            margin: 20px auto;
+            display: block;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .melisma-sequence {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .melisma-sequence .note {
+            margin: 0;
+        }
+
+        .melisma-connector {
+            width: 20px;
+            height: 2px;
+            background: #005959;
+            margin: 0 -10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Dan Tranh Color System v2</h1>
+        <p class="subtitle">Semantic Logic: Size differentiates, Texture indicates patterns, Outline shows modifiers</p>
+
+        <!-- Core Concept -->
+        <h2>1. Core Philosophy</h2>
+        <div class="concept-box">
+            <h3>Semantic Hierarchy</h3>
+            <ul style="line-height: 2;">
+                <li><strong>Base Color:</strong> ALL notes use teal (#008080) - main and grace notes</li>
+                <li><strong>Size:</strong> Differentiates note importance (main = large, grace = small)</li>
+                <li><strong>Texture Fill:</strong> Shows pattern membership (dots = KPIC, lines = KRIC)</li>
+                <li><strong>Outline Color:</strong> Indicates tonal modifiers (rising, falling, level)</li>
+                <li><strong>Opacity/Glow:</strong> Shows selection and audio states</li>
+            </ul>
+        </div>
+
+        <!-- Note Types by Size -->
+        <h2>2. Note Differentiation by Size (Same Color)</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base note-large"></div>
+                <div class="label">Main Note<br>100x100px</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base"></div>
+                <div class="label">Standard Note<br>80x80px</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base note-small"></div>
+                <div class="label">Grace Note<br>50x50px</div>
+            </div>
+        </div>
+        <div class="explanation">
+            <strong>💡 Key Insight:</strong> All notes share the same teal color. Size alone differentiates their musical importance. This maintains semantic consistency - they're all notes, just with different emphasis.
+        </div>
+
+        <!-- Pattern Textures -->
+        <h2>3. Pattern Indication by Texture (Not Color)</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base"></div>
+                <div class="label">No Pattern<br>(Solid fill)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-kpic"></div>
+                <div class="label">KPIC Pattern<br>(Polka dots)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-kric"></div>
+                <div class="label">KRIC Pattern<br>(Vertical lines)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-both"></div>
+                <div class="label">Both Patterns<br>(Dots + Lines)</div>
+            </div>
+        </div>
+
+        <!-- Multiple Pattern Selection -->
+        <h2>4. Multiple Pattern Selection (Texture Density)</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base pattern-kpic-sparse selected"></div>
+                <div class="label">KPIC-23<br>(Sparse dots)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-kpic selected"></div>
+                <div class="label">KPIC-45<br>(Normal dots)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-kpic-dense selected"></div>
+                <div class="label">KPIC-67<br>(Dense dots)</div>
+            </div>
+        </div>
+        <div class="explanation">
+            <strong>💡 Pattern Numbers:</strong> KPIC-1 through KPIC-136 cannot each have unique colors. Instead, when multiple patterns are selected, vary the texture density or pattern size to show different selections while maintaining the same base semantics.
+        </div>
+
+        <!-- Tone Modifiers -->
+        <h2>5. Tone Modifiers (Outline Only)</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base note-large"></div>
+                <div class="label">No Tone<br>(Normal outline)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base note-large tone-rising"></div>
+                <div class="label">Rising Tone<br>(Red outline)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base note-large tone-falling"></div>
+                <div class="label">Falling Tone<br>(Blue outline)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base note-large tone-level"></div>
+                <div class="label">Level Tone<br>(Orange outline)</div>
+            </div>
+        </div>
+
+        <!-- Combined Examples -->
+        <h2>6. Combined Examples</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base note-small pattern-kpic"></div>
+                <div class="label">Grace Note<br>+ KPIC Pattern</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base note-large tone-rising pattern-kric"></div>
+                <div class="label">Main Note<br>+ Rising Tone<br>+ KRIC Pattern</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base pattern-both tone-falling selected"></div>
+                <div class="label">Selected Note<br>+ Falling Tone<br>+ Both Patterns</div>
+            </div>
+        </div>
+
+        <!-- Melisma Representation -->
+        <h2>7. Melisma (Series of Connected Notes)</h2>
+        <div class="melisma-sequence">
+            <div class="note note-base note-large"></div>
+            <div class="melisma-connector"></div>
+            <div class="note note-base"></div>
+            <div class="melisma-connector"></div>
+            <div class="note note-base note-small"></div>
+            <div class="melisma-connector"></div>
+            <div class="note note-base"></div>
+            <div class="melisma-connector"></div>
+            <div class="note note-base note-large"></div>
+        </div>
+        <div class="explanation">
+            <strong>💡 Melisma Logic:</strong> Melisma is not a different note type, but a sequence of connected notes (main and grace). Each note keeps its own size and patterns. The connection lines or proximity indicate the melismatic relationship.
+        </div>
+
+        <!-- Audio States -->
+        <h2>8. Audio Playback States (Animation Only)</h2>
+        <div class="demo-row">
+            <div class="demo-item">
+                <div class="note note-base"></div>
+                <div class="label">Normal</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base audio-playing"></div>
+                <div class="label">Currently Playing<br>(Pulsing + Red glow)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base audio-recent"></div>
+                <div class="label">Just Played<br>(Fading opacity)</div>
+            </div>
+            <div class="demo-item">
+                <div class="note note-base audio-upcoming"></div>
+                <div class="label">Next to Play<br>(Bright glow)</div>
+            </div>
+        </div>
+
+        <!-- Visual Pattern Demo -->
+        <h2>9. Pattern Texture Visualization</h2>
+        <svg class="pattern-demo" viewBox="0 0 800 300">
+            <!-- KPIC Pattern -->
+            <g transform="translate(100, 50)">
+                <rect x="0" y="0" width="150" height="150" fill="#008080" stroke="#005959" stroke-width="3" rx="10"/>
+                <!-- Polka dots pattern -->
+                <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="10" cy="10" r="3" fill="rgba(0, 102, 204, 0.3)"/>
+                </pattern>
+                <rect x="0" y="0" width="150" height="150" fill="url(#dots)" rx="10"/>
+                <text x="75" y="180" text-anchor="middle" fill="#333" font-size="14">KPIC: Pitch Points</text>
+                <text x="75" y="200" text-anchor="middle" fill="#666" font-size="12">(Polka dots)</text>
+            </g>
+
+            <!-- KRIC Pattern -->
+            <g transform="translate(325, 50)">
+                <rect x="0" y="0" width="150" height="150" fill="#008080" stroke="#005959" stroke-width="3" rx="10"/>
+                <!-- Vertical lines pattern -->
+                <pattern id="lines" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                    <line x1="5" y1="0" x2="5" y2="10" stroke="rgba(39, 174, 96, 0.3)" stroke-width="3"/>
+                </pattern>
+                <rect x="0" y="0" width="150" height="150" fill="url(#lines)" rx="10"/>
+                <text x="75" y="180" text-anchor="middle" fill="#333" font-size="14">KRIC: Rhythm Flow</text>
+                <text x="75" y="200" text-anchor="middle" fill="#666" font-size="12">(Vertical lines)</text>
+            </g>
+
+            <!-- Combined Pattern -->
+            <g transform="translate(550, 50)">
+                <rect x="0" y="0" width="150" height="150" fill="#008080" stroke="#005959" stroke-width="3" rx="10"/>
+                <rect x="0" y="0" width="150" height="150" fill="url(#dots)" rx="10"/>
+                <rect x="0" y="0" width="150" height="150" fill="url(#lines)" opacity="0.7" rx="10"/>
+                <text x="75" y="180" text-anchor="middle" fill="#333" font-size="14">Both Patterns</text>
+                <text x="75" y="200" text-anchor="middle" fill="#666" font-size="12">(Overlaid textures)</text>
+            </g>
+        </svg>
+
+        <!-- Sankey Diagram Implications -->
+        <h2>10. Sankey Diagram Implications</h2>
+        <div class="concept-box">
+            <h3>Consistent Logic in Sankey</h3>
+            <p style="line-height: 1.8;">Since all notes use the same base color:</p>
+            <ul style="line-height: 2; margin-top: 10px;">
+                <li><strong>KPIC-2 Sankey nodes:</strong> All teal (#008080)</li>
+                <li><strong>KRIC-2 Sankey nodes:</strong> All teal (#008080)</li>
+                <li><strong>Transition bands:</strong> Gradient from teal to teal (with slight variation)</li>
+                <li><strong>Pattern indication:</strong> Add texture overlay on bands (dots for KPIC, lines for KRIC)</li>
+                <li><strong>Size differentiation:</strong> Grace note transitions use thinner bands</li>
+            </ul>
+        </div>
+
+        <!-- Comparison Table -->
+        <h2>11. System Comparison</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Element</th>
+                    <th>Version 1 (Color-based)</th>
+                    <th>Version 2 (Semantic)</th>
+                    <th>Benefit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Main vs Grace</td>
+                    <td>Different colors</td>
+                    <td>Same color, different size</td>
+                    <td>Clearer hierarchy</td>
+                </tr>
+                <tr>
+                    <td>Tone Markings</td>
+                    <td>New color category</td>
+                    <td>Outline modifier</td>
+                    <td>Shows it modifies existing notes</td>
+                </tr>
+                <tr>
+                    <td>KPIC Patterns</td>
+                    <td>Blue color family</td>
+                    <td>Polka dot texture</td>
+                    <td>Intuitive pitch representation</td>
+                </tr>
+                <tr>
+                    <td>KRIC Patterns</td>
+                    <td>Green color family</td>
+                    <td>Vertical line texture</td>
+                    <td>Visual rhythm notation</td>
+                </tr>
+                <tr>
+                    <td>Pattern Numbers</td>
+                    <td>Different shades</td>
+                    <td>Texture density</td>
+                    <td>Scalable to 136+ patterns</td>
+                </tr>
+                <tr>
+                    <td>Melisma</td>
+                    <td>Separate color</td>
+                    <td>Connected note sequence</td>
+                    <td>Shows true nature</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Interactive Demo -->
+        <h2>12. Interactive Demo</h2>
+        <div class="concept-box">
+            <p><strong>Click notes to see state changes:</strong></p>
+            <div class="demo-row" id="interactive-demo">
+                <div class="demo-item">
+                    <div class="note note-base note-large interactive" data-pattern="none"></div>
+                    <div class="label">Click to add<br>KPIC pattern</div>
+                </div>
+                <div class="demo-item">
+                    <div class="note note-base note-large interactive" data-pattern="none"></div>
+                    <div class="label">Click to add<br>KRIC pattern</div>
+                </div>
+                <div class="demo-item">
+                    <div class="note note-base note-large interactive" data-pattern="none"></div>
+                    <div class="label">Click to add<br>tone modifier</div>
+                </div>
+                <div class="demo-item">
+                    <div class="note note-base note-small interactive" data-pattern="none"></div>
+                    <div class="label">Grace note<br>interactions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <h2>13. Summary of Semantic Logic</h2>
+        <div class="explanation" style="background: #d4edda; border-left-color: #28a745;">
+            <h3>Core Principles:</h3>
+            <ol style="line-height: 2; margin-top: 10px;">
+                <li><strong>One base color</strong> - All notes are teal (semantic unity)</li>
+                <li><strong>Size differentiates importance</strong> - Large = main, Small = grace</li>
+                <li><strong>Texture shows patterns</strong> - Dots = pitch, Lines = rhythm</li>
+                <li><strong>Outline indicates modifiers</strong> - Tones change border color/width</li>
+                <li><strong>Animation for states</strong> - Playing, selected, hover effects</li>
+                <li><strong>Scalable system</strong> - Works for unlimited pattern numbers</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Interactive demo functionality
+        const interactiveNotes = document.querySelectorAll('.interactive');
+
+        interactiveNotes.forEach((note, index) => {
+            note.addEventListener('click', function() {
+                switch(index) {
+                    case 0: // KPIC pattern toggle
+                        if (this.classList.contains('pattern-kpic')) {
+                            this.classList.remove('pattern-kpic');
+                        } else {
+                            this.classList.add('pattern-kpic');
+                        }
+                        break;
+
+                    case 1: // KRIC pattern toggle
+                        if (this.classList.contains('pattern-kric')) {
+                            this.classList.remove('pattern-kric');
+                        } else {
+                            this.classList.add('pattern-kric');
+                        }
+                        break;
+
+                    case 2: // Tone modifier cycle
+                        if (this.classList.contains('tone-rising')) {
+                            this.classList.remove('tone-rising');
+                            this.classList.add('tone-falling');
+                        } else if (this.classList.contains('tone-falling')) {
+                            this.classList.remove('tone-falling');
+                            this.classList.add('tone-level');
+                        } else if (this.classList.contains('tone-level')) {
+                            this.classList.remove('tone-level');
+                        } else {
+                            this.classList.add('tone-rising');
+                        }
+                        break;
+
+                    case 3: // Grace note with patterns
+                        if (this.classList.contains('pattern-both')) {
+                            this.classList.remove('pattern-both');
+                            this.classList.remove('selected');
+                        } else {
+                            this.classList.add('pattern-both');
+                            this.classList.add('selected');
+                        }
+                        break;
+                }
+
+                // Add selection glow
+                this.classList.add('selected');
+                setTimeout(() => {
+                    if (index !== 3) { // Keep grace note selected
+                        this.classList.remove('selected');
+                    }
+                }, 2000);
+            });
+        });
+
+        // Add hover effects
+        interactiveNotes.forEach(note => {
+            note.addEventListener('mouseenter', function() {
+                if (!this.classList.contains('selected')) {
+                    this.style.opacity = '0.9';
+                    this.style.transform = 'scale(1.05)';
+                }
+            });
+
+            note.addEventListener('mouseleave', function() {
+                if (!this.classList.contains('selected')) {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

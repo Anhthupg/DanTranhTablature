@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Color System v6.5 - Continuous Hue Order</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #000;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        h2 {
+            color: #000;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #000;
+        }
+
+        .note {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            background: #000000;
+            color: white;
+            border: 6px solid;
+            font-size: 11px;
+            transition: all 0.3s ease;
+            margin: 3px;
+        }
+
+        /* 24 Colors in Perfect Hue Order (15° increments around color wheel) */
+        .hue-0 { border-color: #FF0000; }    /* 0° - Red */
+        .hue-15 { border-color: #FF4000; }   /* 15° - Red-Orange */
+        .hue-30 { border-color: #FF8000; }   /* 30° - Orange */
+        .hue-45 { border-color: #FFC000; }   /* 45° - Yellow-Orange */
+        .hue-60 { border-color: #FFFF00; }   /* 60° - Yellow */
+        .hue-75 { border-color: #C0FF00; }   /* 75° - Yellow-Green */
+        .hue-90 { border-color: #80FF00; }   /* 90° - Lime */
+        .hue-105 { border-color: #40FF00; }  /* 105° - Green-Lime */
+        .hue-120 { border-color: #00FF00; }  /* 120° - Green */
+        .hue-135 { border-color: #00FF40; }  /* 135° - Green-Cyan */
+        .hue-150 { border-color: #00FF80; }  /* 150° - Spring */
+        .hue-165 { border-color: #00FFC0; }  /* 165° - Spring-Cyan */
+        .hue-180 { border-color: #00FFFF; }  /* 180° - Cyan */
+        .hue-195 { border-color: #00C0FF; }  /* 195° - Cyan-Blue */
+        .hue-210 { border-color: #0080FF; }  /* 210° - Sky Blue */
+        .hue-225 { border-color: #0040FF; }  /* 225° - Blue */
+        .hue-240 { border-color: #0000FF; }  /* 240° - Pure Blue */
+        .hue-255 { border-color: #4000FF; }  /* 255° - Blue-Violet */
+        .hue-270 { border-color: #8000FF; }  /* 270° - Violet */
+        .hue-285 { border-color: #C000FF; }  /* 285° - Purple */
+        .hue-300 { border-color: #FF00FF; }  /* 300° - Magenta */
+        .hue-315 { border-color: #FF00C0; }  /* 315° - Pink */
+        .hue-330 { border-color: #FF0080; }  /* 330° - Rose */
+        .hue-345 { border-color: #FF0040; }  /* 345° - Pink-Red */
+
+        /* Neon versions (same hues with glow) */
+        .neon-0 { box-shadow: 0 0 15px #FF0000, 0 0 30px #FF0000; }
+        .neon-15 { box-shadow: 0 0 15px #FF4000, 0 0 30px #FF4000; }
+        .neon-30 { box-shadow: 0 0 15px #FF8000, 0 0 30px #FF8000; }
+        .neon-45 { box-shadow: 0 0 15px #FFC000, 0 0 30px #FFC000; }
+        .neon-60 { box-shadow: 0 0 15px #FFFF00, 0 0 30px #FFFF00; }
+        .neon-75 { box-shadow: 0 0 15px #C0FF00, 0 0 30px #C0FF00; }
+        .neon-90 { box-shadow: 0 0 15px #80FF00, 0 0 30px #80FF00; }
+        .neon-105 { box-shadow: 0 0 15px #40FF00, 0 0 30px #40FF00; }
+        .neon-120 { box-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00; }
+        .neon-135 { box-shadow: 0 0 15px #00FF40, 0 0 30px #00FF40; }
+        .neon-150 { box-shadow: 0 0 15px #00FF80, 0 0 30px #00FF80; }
+        .neon-165 { box-shadow: 0 0 15px #00FFC0, 0 0 30px #00FFC0; }
+        .neon-180 { box-shadow: 0 0 15px #00FFFF, 0 0 30px #00FFFF; }
+        .neon-195 { box-shadow: 0 0 15px #00C0FF, 0 0 30px #00C0FF; }
+        .neon-210 { box-shadow: 0 0 15px #0080FF, 0 0 30px #0080FF; }
+        .neon-225 { box-shadow: 0 0 15px #0040FF, 0 0 30px #0040FF; }
+        .neon-240 { box-shadow: 0 0 15px #0000FF, 0 0 30px #0000FF; }
+        .neon-255 { box-shadow: 0 0 15px #4000FF, 0 0 30px #4000FF; }
+        .neon-270 { box-shadow: 0 0 15px #8000FF, 0 0 30px #8000FF; }
+        .neon-285 { box-shadow: 0 0 15px #C000FF, 0 0 30px #C000FF; }
+        .neon-300 { box-shadow: 0 0 15px #FF00FF, 0 0 30px #FF00FF; }
+        .neon-315 { box-shadow: 0 0 15px #FF00C0, 0 0 30px #FF00C0; }
+        .neon-330 { box-shadow: 0 0 15px #FF0080, 0 0 30px #FF0080; }
+        .neon-345 { box-shadow: 0 0 15px #FF0040, 0 0 30px #FF0040; }
+
+        .demo-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 2px solid #ddd;
+        }
+
+        .color-strip {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .background-white {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+        }
+
+        .background-black {
+            background: #000000;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #333;
+        }
+
+        .section-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .section-title-white {
+            color: white;
+        }
+
+        .hue-label {
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .hue-label-white {
+            color: #ccc;
+        }
+
+        .recommendation-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .difficulty-indicator {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .easy { background: #4CAF50; color: white; }
+        .medium { background: #FF9800; color: white; }
+        .hard { background: #F44336; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌈 Dan Tranh Color System v6.5 - Continuous Hue Order</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Same Hues with/without Neon Glow - Perfect Color Wheel Progression
+        </p>
+
+        <!-- Complete 24 Color Spectrum -->
+        <h2>1. Complete 24 Color Spectrum (15° Increments)</h2>
+        <div class="demo-section">
+            <div class="section-title">All 24 Colors - Continuous Hue Progression</div>
+            <div class="color-strip">
+                <div>
+                    <div class="note hue-0">1</div>
+                    <div class="hue-label">0°<br>Red</div>
+                </div>
+                <div>
+                    <div class="note hue-15">2</div>
+                    <div class="hue-label">15°<br>R-O</div>
+                </div>
+                <div>
+                    <div class="note hue-30">3</div>
+                    <div class="hue-label">30°<br>Orange</div>
+                </div>
+                <div>
+                    <div class="note hue-45">4</div>
+                    <div class="hue-label">45°<br>Y-O</div>
+                </div>
+                <div>
+                    <div class="note hue-60">5</div>
+                    <div class="hue-label">60°<br>Yellow</div>
+                </div>
+                <div>
+                    <div class="note hue-75">6</div>
+                    <div class="hue-label">75°<br>Y-G</div>
+                </div>
+                <div>
+                    <div class="note hue-90">7</div>
+                    <div class="hue-label">90°<br>Lime</div>
+                </div>
+                <div>
+                    <div class="note hue-105">8</div>
+                    <div class="hue-label">105°<br>G-L</div>
+                </div>
+                <div>
+                    <div class="note hue-120">9</div>
+                    <div class="hue-label">120°<br>Green</div>
+                </div>
+                <div>
+                    <div class="note hue-135">10</div>
+                    <div class="hue-label">135°<br>G-C</div>
+                </div>
+                <div>
+                    <div class="note hue-150">11</div>
+                    <div class="hue-label">150°<br>Spring</div>
+                </div>
+                <div>
+                    <div class="note hue-165">12</div>
+                    <div class="hue-label">165°<br>S-C</div>
+                </div>
+                <div>
+                    <div class="note hue-180">13</div>
+                    <div class="hue-label">180°<br>Cyan</div>
+                </div>
+                <div>
+                    <div class="note hue-195">14</div>
+                    <div class="hue-label">195°<br>C-B</div>
+                </div>
+                <div>
+                    <div class="note hue-210">15</div>
+                    <div class="hue-label">210°<br>Sky</div>
+                </div>
+                <div>
+                    <div class="note hue-225">16</div>
+                    <div class="hue-label">225°<br>Blue</div>
+                </div>
+                <div>
+                    <div class="note hue-240">17</div>
+                    <div class="hue-label">240°<br>Pure B</div>
+                </div>
+                <div>
+                    <div class="note hue-255">18</div>
+                    <div class="hue-label">255°<br>B-V</div>
+                </div>
+                <div>
+                    <div class="note hue-270">19</div>
+                    <div class="hue-label">270°<br>Violet</div>
+                </div>
+                <div>
+                    <div class="note hue-285">20</div>
+                    <div class="hue-label">285°<br>Purple</div>
+                </div>
+                <div>
+                    <div class="note hue-300">21</div>
+                    <div class="hue-label">300°<br>Magenta</div>
+                </div>
+                <div>
+                    <div class="note hue-315">22</div>
+                    <div class="hue-label">315°<br>Pink</div>
+                </div>
+                <div>
+                    <div class="note hue-330">23</div>
+                    <div class="hue-label">330°<br>Rose</div>
+                </div>
+                <div>
+                    <div class="note hue-345">24</div>
+                    <div class="hue-label">345°<br>P-R</div>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 15px; color: #666;">
+                ↑ Perfect color wheel progression - each step is exactly 15° of hue rotation
+            </p>
+        </div>
+
+        <!-- 12 Colors Selected -->
+        <h2>2. Twelve Colors (Every Other Color) <span class="difficulty-indicator easy">EASY</span></h2>
+        <div class="comparison-grid">
+            <div class="background-white">
+                <div class="section-title">12 Colors - Non-Neon (30° intervals)</div>
+                <div class="color-strip">
+                    <div>
+                        <div class="note hue-0">1</div>
+                        <div class="hue-label">0° Red</div>
+                    </div>
+                    <div>
+                        <div class="note hue-30">2</div>
+                        <div class="hue-label">30° Orange</div>
+                    </div>
+                    <div>
+                        <div class="note hue-60">3</div>
+                        <div class="hue-label">60° Yellow</div>
+                    </div>
+                    <div>
+                        <div class="note hue-90">4</div>
+                        <div class="hue-label">90° Lime</div>
+                    </div>
+                    <div>
+                        <div class="note hue-120">5</div>
+                        <div class="hue-label">120° Green</div>
+                    </div>
+                    <div>
+                        <div class="note hue-150">6</div>
+                        <div class="hue-label">150° Spring</div>
+                    </div>
+                    <div>
+                        <div class="note hue-180">7</div>
+                        <div class="hue-label">180° Cyan</div>
+                    </div>
+                    <div>
+                        <div class="note hue-210">8</div>
+                        <div class="hue-label">210° Sky</div>
+                    </div>
+                    <div>
+                        <div class="note hue-240">9</div>
+                        <div class="hue-label">240° Blue</div>
+                    </div>
+                    <div>
+                        <div class="note hue-270">10</div>
+                        <div class="hue-label">270° Violet</div>
+                    </div>
+                    <div>
+                        <div class="note hue-300">11</div>
+                        <div class="hue-label">300° Magenta</div>
+                    </div>
+                    <div>
+                        <div class="note hue-330">12</div>
+                        <div class="hue-label">330° Rose</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="background-black">
+                <div class="section-title section-title-white">12 Colors - Neon (Same Hues + Glow)</div>
+                <div class="color-strip">
+                    <div>
+                        <div class="note hue-0 neon-0">1</div>
+                        <div class="hue-label hue-label-white">0° Red</div>
+                    </div>
+                    <div>
+                        <div class="note hue-30 neon-30">2</div>
+                        <div class="hue-label hue-label-white">30° Orange</div>
+                    </div>
+                    <div>
+                        <div class="note hue-60 neon-60">3</div>
+                        <div class="hue-label hue-label-white">60° Yellow</div>
+                    </div>
+                    <div>
+                        <div class="note hue-90 neon-90">4</div>
+                        <div class="hue-label hue-label-white">90° Lime</div>
+                    </div>
+                    <div>
+                        <div class="note hue-120 neon-120">5</div>
+                        <div class="hue-label hue-label-white">120° Green</div>
+                    </div>
+                    <div>
+                        <div class="note hue-150 neon-150">6</div>
+                        <div class="hue-label hue-label-white">150° Spring</div>
+                    </div>
+                    <div>
+                        <div class="note hue-180 neon-180">7</div>
+                        <div class="hue-label hue-label-white">180° Cyan</div>
+                    </div>
+                    <div>
+                        <div class="note hue-210 neon-210">8</div>
+                        <div class="hue-label hue-label-white">210° Sky</div>
+                    </div>
+                    <div>
+                        <div class="note hue-240 neon-240">9</div>
+                        <div class="hue-label hue-label-white">240° Blue</div>
+                    </div>
+                    <div>
+                        <div class="note hue-270 neon-270">10</div>
+                        <div class="hue-label hue-label-white">270° Violet</div>
+                    </div>
+                    <div>
+                        <div class="note hue-300 neon-300">11</div>
+                        <div class="hue-label hue-label-white">300° Magenta</div>
+                    </div>
+                    <div>
+                        <div class="note hue-330 neon-330">12</div>
+                        <div class="hue-label hue-label-white">330° Rose</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 16 Colors -->
+        <h2>3. Sixteen Colors (22.5° intervals) <span class="difficulty-indicator medium">MEDIUM</span></h2>
+        <div class="comparison-grid">
+            <div class="background-white">
+                <div class="section-title">16 Colors - Non-Neon</div>
+                <div class="color-strip">
+                    <div class="note hue-0">1</div>
+                    <div class="note hue-30">2</div>
+                    <div class="note hue-45">3</div>
+                    <div class="note hue-60">4</div>
+                    <div class="note hue-90">5</div>
+                    <div class="note hue-120">6</div>
+                    <div class="note hue-135">7</div>
+                    <div class="note hue-150">8</div>
+                    <div class="note hue-180">9</div>
+                    <div class="note hue-210">10</div>
+                    <div class="note hue-225">11</div>
+                    <div class="note hue-240">12</div>
+                    <div class="note hue-270">13</div>
+                    <div class="note hue-285">14</div>
+                    <div class="note hue-300">15</div>
+                    <div class="note hue-330">16</div>
+                </div>
+            </div>
+
+            <div class="background-black">
+                <div class="section-title section-title-white">16 Colors - Neon (Same Hues + Glow)</div>
+                <div class="color-strip">
+                    <div class="note hue-0 neon-0">1</div>
+                    <div class="note hue-30 neon-30">2</div>
+                    <div class="note hue-45 neon-45">3</div>
+                    <div class="note hue-60 neon-60">4</div>
+                    <div class="note hue-90 neon-90">5</div>
+                    <div class="note hue-120 neon-120">6</div>
+                    <div class="note hue-135 neon-135">7</div>
+                    <div class="note hue-150 neon-150">8</div>
+                    <div class="note hue-180 neon-180">9</div>
+                    <div class="note hue-210 neon-210">10</div>
+                    <div class="note hue-225 neon-225">11</div>
+                    <div class="note hue-240 neon-240">12</div>
+                    <div class="note hue-270 neon-270">13</div>
+                    <div class="note hue-285 neon-285">14</div>
+                    <div class="note hue-300 neon-300">15</div>
+                    <div class="note hue-330 neon-330">16</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 20 Colors -->
+        <h2>4. Twenty Colors (18° intervals) <span class="difficulty-indicator hard">HARD</span></h2>
+        <div class="comparison-grid">
+            <div class="background-white">
+                <div class="section-title">20 Colors - Non-Neon</div>
+                <div class="color-strip">
+                    <div class="note hue-0">1</div>
+                    <div class="note hue-15">2</div>
+                    <div class="note hue-30">3</div>
+                    <div class="note hue-45">4</div>
+                    <div class="note hue-60">5</div>
+                    <div class="note hue-75">6</div>
+                    <div class="note hue-90">7</div>
+                    <div class="note hue-120">8</div>
+                    <div class="note hue-135">9</div>
+                    <div class="note hue-150">10</div>
+                    <div class="note hue-180">11</div>
+                    <div class="note hue-195">12</div>
+                    <div class="note hue-210">13</div>
+                    <div class="note hue-240">14</div>
+                    <div class="note hue-255">15</div>
+                    <div class="note hue-270">16</div>
+                    <div class="note hue-285">17</div>
+                    <div class="note hue-300">18</div>
+                    <div class="note hue-315">19</div>
+                    <div class="note hue-330">20</div>
+                </div>
+            </div>
+
+            <div class="background-black">
+                <div class="section-title section-title-white">20 Colors - Neon (Same Hues + Glow)</div>
+                <div class="color-strip">
+                    <div class="note hue-0 neon-0">1</div>
+                    <div class="note hue-15 neon-15">2</div>
+                    <div class="note hue-30 neon-30">3</div>
+                    <div class="note hue-45 neon-45">4</div>
+                    <div class="note hue-60 neon-60">5</div>
+                    <div class="note hue-75 neon-75">6</div>
+                    <div class="note hue-90 neon-90">7</div>
+                    <div class="note hue-120 neon-120">8</div>
+                    <div class="note hue-135 neon-135">9</div>
+                    <div class="note hue-150 neon-150">10</div>
+                    <div class="note hue-180 neon-180">11</div>
+                    <div class="note hue-195 neon-195">12</div>
+                    <div class="note hue-210 neon-210">13</div>
+                    <div class="note hue-240 neon-240">14</div>
+                    <div class="note hue-255 neon-255">15</div>
+                    <div class="note hue-270 neon-270">16</div>
+                    <div class="note hue-285 neon-285">17</div>
+                    <div class="note hue-300 neon-300">18</div>
+                    <div class="note hue-315 neon-315">19</div>
+                    <div class="note hue-330 neon-330">20</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 24 Colors -->
+        <h2>5. All Twenty-Four Colors (15° intervals) <span class="difficulty-indicator hard">EXTREME</span></h2>
+        <div class="comparison-grid">
+            <div class="background-white">
+                <div class="section-title">24 Colors - Non-Neon</div>
+                <div class="color-strip">
+                    <div class="note hue-0">1</div>
+                    <div class="note hue-15">2</div>
+                    <div class="note hue-30">3</div>
+                    <div class="note hue-45">4</div>
+                    <div class="note hue-60">5</div>
+                    <div class="note hue-75">6</div>
+                    <div class="note hue-90">7</div>
+                    <div class="note hue-105">8</div>
+                    <div class="note hue-120">9</div>
+                    <div class="note hue-135">10</div>
+                    <div class="note hue-150">11</div>
+                    <div class="note hue-165">12</div>
+                    <div class="note hue-180">13</div>
+                    <div class="note hue-195">14</div>
+                    <div class="note hue-210">15</div>
+                    <div class="note hue-225">16</div>
+                    <div class="note hue-240">17</div>
+                    <div class="note hue-255">18</div>
+                    <div class="note hue-270">19</div>
+                    <div class="note hue-285">20</div>
+                    <div class="note hue-300">21</div>
+                    <div class="note hue-315">22</div>
+                    <div class="note hue-330">23</div>
+                    <div class="note hue-345">24</div>
+                </div>
+            </div>
+
+            <div class="background-black">
+                <div class="section-title section-title-white">24 Colors - Neon (Same Hues + Glow)</div>
+                <div class="color-strip">
+                    <div class="note hue-0 neon-0">1</div>
+                    <div class="note hue-15 neon-15">2</div>
+                    <div class="note hue-30 neon-30">3</div>
+                    <div class="note hue-45 neon-45">4</div>
+                    <div class="note hue-60 neon-60">5</div>
+                    <div class="note hue-75 neon-75">6</div>
+                    <div class="note hue-90 neon-90">7</div>
+                    <div class="note hue-105 neon-105">8</div>
+                    <div class="note hue-120 neon-120">9</div>
+                    <div class="note hue-135 neon-135">10</div>
+                    <div class="note hue-150 neon-150">11</div>
+                    <div class="note hue-165 neon-165">12</div>
+                    <div class="note hue-180 neon-180">13</div>
+                    <div class="note hue-195 neon-195">14</div>
+                    <div class="note hue-210 neon-210">15</div>
+                    <div class="note hue-225 neon-225">16</div>
+                    <div class="note hue-240 neon-240">17</div>
+                    <div class="note hue-255 neon-255">18</div>
+                    <div class="note hue-270 neon-270">19</div>
+                    <div class="note hue-285 neon-285">20</div>
+                    <div class="note hue-300 neon-300">21</div>
+                    <div class="note hue-315 neon-315">22</div>
+                    <div class="note hue-330 neon-330">23</div>
+                    <div class="note hue-345 neon-345">24</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Insight -->
+        <h2>6. Key Insight: Neon vs Non-Neon</h2>
+        <div class="recommendation-box">
+            <h3>🎯 Perfect Understanding:</h3>
+            <ul style="line-height: 2; margin-top: 10px;">
+                <li><strong>Same exact hues:</strong> Neon and non-neon use identical border colors</li>
+                <li><strong>Only difference:</strong> Neon adds glow effect (box-shadow) on dark background</li>
+                <li><strong>Continuous progression:</strong> Colors follow perfect 15° hue wheel increments</li>
+                <li><strong>No color changes:</strong> Each color keeps its exact hue value</li>
+                <li><strong>Glow enhancement:</strong> Makes similar colors more distinguishable</li>
+                <li><strong>Scalable system:</strong> Works from 12 to 24 colors</li>
+            </ul>
+
+            <h4 style="margin-top: 20px;">Visual Proof:</h4>
+            <p style="margin-top: 10px;">
+                You can see above that each numbered position uses the exact same border color in both non-neon and neon versions.
+                The only difference is the black background and glow effect that makes the neon version more dramatic and distinguishable.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

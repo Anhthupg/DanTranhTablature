@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Test 21 - Adaptive Glow System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+        }
+
+        h1 { text-align: center; color: #000; margin-bottom: 10px; font-size: 32px; }
+        h2 { color: #000; margin-top: 40px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 3px solid #000; }
+
+        /* Base Note */
+        .note {
+            width: 70px;
+            height: 70px;
+            background: #000000;
+            border: 6px solid;
+            margin: 6px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        /* 12 Colors */
+        .c1 { border-color: #FF0000; }  .c2 { border-color: #FF6600; }  .c3 { border-color: #FFAA00; }
+        .c4 { border-color: #FFFF00; }  .c5 { border-color: #AAFF00; }  .c6 { border-color: #00FF00; }
+        .c7 { border-color: #00FFAA; }  .c8 { border-color: #00FFFF; }  .c9 { border-color: #0066FF; }
+        .c10 { border-color: #0000FF; } .c11 { border-color: #6600FF; } .c12 { border-color: #CC00FF; }
+
+        /* 4 Glow Types */
+        .glow-none { }
+
+        .glow-black {
+            box-shadow:
+                0 0 15px #000000,
+                0 0 30px #000000;
+        }
+
+        .glow-white {
+            box-shadow:
+                0 0 15px #FFFFFF,
+                0 0 30px #FFFFFF;
+        }
+
+        .glow-color-1 { box-shadow: 0 0 15px #FF0000, 0 0 30px #FF0000; }
+        .glow-color-2 { box-shadow: 0 0 15px #FF6600, 0 0 30px #FF6600; }
+        .glow-color-3 { box-shadow: 0 0 15px #FFAA00, 0 0 30px #FFAA00; }
+        .glow-color-4 { box-shadow: 0 0 15px #FFFF00, 0 0 30px #FFFF00; }
+        .glow-color-5 { box-shadow: 0 0 15px #AAFF00, 0 0 30px #AAFF00; }
+        .glow-color-6 { box-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00; }
+        .glow-color-7 { box-shadow: 0 0 15px #00FFAA, 0 0 30px #00FFAA; }
+        .glow-color-8 { box-shadow: 0 0 15px #00FFFF, 0 0 30px #00FFFF; }
+        .glow-color-9 { box-shadow: 0 0 15px #0066FF, 0 0 30px #0066FF; }
+        .glow-color-10 { box-shadow: 0 0 15px #0000FF, 0 0 30px #0000FF; }
+        .glow-color-11 { box-shadow: 0 0 15px #6600FF, 0 0 30px #6600FF; }
+        .glow-color-12 { box-shadow: 0 0 15px #CC00FF, 0 0 30px #CC00FF; }
+
+        /* Background Variations */
+        .bg-white { background: #FFFFFF; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-light-grey { background: #E0E0E0; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-medium-grey { background: #B0B0B0; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-grey { background: #808080; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-dark-grey { background: #505050; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-very-dark { background: #303030; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-near-black { background: #151515; padding: 25px; border-radius: 10px; margin: 10px 0; }
+        .bg-black { background: #000000; padding: 25px; border-radius: 10px; margin: 10px 0; }
+
+        .color-row {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .demo-section {
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .section-header-dark {
+            background: #333;
+            color: white;
+        }
+
+        .glow-comparison {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .glow-demo {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .glow-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .glow-label-white {
+            color: #ccc;
+        }
+
+        .explanation {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .usage-table th,
+        .usage-table td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        .usage-table th {
+            background: #000;
+            color: white;
+        }
+
+        .recommended {
+            background: #d4edda !important;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💡 Dan Tranh Test 21 - Adaptive Glow System</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Smart Glow: No Glow → Black Glow (Light BG) → White Glow (Dark BG) → Color Glow
+        </p>
+
+        <!-- Glow Type Explanation -->
+        <h2>1. Four Glow Types</h2>
+        <div class="glow-comparison">
+            <div class="glow-demo">
+                <div class="note c1 glow-none">1</div>
+                <div class="glow-label"><strong>No Glow</strong><br>Clean, minimal</div>
+            </div>
+            <div class="glow-demo">
+                <div class="note c6 glow-black">6</div>
+                <div class="glow-label"><strong>Black Glow</strong><br>For light backgrounds</div>
+            </div>
+            <div class="glow-demo" style="background: #333;">
+                <div class="note c8 glow-white">8</div>
+                <div class="glow-label glow-label-white"><strong>White Glow</strong><br>For dark backgrounds</div>
+            </div>
+            <div class="glow-demo" style="background: #333;">
+                <div class="note c12 glow-color-12">12</div>
+                <div class="glow-label glow-label-white"><strong>Color Glow</strong><br>Maximum impact</div>
+            </div>
+        </div>
+
+        <!-- Background Adaptation Table -->
+        <h2>2. Recommended Glow by Background</h2>
+        <table class="usage-table">
+            <thead>
+                <tr>
+                    <th>Background</th>
+                    <th>Hex Code</th>
+                    <th>Recommended Glow</th>
+                    <th>Why</th>
+                    <th>Alternative</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="recommended">
+                    <td><strong>White</strong></td>
+                    <td>#FFFFFF</td>
+                    <td>No Glow / Black Glow</td>
+                    <td>Clean, minimal contrast</td>
+                    <td>Color glow for emphasis</td>
+                </tr>
+                <tr>
+                    <td>Light Grey</td>
+                    <td>#E0E0E0</td>
+                    <td>Black Glow</td>
+                    <td>Subtle definition</td>
+                    <td>No glow</td>
+                </tr>
+                <tr>
+                    <td>Medium Grey</td>
+                    <td>#B0B0B0</td>
+                    <td>Black Glow</td>
+                    <td>Good contrast</td>
+                    <td>Color glow</td>
+                </tr>
+                <tr>
+                    <td>Grey</td>
+                    <td>#808080</td>
+                    <td>Color Glow</td>
+                    <td>Balanced, visible</td>
+                    <td>White glow</td>
+                </tr>
+                <tr>
+                    <td>Dark Grey</td>
+                    <td>#505050</td>
+                    <td>White Glow</td>
+                    <td>Clear definition</td>
+                    <td>Color glow</td>
+                </tr>
+                <tr>
+                    <td>Very Dark</td>
+                    <td>#303030</td>
+                    <td>White Glow</td>
+                    <td>Strong contrast</td>
+                    <td>Color glow</td>
+                </tr>
+                <tr>
+                    <td>Near Black</td>
+                    <td>#151515</td>
+                    <td>Color Glow</td>
+                    <td>Neon effect</td>
+                    <td>White glow</td>
+                </tr>
+                <tr class="recommended">
+                    <td><strong>Black</strong></td>
+                    <td>#000000</td>
+                    <td>Color Glow</td>
+                    <td>Maximum neon impact</td>
+                    <td>White glow</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Background Tests -->
+        <h2>3. All 12 Colors on Different Backgrounds</h2>
+
+        <!-- White Background - No Glow -->
+        <div class="demo-section">
+            <div class="section-header">White Background - No Glow (Clean)</div>
+            <div class="bg-white">
+                <div class="color-row">
+                    <div class="note c1 glow-none">1</div>
+                    <div class="note c2 glow-none">2</div>
+                    <div class="note c3 glow-none">3</div>
+                    <div class="note c4 glow-none">4</div>
+                    <div class="note c5 glow-none">5</div>
+                    <div class="note c6 glow-none">6</div>
+                    <div class="note c7 glow-none">7</div>
+                    <div class="note c8 glow-none">8</div>
+                    <div class="note c9 glow-none">9</div>
+                    <div class="note c10 glow-none">10</div>
+                    <div class="note c11 glow-none">11</div>
+                    <div class="note c12 glow-none">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Light Grey - Black Glow -->
+        <div class="demo-section">
+            <div class="section-header">Light Grey Background - Black Glow (Subtle Definition)</div>
+            <div class="bg-light-grey">
+                <div class="color-row">
+                    <div class="note c1 glow-black">1</div>
+                    <div class="note c2 glow-black">2</div>
+                    <div class="note c3 glow-black">3</div>
+                    <div class="note c4 glow-black">4</div>
+                    <div class="note c5 glow-black">5</div>
+                    <div class="note c6 glow-black">6</div>
+                    <div class="note c7 glow-black">7</div>
+                    <div class="note c8 glow-black">8</div>
+                    <div class="note c9 glow-black">9</div>
+                    <div class="note c10 glow-black">10</div>
+                    <div class="note c11 glow-black">11</div>
+                    <div class="note c12 glow-black">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Medium Grey - Color Glow -->
+        <div class="demo-section">
+            <div class="section-header">Medium Grey Background - Color Glow (Balanced)</div>
+            <div class="bg-medium-grey">
+                <div class="color-row">
+                    <div class="note c1 glow-color-1">1</div>
+                    <div class="note c2 glow-color-2">2</div>
+                    <div class="note c3 glow-color-3">3</div>
+                    <div class="note c4 glow-color-4">4</div>
+                    <div class="note c5 glow-color-5">5</div>
+                    <div class="note c6 glow-color-6">6</div>
+                    <div class="note c7 glow-color-7">7</div>
+                    <div class="note c8 glow-color-8">8</div>
+                    <div class="note c9 glow-color-9">9</div>
+                    <div class="note c10 glow-color-10">10</div>
+                    <div class="note c11 glow-color-11">11</div>
+                    <div class="note c12 glow-color-12">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grey - Transition Point -->
+        <div class="demo-section">
+            <div class="section-header">Grey Background - Color Glow (Transition Point)</div>
+            <div class="bg-grey">
+                <div class="color-row">
+                    <div class="note c1 glow-color-1">1</div>
+                    <div class="note c2 glow-color-2">2</div>
+                    <div class="note c3 glow-color-3">3</div>
+                    <div class="note c4 glow-color-4">4</div>
+                    <div class="note c5 glow-color-5">5</div>
+                    <div class="note c6 glow-color-6">6</div>
+                    <div class="note c7 glow-color-7">7</div>
+                    <div class="note c8 glow-color-8">8</div>
+                    <div class="note c9 glow-color-9">9</div>
+                    <div class="note c10 glow-color-10">10</div>
+                    <div class="note c11 glow-color-11">11</div>
+                    <div class="note c12 glow-color-12">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dark Grey - White Glow -->
+        <div class="demo-section">
+            <div class="section-header section-header-dark">Dark Grey Background - White Glow (Clear Definition)</div>
+            <div class="bg-dark-grey">
+                <div class="color-row">
+                    <div class="note c1 glow-white">1</div>
+                    <div class="note c2 glow-white">2</div>
+                    <div class="note c3 glow-white">3</div>
+                    <div class="note c4 glow-white">4</div>
+                    <div class="note c5 glow-white">5</div>
+                    <div class="note c6 glow-white">6</div>
+                    <div class="note c7 glow-white">7</div>
+                    <div class="note c8 glow-white">8</div>
+                    <div class="note c9 glow-white">9</div>
+                    <div class="note c10 glow-white">10</div>
+                    <div class="note c11 glow-white">11</div>
+                    <div class="note c12 glow-white">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Very Dark - Color Glow -->
+        <div class="demo-section">
+            <div class="section-header section-header-dark">Very Dark Background - Color Glow (Neon Start)</div>
+            <div class="bg-very-dark">
+                <div class="color-row">
+                    <div class="note c1 glow-color-1">1</div>
+                    <div class="note c2 glow-color-2">2</div>
+                    <div class="note c3 glow-color-3">3</div>
+                    <div class="note c4 glow-color-4">4</div>
+                    <div class="note c5 glow-color-5">5</div>
+                    <div class="note c6 glow-color-6">6</div>
+                    <div class="note c7 glow-color-7">7</div>
+                    <div class="note c8 glow-color-8">8</div>
+                    <div class="note c9 glow-color-9">9</div>
+                    <div class="note c10 glow-color-10">10</div>
+                    <div class="note c11 glow-color-11">11</div>
+                    <div class="note c12 glow-color-12">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Near Black - Color Glow -->
+        <div class="demo-section">
+            <div class="section-header section-header-dark">Near Black Background - Color Glow (Strong Neon)</div>
+            <div class="bg-near-black">
+                <div class="color-row">
+                    <div class="note c1 glow-color-1">1</div>
+                    <div class="note c2 glow-color-2">2</div>
+                    <div class="note c3 glow-color-3">3</div>
+                    <div class="note c4 glow-color-4">4</div>
+                    <div class="note c5 glow-color-5">5</div>
+                    <div class="note c6 glow-color-6">6</div>
+                    <div class="note c7 glow-color-7">7</div>
+                    <div class="note c8 glow-color-8">8</div>
+                    <div class="note c9 glow-color-9">9</div>
+                    <div class="note c10 glow-color-10">10</div>
+                    <div class="note c11 glow-color-11">11</div>
+                    <div class="note c12 glow-color-12">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pure Black - Maximum Color Glow -->
+        <div class="demo-section">
+            <div class="section-header section-header-dark">Pure Black Background - Color Glow (Maximum Neon)</div>
+            <div class="bg-black">
+                <div class="color-row">
+                    <div class="note c1 glow-color-1">1</div>
+                    <div class="note c2 glow-color-2">2</div>
+                    <div class="note c3 glow-color-3">3</div>
+                    <div class="note c4 glow-color-4">4</div>
+                    <div class="note c5 glow-color-5">5</div>
+                    <div class="note c6 glow-color-6">6</div>
+                    <div class="note c7 glow-color-7">7</div>
+                    <div class="note c8 glow-color-8">8</div>
+                    <div class="note c9 glow-color-9">9</div>
+                    <div class="note c10 glow-color-10">10</div>
+                    <div class="note c11 glow-color-11">11</div>
+                    <div class="note c12 glow-color-12">12</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Implementation Logic -->
+        <h2>4. Smart Glow Implementation Logic</h2>
+        <div class="explanation">
+            <h3>🧠 Adaptive Glow Algorithm:</h3>
+            <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; margin-top: 10px;">
+function getOptimalGlow(backgroundColor, noteColor, emphasis) {
+    const bgBrightness = getBrightness(backgroundColor);
+
+    if (emphasis === 'none') return 'glow-none';
+
+    if (bgBrightness > 200) {        // Light backgrounds
+        return emphasis === 'high' ? 'glow-color' : 'glow-black';
+    }
+    else if (bgBrightness > 100) {   // Medium backgrounds
+        return 'glow-color';
+    }
+    else {                           // Dark backgrounds
+        return emphasis === 'subtle' ? 'glow-white' : 'glow-color';
+    }
+}
+            </pre>
+
+            <h4 style="margin-top: 20px;">💡 Usage Scenarios:</h4>
+            <ul style="line-height: 2; margin-top: 10px;">
+                <li><strong>No Glow:</strong> Normal unselected notes on clean backgrounds</li>
+                <li><strong>Black Glow:</strong> Selection on light backgrounds (subtle emphasis)</li>
+                <li><strong>White Glow:</strong> Selection on dark backgrounds (clean contrast)</li>
+                <li><strong>Color Glow:</strong> Special emphasis, pattern highlights, audio playback</li>
+            </ul>
+
+            <h4 style="margin-top: 20px;">🎯 Recommended Implementation:</h4>
+            <ul style="line-height: 1.8; margin-top: 10px;">
+                <li>📋 <strong>Default State:</strong> No glow (clean appearance)</li>
+                <li>🎯 <strong>Selection:</strong> Black glow (light BG) / White glow (dark BG)</li>
+                <li>🎵 <strong>Audio Playing:</strong> Color glow (any background)</li>
+                <li>🔍 <strong>Pattern Highlight:</strong> Color glow (maximum visibility)</li>
+                <li>🖱️ <strong>Hover:</strong> Subtle black/white glow</li>
+                <li>⭐ <strong>Special States:</strong> Color glow for emphasis</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

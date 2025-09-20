@@ -897,6 +897,49 @@
         .string-number { font-family: Arial; font-size: 16px; fill: white; font-weight: 1200; stroke: #000; stroke-width: 0.3; }
         .note-circle { cursor: pointer; }
         .note-circle:hover { stroke-width: 4; }
+
+        /* Sankey band tooltip styles */
+        .sankey-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.4;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid #333;
+            max-width: 300px;
+        }
+
+        .sankey-tooltip .tooltip-title {
+            font-weight: bold;
+            color: #FFD700;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 4px;
+        }
+
+        .sankey-tooltip .tooltip-section {
+            margin-bottom: 6px;
+        }
+
+        .sankey-tooltip .tooltip-label {
+            color: #AAA;
+            font-size: 11px;
+        }
+
+        .sankey-tooltip .tooltip-value {
+            color: #FFF;
+            font-weight: bold;
+        }
+
+        .sankey-tooltip .tooltip-rhythm {
+            color: #87CEEB;
+        }
         
         /* Analysis highlighting classes */
         .kpic-highlight {
@@ -6363,10 +6406,23 @@
                 rhythmTransitions[key]++;
             }
 
-            // Calculate totals for verification
+            // Calculate totals for verification and ranking
             const kpicTotal = Object.values(pitchTransitions).reduce((sum, count) => sum + count, 0);
             const kricTotal = Object.values(rhythmTransitions).reduce((sum, count) => sum + count, 0);
             const totalNoteTransitions = noteData.length - 1;
+
+            // Create transition rankings for tooltips
+            const pitchTransitionRankings = Object.entries(pitchTransitions)
+                .sort(([,a], [,b]) => b - a)
+                .map(([key, count], index) => ({ key, count, rank: index + 1, percentage: (count / kpicTotal * 100).toFixed(1) }));
+
+            const rhythmTransitionRankings = Object.entries(rhythmTransitions)
+                .sort(([,a], [,b]) => b - a)
+                .map(([key, count], index) => ({ key, count, rank: index + 1, percentage: (count / kricTotal * 100).toFixed(1) }));
+
+            // Create lookup maps for quick access
+            const pitchRankingMap = new Map(pitchTransitionRankings.map(r => [r.key, r]));
+            const rhythmRankingMap = new Map(rhythmTransitionRankings.map(r => [r.key, r]));
 
             // Create HTML structure
             console.log('Generating Sankey HTML...');
@@ -6378,8 +6434,8 @@
             console.log(`KPIC-2 = KRIC-2? ${kpicTotal === kricTotal ? '✅ YES' : '❌ NO'}`);
             console.log('Rhythm transitions found:', Object.keys(rhythmTransitions).length);
             console.log('Rhythm transition details:', rhythmTransitions);
-            const pitchSankeyHTML = generateSankeyHTML('pitch', pitchTransitions, noteData, null, graceTransitions, kpicMode);
-            const rhythmSankeyHTML = generateSankeyHTML('rhythm', rhythmTransitions, noteData, durationRanks);
+            const pitchSankeyHTML = generateSankeyHTML('pitch', pitchTransitions, noteData, null, graceTransitions, kpicMode, pitchRankingMap, rhythmTransitions, rhythmRankingMap, kpicTotal);
+            const rhythmSankeyHTML = generateSankeyHTML('rhythm', rhythmTransitions, noteData, durationRanks, null, 'all', rhythmRankingMap);
 
             contentArea.innerHTML = `
                 <div style="padding: 20px;">
@@ -6457,7 +6513,7 @@
         }
 
         // Generate Sankey HTML
-        function generateSankeyHTML(type, transitions, noteData, durationRanks, graceTransitions = {}, kpicMode = 'all') {
+        function generateSankeyHTML(type, transitions, noteData, durationRanks, graceTransitions = {}, kpicMode = 'all', pitchRankingMap = null, rhythmTransitions = {}, rhythmRankingMap = null, totalTransitions = null) {
             console.log('generateSankeyHTML called for type:', type, 'mode:', kpicMode);
             const links = [];
             const nodeWidth = type === 'pitch' ? 60 : 80;
@@ -6579,6 +6635,14 @@
                     linkGroups[baseKey].push(link);
                 });
 
+                // Debug: Log groups with multiple transition types
+                Object.entries(linkGroups).forEach(([key, group]) => {
+                    if (group.length > 1) {
+                        const types = group.map(l => l.transitionType || 'main-main').join(', ');
+                        console.log(`Pitch pair ${key.replace('|||', ' → ')} has ${group.length} transition types: ${types}`);
+                    }
+                });
+
                 // Draw grouped links with click handling
                 let globalLinkIndex = 0;
                 Object.values(linkGroups).forEach(group => {
@@ -6588,10 +6652,20 @@
                         const targetY = stringPositions[link.target] || stringPositions[link.target.replace(' (grace)', '')];
 
                         if (sourceY && targetY) {
+                            // Extract note names first for debug logging
+                            const fromNote = link.source.split(': ')[1].replace(' (grace)', '');
+                            const toNote = link.target.split(': ')[1].replace(' (grace)', '');
+                            const pattern = `["${fromNote}", "${toNote}"]`;
+
                             // Calculate offset for side-by-side bands
                             const groupSize = group.length;
-                            const offsetAmount = groupSize > 1 ? 10 : 0; // Offset by 10px for multiple bands
+                            const offsetAmount = groupSize > 1 ? 12 : 0; // Increased offset for better visibility
                             const yOffset = groupSize > 1 ? (groupIndex - (groupSize - 1) / 2) * offsetAmount : 0;
+
+                            // Debug log for multi-type groups
+                            if (groupSize > 1 && groupIndex === 0) {
+                                console.log(`Drawing ${groupSize} bands for ${fromNote} → ${toNote} with types:`, group.map(l => l.transitionType || 'main-main'));
+                            }
 
                             // Use actual Y positions from tablature with offset
                             const scaledSourceY = sourceY + yOffset;
@@ -6603,10 +6677,36 @@
                             const targetX = svgWidth - nodeWidth - 20;
                             const midX = (sourceX + targetX) / 2;
 
-                            // Extract just the note names for the pattern
-                            const fromNote = link.source.split(': ')[1].replace(' (grace)', '');
-                            const toNote = link.target.split(': ')[1].replace(' (grace)', '');
-                            const pattern = `["${fromNote}", "${toNote}"]`;
+                            // Get transition ranking info
+                            const transitionKey = link.fullKey || `${link.source}|||${link.target}`;
+                            const pitchRanking = pitchRankingMap?.get(transitionKey);
+                            const rhythmInfo = getRhythmInfoForTransition(fromNote, toNote, noteData, rhythmTransitions, rhythmRankingMap);
+
+                            // Create unique ID for this transition for tooltip data
+                            const transitionId = `transition_${linkIndex}`;
+
+                            // Store transition info in a global map for tooltip access
+                            if (!window.sankeyTransitionData) {
+                                window.sankeyTransitionData = new Map();
+                            }
+
+                            // Add group information for context
+                            const groupInfo = {
+                                totalTypes: group.length,
+                                allTypes: group.map(l => l.transitionType || 'main-main'),
+                                allCounts: group.map(l => l.value)
+                            };
+
+                            window.sankeyTransitionData.set(transitionId, {
+                                fromNote,
+                                toNote,
+                                count: link.value,
+                                totalTransitions: totalTransitions || Object.values(transitions).reduce((sum, count) => sum + count, 0),
+                                transitionType: link.transitionType,
+                                pitchRanking,
+                                rhythmInfo,
+                                groupInfo
+                            });
 
                             // Determine style based on transition type
                             if (kpicMode === 'all') {
@@ -6638,9 +6738,9 @@
                                             data-band-id="kpic-${linkIndex}"
                                             data-transition-type="main-grace"
                                             style="cursor: pointer;"
-                                            onmouseover="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(20, thickness + 3)}'; p.style.opacity = '0.8'; } });"
-                                            onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } });"
-                                            title="${fromNote} → ${toNote}: ${link.value} occurrence${link.value > 1 ? 's' : ''} (main to grace)"/>
+                                            onmouseover="event.stopPropagation(); this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(20, thickness + 3)}'; p.style.opacity = '0.8'; } }); showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } }); hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));">
                                     </g>`;
                                 } else if (link.transitionType === 'grace-main') {
                                     // Grace to main - dashed orange transitioning to solid blue
@@ -6670,9 +6770,9 @@
                                             data-band-id="kpic-${linkIndex}"
                                             data-transition-type="grace-main"
                                             style="cursor: pointer;"
-                                            onmouseover="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(20, thickness + 3)}'; p.style.opacity = '0.8'; } });"
-                                            onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } });"
-                                            title="${fromNote} → ${toNote}: ${link.value} occurrence${link.value > 1 ? 's' : ''} (grace to main)"/>
+                                            onmouseover="event.stopPropagation(); this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(20, thickness + 3)}'; p.style.opacity = '0.8'; } }); showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } }); hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));">
                                     </g>`;
                                 } else if (link.transitionType === 'grace-grace') {
                                     // Grace to grace - fully dashed gold
@@ -6689,9 +6789,9 @@
                                             data-band-id="kpic-${linkIndex}"
                                             data-transition-type="grace-grace"
                                             style="cursor: pointer;"
-                                            onmouseover="this.style.stroke='rgba(255, 215, 0, 0.9)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}';"
-                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(255, 215, 0, 0.6)'; this.style.strokeWidth='${thickness}'; }"
-                                            title="${fromNote} → ${toNote}: ${link.value} occurrence${link.value > 1 ? 's' : ''} (grace to grace)"/>`;
+                                            onmouseover="event.stopPropagation(); this.style.stroke='rgba(255, 215, 0, 0.9)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(255, 215, 0, 0.6)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
                                 } else {
                                     // Main to main - fully solid blue
                                     svg += `<path d="M ${sourceX} ${scaledSourceY} C ${midX} ${scaledSourceY}, ${midX} ${scaledTargetY}, ${targetX} ${scaledTargetY}"
@@ -6705,9 +6805,9 @@
                                             data-value="${link.value}"
                                             data-band-id="kpic-${linkIndex}"
                                             style="cursor: pointer;"
-                                            onmouseover="this.style.stroke='rgba(52, 152, 219, 0.7)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}';"
-                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(52, 152, 219, 0.4)'; this.style.strokeWidth='${thickness}'; }"
-                                            title="${fromNote} → ${toNote}: ${link.value} occurrence${link.value > 1 ? 's' : ''}"/>`;
+                                            onmouseover="event.stopPropagation(); this.style.stroke='rgba(52, 152, 219, 0.7)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                            onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(52, 152, 219, 0.4)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                            onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
                                 }
                             } else {
                                 // For other modes, use solid bands
@@ -6723,9 +6823,9 @@
                                         data-value="${link.value}"
                                         data-band-id="kpic-${linkIndex}"
                                         style="cursor: pointer;"
-                                        onmouseover="this.style.stroke='${strokeStyle.replace('0.4', '0.7')}'; this.style.strokeWidth='${Math.min(20, thickness + 3)}';"
-                                        onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='${strokeStyle}'; this.style.strokeWidth='${thickness}'; }"
-                                        title="${fromNote} → ${toNote}: ${link.value} occurrence${link.value > 1 ? 's' : ''}"/>`;
+                                        onmouseover="event.stopPropagation(); this.style.stroke='rgba(52, 152, 219, 0.7)'; this.style.strokeWidth='${Math.min(20, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
+                                        onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(52, 152, 219, 0.4)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
+                                        onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
                             }
 
                             // Add center label
@@ -7470,6 +7570,123 @@
                 console.log('Pattern not found in KPIC-2 or index out of range:', pattern);
                 console.log('Pattern was:', pattern);
             }
+        }
+
+        // Function to create and show Sankey tooltip
+        function showSankeyTooltip(event, transitionInfo) {
+            // Remove existing tooltip
+            const existingTooltip = document.querySelector('.sankey-tooltip');
+            if (existingTooltip) {
+                existingTooltip.remove();
+            }
+
+            // Create new tooltip
+            const tooltip = document.createElement('div');
+            tooltip.className = 'sankey-tooltip';
+
+            const { fromNote, toNote, count, transitionType, pitchRanking, rhythmInfo, groupInfo } = transitionInfo;
+
+            let typeLabel = '';
+            if (transitionType === 'main-grace') typeLabel = ' (Main → Grace)';
+            else if (transitionType === 'grace-main') typeLabel = ' (Grace → Main)';
+            else if (transitionType === 'grace-grace') typeLabel = ' (Grace → Grace)';
+            else typeLabel = ' (Main → Main)';
+
+            // Add group information if multiple types exist
+            let groupSection = '';
+            if (groupInfo && groupInfo.totalTypes > 1) {
+                const typeBreakdown = groupInfo.allTypes.map((type, i) => {
+                    const typeName = type === 'main-grace' ? 'Main→Grace' :
+                                    type === 'grace-main' ? 'Grace→Main' :
+                                    type === 'grace-grace' ? 'Grace→Grace' : 'Main→Main';
+
+                    // Fix the comparison logic for main-main transitions
+                    const currentTransitionNormalized = transitionType || 'main-main';
+                    const typeNormalized = type || 'main-main';
+                    const isCurrentType = currentTransitionNormalized === typeNormalized;
+
+                    const style = isCurrentType ? 'font-weight: bold; color: #FFD700;' : 'color: #CCC;';
+                    return `<span style="${style}">${typeName}: ${groupInfo.allCounts[i]}</span>`;
+                }).join('<br>');
+
+                groupSection = `
+                    <div class="tooltip-section">
+                        <span class="tooltip-label">All Types for this Pitch Pair:</span><br>
+                        ${typeBreakdown}
+                    </div>`;
+            }
+
+            let rhythmSection = '';
+            if (rhythmInfo && rhythmInfo.length > 0) {
+                const rhythmList = rhythmInfo.map(r => `<span class="tooltip-rhythm">${r.from}→${r.to} (×${r.count})</span>`).join('<br>');
+                rhythmSection = `
+                    <div class="tooltip-section">
+                        <span class="tooltip-label">KRIC Rhythms:</span><br>
+                        ${rhythmList}
+                    </div>`;
+            }
+
+            tooltip.innerHTML = `
+                <div class="tooltip-title">${fromNote} → ${toNote}${typeLabel}</div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Occurrences:</span> <span class="tooltip-value">${count}</span>
+                </div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Percentage:</span> <span class="tooltip-value">${pitchRanking?.percentage || '0.0'}%</span>
+                </div>
+                <div class="tooltip-section">
+                    <span class="tooltip-label">Rank:</span> <span class="tooltip-value">#${pitchRanking?.rank || 'N/A'}</span>
+                </div>
+                ${groupSection}
+                ${rhythmSection}
+            `;
+
+            // Position tooltip to the right of mouse (avoiding cursor coverage)
+            tooltip.style.left = (event.pageX + 45) + 'px';
+            tooltip.style.top = (event.pageY - 10) + 'px';
+
+            document.body.appendChild(tooltip);
+        }
+
+        // Function to hide Sankey tooltip
+        function hideSankeyTooltip() {
+            const tooltip = document.querySelector('.sankey-tooltip');
+            if (tooltip) {
+                tooltip.remove();
+            }
+        }
+
+        // Function to get rhythm transitions for a pitch transition
+        function getRhythmInfoForTransition(fromNote, toNote, noteData, rhythmTransitions, rhythmRankingMap) {
+            const rhythmInfo = [];
+
+            // Find all rhythm patterns that occur between these pitch notes
+            for (let i = 0; i < noteData.length - 1; i++) {
+                const currentPitch = noteData[i].pitch;
+                const nextPitch = noteData[i + 1].pitch;
+
+                if ((currentPitch === fromNote && nextPitch === toNote) ||
+                    (currentPitch.replace(' (grace)', '') === fromNote && nextPitch.replace(' (grace)', '') === toNote)) {
+                    const currentDuration = noteData[i].duration;
+                    const nextDuration = noteData[i + 1].duration;
+                    const rhythmKey = `${currentDuration}|||${nextDuration}`;
+                    const ranking = rhythmRankingMap?.get(rhythmKey);
+
+                    const existing = rhythmInfo.find(r => r.from === currentDuration && r.to === nextDuration);
+                    if (existing) {
+                        existing.count++;
+                    } else {
+                        rhythmInfo.push({
+                            from: currentDuration,
+                            to: nextDuration,
+                            count: 1,
+                            ranking: ranking
+                        });
+                    }
+                }
+            }
+
+            return rhythmInfo.sort((a, b) => b.count - a.count);
         }
 
         // Function to restore normal note visibility

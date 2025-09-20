@@ -410,6 +410,21 @@
             0%, 100% { opacity: 0; }
             50% { opacity: 1; }
         }
+
+        @keyframes sankeyPulse {
+            0% {
+                filter: drop-shadow(0 0 15px #ff0000) drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 45px #ff0000);
+                opacity: 1.0;
+            }
+            50% {
+                filter: drop-shadow(0 0 25px #ff0000) drop-shadow(0 0 50px #ff0000) drop-shadow(0 0 75px #ff0000);
+                opacity: 0.8;
+            }
+            100% {
+                filter: drop-shadow(0 0 15px #ff0000) drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 45px #ff0000);
+                opacity: 1.0;
+            }
+        }
         
         .line-break {
             color: #bdc3c7;
@@ -1946,6 +1961,13 @@
                 updateKpicPatternOptions();
                 updateKricPatternOptions();
             });
+
+            // Initialize synchronization system
+            setTimeout(() => {
+                addSankeyClickHandlers();
+                addTablaturePatternSync();
+                console.log('✅ Synchronization system initialized');
+            }, 1000); // Wait for Sankey generation
         });
         
         function populateSyllableDropdown() {
@@ -2797,9 +2819,32 @@
                 patterns.forEach((pattern, index) => {
                     const option = document.createElement('option');
                     option.value = index;
+
+                    // Add grace prefixes to pitch names where applicable
+                    const graceNoteIndices = [3, 10, 19, 21, 49, 51, 60, 92, 94, 107, 109];
+
+                    // Create a summary showing the most common grace/main form of this pattern
+                    const displayPattern = pattern.pattern.map((pitch, noteIndex) => {
+                        // Check if this note position tends to be grace across all occurrences
+                        let graceCount = 0;
+                        let totalCount = 0;
+
+                        pattern.positions.forEach(startPos => {
+                            const absoluteNoteIndex = startPos + noteIndex;
+                            if (graceNoteIndices.includes(absoluteNoteIndex)) {
+                                graceCount++;
+                            }
+                            totalCount++;
+                        });
+
+                        // If majority of occurrences are grace notes, show grace prefix
+                        const isMainlyGrace = graceCount > totalCount / 2;
+                        return isMainlyGrace ? 'g' + pitch : pitch;
+                    });
+
                     const label = pattern.count === 1 ?
-                        `${pattern.pattern.join(' → ')} (1×) [single]` :
-                        `${pattern.pattern.join(' → ')} (${pattern.count}×)`;
+                        `${displayPattern.join(' → ')} (1×) [single]` :
+                        `${displayPattern.join(' → ')} (${pattern.count}×)`;
                     option.textContent = label;
                     patternSelect.appendChild(option);
                 });
@@ -3222,6 +3267,11 @@
             // Store the threshold value for pattern detection
             window.kpicThreshold = value === 0 ? 'none' : (value === 136 ? 'kpic-max' : `kpic-${value}`);
 
+            // Show Transition Analysis window when KPIC-2 or higher is selected
+            if (value >= 2 && value <= 16) {
+                showTransitionAnalysisWindow();
+            }
+
             updateKpicPatternOptions();
             // Refresh pattern options for the new mode
             if (window.kpicThreshold && window.kpicThreshold !== "none") {
@@ -3246,6 +3296,11 @@
 
             // Store the threshold value for pattern detection
             window.kricThreshold = value === 0 ? 'none' : (value === 136 ? 'kric-max' : `kric-${value}`);
+
+            // Show Transition Analysis window when KRIC-2 or higher is selected
+            if (value >= 2 && value <= 16) {
+                showTransitionAnalysisWindow();
+            }
 
             updateKricPatternOptions();
             // Refresh pattern options for the new mode
@@ -3414,14 +3469,12 @@
                 const modePatterns = analysisData.kpic_patterns[analysisMode] || analysisData.kpic_patterns.full;
                 const patterns = modePatterns[kpicFilter] || [];
                 const patternSelect = document.getElementById('specificKpicPattern');
+                const selectedOptions = Array.from(patternSelect.selectedOptions);
+                console.log('🎯 KPIC Selected options:', selectedOptions.length);
+
                 const selectedIndices = Array.from(patternSelect.selectedOptions).map(opt => parseInt(opt.value));
-                console.log('🎯 KPIC Selected indices:', selectedIndices);
-                console.log('🎯 KPIC Patterns available:', patterns.length);
-
-                // Only highlight specifically selected patterns from dropdown
-                // Don't auto-select all patterns when none are selected
-
                 const selectedPatterns = selectedIndices.map(i => patterns[i]).filter(Boolean);
+
                 console.log('🎯 KPIC Selected patterns:', selectedPatterns.length);
 
                 selectedPatterns.forEach((pattern, patternIndex) => {
@@ -3475,7 +3528,17 @@
                         highlightCorrespondingLyrics(patternPositions, patternColors[colorIndex], `KPIC-${kpicFilter}`, patternIndex);
                     });
                 });
-                
+
+                // Sync Sankey highlighting for all selected patterns
+                selectedPatterns.forEach(pattern => {
+                    syncSankeySelectionForPattern(pattern.pattern);
+                });
+
+                // Show and scroll to Sankey when patterns are selected
+                if (selectedPatterns.length > 0) {
+                    showAndScrollToSankey();
+                }
+
                 patternDetails += `<h4>${kpicFilter.toUpperCase()} Selected Patterns</h4>`;
                 patternDetails += '<ul>';
                 selectedPatterns.forEach(p => {
@@ -4111,6 +4174,241 @@
             }
 
             console.log(`✅ drawSimpleConnections completed for pattern ${patternId}: ${sortedPositions.length - 1} lines drawn`);
+        }
+
+        // ===== SYNCHRONIZATION SYSTEM =====
+
+        function syncPatternSelection(pattern, source = 'unknown') {
+            console.log(`🔄 Syncing pattern selection: ${pattern.join(' → ')} from ${source}`);
+
+            // 1. Update dropdown selection
+            syncDropdownSelection(pattern);
+
+            // 2. Update Sankey band highlighting
+            syncSankeySelection(pattern);
+
+            // 3. Update tablature highlighting
+            syncTablatureHighlighting(pattern);
+        }
+
+        function syncDropdownSelection(pattern) {
+            const patternSelect = document.getElementById('specificKpicPattern');
+            if (!patternSelect) return;
+
+            // Find matching pattern in dropdown
+            const patternStr = pattern.join(' → ');
+            for (let i = 0; i < patternSelect.options.length; i++) {
+                const optionText = patternSelect.options[i].textContent;
+                if (optionText.startsWith(patternStr + ' (')) {
+                    patternSelect.options[i].selected = true;
+                    console.log(`✅ Selected dropdown pattern: ${optionText}`);
+                    break;
+                }
+            }
+
+            // Trigger highlighting update
+            updateHighlighting();
+        }
+
+        function syncSankeySelection(pattern) {
+            // Clear previous Sankey selections
+            document.querySelectorAll('.sankey-link').forEach(link => {
+                link.classList.remove('selected-band');
+                link.style.stroke = link.getAttribute('data-original-stroke') || link.style.stroke;
+                link.style.strokeWidth = link.getAttribute('data-original-width') || link.style.strokeWidth;
+            });
+
+            // Find and highlight matching Sankey band
+            const patternStr = pattern.join('-');
+            document.querySelectorAll('.sankey-link').forEach(link => {
+                const bandPattern = link.getAttribute('data-pattern-raw');
+                if (bandPattern === patternStr) {
+                    link.classList.add('selected-band');
+                    const currentStroke = link.style.stroke;
+                    const currentWidth = link.style.strokeWidth;
+                    link.setAttribute('data-original-stroke', currentStroke);
+                    link.setAttribute('data-original-width', currentWidth);
+                    link.style.stroke = currentStroke.replace('0.5', '0.9');
+                    link.style.strokeWidth = Math.min(16, parseInt(currentWidth) + 4);
+                    console.log(`✅ Highlighted Sankey band: ${bandPattern}`);
+                }
+            });
+        }
+
+        function syncSankeySelectionForPattern(pattern) {
+            console.log(`🔄 syncSankeySelectionForPattern called with pattern:`, pattern);
+
+            // Clear previous Sankey selections first
+            document.querySelectorAll('.sankey-link').forEach(link => {
+                link.classList.remove('selected-band');
+                const originalStroke = link.getAttribute('data-original-stroke');
+                const originalWidth = link.getAttribute('data-original-width');
+                if (originalStroke) link.style.stroke = originalStroke;
+                if (originalWidth) link.style.strokeWidth = originalWidth;
+            });
+
+            // Remove grace prefixes for Sankey matching
+            const cleanPattern = pattern.map(note => note.startsWith('g') ? note.substring(1) : note);
+            const patternStr = cleanPattern.join('-');
+            console.log(`🔍 Looking for Sankey band with pattern: ${patternStr}`);
+
+            let foundBands = 0;
+            document.querySelectorAll('.sankey-link').forEach(link => {
+                const bandPattern = link.getAttribute('data-pattern-raw');
+                console.log(`   Checking band: ${bandPattern} vs ${patternStr}`);
+
+                if (bandPattern === patternStr) {
+                    link.classList.add('selected-band');
+                    const currentStroke = link.style.stroke || link.getAttribute('stroke');
+                    const currentWidth = link.style.strokeWidth || link.getAttribute('stroke-width');
+
+                    // Store original values
+                    link.setAttribute('data-original-stroke', currentStroke);
+                    link.setAttribute('data-original-width', currentWidth);
+
+                    // Apply DRAMATIC highlighting to match tablature intensity
+                    link.style.stroke = '#ff0000'; // Bright red like tablature
+                    link.style.strokeWidth = Math.max(12, parseInt(currentWidth) * 3); // Much thicker
+                    link.style.opacity = '1.0'; // Full opacity
+
+                    // Triple glow effect to match tablature
+                    link.style.filter = 'drop-shadow(0 0 15px #ff0000) drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 45px #ff0000)';
+
+                    // Add pulsing animation for extra drama
+                    link.style.animation = 'sankeyPulse 2s ease-in-out infinite';
+
+                    foundBands++;
+                    console.log(`✅ DRAMATICALLY highlighted Sankey band: ${bandPattern} (stroke: ${link.style.stroke}, width: ${link.style.strokeWidth})`);
+                }
+            });
+
+            console.log(`🎯 Total bands highlighted: ${foundBands}`);
+        }
+
+        function syncTablatureHighlighting(pattern) {
+            // This is handled by updateHighlighting() which is called from syncDropdownSelection
+            console.log(`✅ Tablature highlighting synced via updateHighlighting()`);
+        }
+
+        function showAndScrollToSankey() {
+            // Make sure KPIC Sankey is visible and scroll to it
+            const sankeyContainer = document.getElementById('kpic-sankey');
+            if (sankeyContainer) {
+                // Make sure the parent containers are expanded
+                const analysisContainer = sankeyContainer.closest('.analysis-container');
+                if (analysisContainer && analysisContainer.style.display === 'none') {
+                    analysisContainer.style.display = 'block';
+                }
+
+                // Scroll the Sankey into view
+                sankeyContainer.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                // Add a subtle highlight effect to draw attention
+                sankeyContainer.style.transition = 'box-shadow 0.3s ease';
+                sankeyContainer.style.boxShadow = '0 0 20px rgba(255, 152, 0, 0.5)';
+                setTimeout(() => {
+                    sankeyContainer.style.boxShadow = '';
+                }, 2000);
+
+                console.log('✅ Sankey diagram shown and scrolled into view');
+            }
+        }
+
+        function showTransitionAnalysisWindow() {
+            // Show the KPIC-2 & KRIC-2 Transition Analysis window
+            const kpicActive = window.kpicThreshold === 'kpic-2';
+            const kricActive = window.kricThreshold === 'kric-2';
+
+            if (kpicActive || kricActive) {
+                console.log('🎯 Showing Transition Analysis window for KPIC-2/KRIC-2');
+
+                // Use the existing showContent function which properly generates Sankey diagrams
+                showContent('kpic-kric-sankey');
+
+                // Add extra highlight effect after a short delay
+                setTimeout(() => {
+                    const contentArea = document.getElementById('content-area');
+                    if (contentArea && contentArea.style.display === 'block') {
+                        // Add highlight effect
+                        contentArea.style.transition = 'box-shadow 0.3s ease';
+                        contentArea.style.boxShadow = '0 0 30px rgba(155, 89, 182, 0.4)';
+                        setTimeout(() => {
+                            contentArea.style.boxShadow = '';
+                        }, 3000);
+
+                        console.log('✅ Transition Analysis window highlighted');
+                    }
+                }, 800);
+            }
+        }
+
+        // Add click handler to Sankey bands
+        function addSankeyClickHandlers() {
+            document.querySelectorAll('.sankey-link.clickable-band').forEach(band => {
+                band.addEventListener('click', function(e) {
+                    e.stopPropagation();
+
+                    const patternRaw = this.getAttribute('data-pattern-raw');
+                    if (patternRaw) {
+                        const pattern = patternRaw.split('-');
+                        console.log(`🖱️ Sankey band clicked: ${pattern.join(' → ')}`);
+                        syncPatternSelection(pattern, 'sankey');
+                    }
+                });
+            });
+            console.log(`✅ Added click handlers to ${document.querySelectorAll('.sankey-link.clickable-band').length} Sankey bands`);
+        }
+
+        // Add click handler for tablature notes to find their patterns
+        function addTablaturePatternSync() {
+            document.querySelectorAll('.note-circle').forEach(circle => {
+                const originalHandler = circle.onclick;
+
+                circle.addEventListener('contextmenu', function(e) {
+                    e.preventDefault(); // Prevent context menu
+
+                    const noteIndex = parseInt(this.getAttribute('data-note-index'));
+                    const pitch = getPitchFromAnalysisData(noteIndex);
+
+                    // Find patterns that include this note
+                    findPatternsContainingNote(noteIndex, pitch);
+                });
+            });
+        }
+
+        function findPatternsContainingNote(noteIndex, pitch) {
+            console.log(`🔍 Finding patterns containing note ${noteIndex} (${pitch})`);
+
+            // Look for KPIC-2 patterns containing this note
+            const kpicFilter = window.kpicThreshold || 'kpic-2';
+            if (kpicFilter.startsWith('kpic-')) {
+                const analysisMode = document.querySelector('input[name="analysisMode"]:checked')?.value || 'full';
+                const modePatterns = analysisData.kpic_patterns[analysisMode] || analysisData.kpic_patterns.full;
+                const patterns = modePatterns[kpicFilter] || [];
+
+                patterns.forEach(pattern => {
+                    pattern.positions.forEach(startPos => {
+                        for (let i = 0; i < pattern.pattern.length; i++) {
+                            if (startPos + i === noteIndex) {
+                                console.log(`📍 Found pattern: ${pattern.pattern.join(' → ')} starting at ${startPos}`);
+                                syncPatternSelection(pattern.pattern, 'tablature');
+                                return;
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+        // Handle Sankey band clicks
+        function handleSankeyBandClick(bandElement, patternRaw) {
+            console.log(`🖱️ Sankey band clicked: ${patternRaw}`);
+
+            const pattern = patternRaw.split('-');
+            syncPatternSelection(pattern, 'sankey');
         }
 
         function drawGraceAwareConnections(positions, color, strokeWidth = 2, patternId = '') {
@@ -6330,9 +6628,6 @@
             });
 
             console.log(`Total notes: ${noteData.length}, Grace notes: ${graceCount}, Mode: ${kpicMode}`);
-            if (kpicMode === 'grace') {
-                console.log('Grace notes found:', noteData.filter(n => n.isGrace).map((n, i) => `${i}: ${n.pitch} (${n.isGrace})`));
-            }
 
             // Calculate KPIC-2 transitions (pitch to pitch) based on mode
             if (kpicMode === 'all') {
@@ -6570,10 +6865,6 @@
                                     <input type="radio" name="sankeyMode" value="main" onchange="regenerateSankeyWithMode()" ${kpicMode === 'main' ? 'checked' : ''} style="margin-right: 4px;">
                                     Main Only
                                 </label>
-                                <label style="display: flex; align-items: center; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" name="sankeyMode" value="grace" onchange="regenerateSankeyWithMode()" ${kpicMode === 'grace' ? 'checked' : ''} style="margin-right: 4px;">
-                                    Grace Units
-                                </label>
                             </div>
                         </div>
                     </div>
@@ -6665,7 +6956,7 @@
                 // Match the tablature's actual scale
                 // The tablature uses these string positions directly, so we should too
                 const svgHeight = maxY + 100; // Add padding
-                const svgWidth = kpicMode === 'grace' ? 800 : 600; // Wider for 3-column grace mode
+                const svgWidth = 600; // Standard 2-column layout
 
                 // Process transitions
                 Object.entries(transitions).forEach(([key, count]) => {
@@ -6853,6 +7144,7 @@
                                     data-band-id="kpic-${linkIndex}"
                                     data-transition-type="${link.transitionType}"
                                     style="cursor: pointer;"
+                                    onclick="handleSankeyBandClick(this, '${fromNote}-${toNote}');"
                                     onmouseover="event.stopPropagation(); this.style.stroke='${strokeColor.replace('0.5', '0.8')}'; this.style.strokeWidth='${Math.min(16, thickness + 3)}'; showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));"
                                     onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='${strokeColor}'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
                                     onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
@@ -8017,8 +8309,7 @@
             // Sync with analysis mode radio buttons (without triggering change event)
             const analysisModeMap = {
                 'all': 'full',
-                'main': 'main_melody',
-                'grace': 'grace_units'
+                'main': 'main_melody'
             };
             const correspondingAnalysisMode = analysisModeMap[selectedMode];
             const analysisRadio = document.querySelector(`input[name="analysisMode"][value="${correspondingAnalysisMode}"]`);

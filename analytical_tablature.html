@@ -4315,9 +4315,10 @@
                 link.style.animation = '';
             });
 
-            // Find and highlight matching KRIC Sankey band
-            const patternStr = pattern.join('-');
-            console.log(`🔍 Looking for KRIC Sankey band with pattern: ${patternStr}`);
+            // Remove grace prefixes for Sankey matching (just like KPIC does)
+            const cleanPattern = pattern.map(rhythm => rhythm.startsWith('g') ? rhythm.substring(1) : rhythm);
+            const patternStr = cleanPattern.join('-');
+            console.log(`🔍 Looking for KRIC Sankey band with pattern: ${patternStr} (cleaned from ${pattern.join('-')})`);
 
             let foundBands = 0;
             document.querySelectorAll('#rhythm-sankey-svg .sankey-link').forEach(link => {
@@ -6865,9 +6866,14 @@
             };
 
             for (let i = 0; i < noteData.length - 1; i++) {
-                const from = noteData[i].duration;
-                const to = noteData[i + 1].duration;
-                const key = `${from}|||${to}`;
+                const fromNote = noteData[i];
+                const toNote = noteData[i + 1];
+
+                // Add grace prefix to rhythm if note is grace
+                const fromRhythm = fromNote.isGrace ? 'g' + fromNote.duration : fromNote.duration;
+                const toRhythm = toNote.isGrace ? 'g' + toNote.duration : toNote.duration;
+
+                const key = `${fromRhythm}|||${toRhythm}`;
                 if (!rhythmTransitions[key]) {
                     rhythmTransitions[key] = 0;
                 }
@@ -8052,9 +8058,12 @@
             const noteCircles = document.querySelectorAll('.note-circle');
             const rhythmData = [];
 
-            // Extract rhythm data from notes
+            // Extract rhythm data from notes with grace note detection
+            const graceNoteIndices = [3, 10, 19, 21, 49, 51, 60, 92, 94, 107, 109];
+
             noteCircles.forEach((circle, index) => {
                 const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
+                const isGrace = graceNoteIndices.includes(index);
 
                 // Determine duration based on spacing to next note
                 let duration = 'quarter';
@@ -8069,9 +8078,14 @@
                     else duration = 'sixteenth';
                 }
 
+                // Add grace prefix to duration if this is a grace note
+                const rhythmLabel = isGrace ? 'g' + duration : duration;
+
                 rhythmData.push({
                     index: index,
-                    duration: duration,
+                    duration: rhythmLabel, // Now includes grace prefix
+                    originalDuration: duration, // Keep original for Sankey matching
+                    isGrace: isGrace,
                     cx: cx
                 });
             });

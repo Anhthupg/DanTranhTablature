@@ -425,15 +425,7 @@
                 opacity: 1.0;
             }
         }
-
-        .dramatic-kpic-glow {
-            filter: drop-shadow(0 0 12px #ff0000) drop-shadow(0 0 24px #ff0000) drop-shadow(0 0 36px #ff0000) !important;
-        }
-
-        .dramatic-kric-glow {
-            filter: drop-shadow(0 0 12px #2196f3) drop-shadow(0 0 24px #2196f3) drop-shadow(0 0 36px #2196f3) !important;
-        }
-
+        
         .line-break {
             color: #bdc3c7;
             cursor: pointer;
@@ -1811,7 +1803,6 @@
             <button onclick="showContent('lyrics')" style="padding: 8px 15px; margin: 0 5px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📝 Lyrics</button>
             <button onclick="showContent('strings-vs-notes')" style="padding: 8px 15px; margin: 0 5px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 Strings vs Notes</button>
             <button onclick="showContent('kpic-kric-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #9b59b6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-2 & KRIC-2</button>
-            <button onclick="showContent('kpic3-kric3-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #8e44ad; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-3 & KRIC-3</button>
             <button onclick="showLegend()" style="padding: 8px 15px; margin: 0 5px; background: #34495e; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🏷️ Legend</button>
         </div>
 
@@ -2910,9 +2901,7 @@
                 patterns.forEach((pattern, index) => {
                     const option = document.createElement('option');
                     option.value = index;
-                    // Convert duration values to readable note names
-                    const readablePattern = pattern.pattern.map(duration => durationToNoteName(duration));
-                    option.textContent = `${readablePattern.join(' → ')} (${pattern.count}×)`;
+                    option.textContent = `${pattern.pattern.join(' → ')} (${pattern.count}×)`;
                     patternSelect.appendChild(option);
                 });
 
@@ -2970,19 +2959,11 @@
             // if (kpicGroup) kpicGroup.style.display = 'none'; // Keep pattern group visible when switching modes
             // if (kricGroup) kricGroup.style.display = 'none'; // Keep pattern group visible when switching modes
 
-            // Clear KRIC pattern cache to force regeneration with new mode
-            console.log('🔄 Clearing KRIC pattern cache for mode:', analysisMode);
-            window.kricPatterns = null;
-
             // Update highlighting with new mode
             // Refresh pattern options for the new mode
             if (window.kpicThreshold && window.kpicThreshold !== "none") {
                 updateKpicPatternOptions();
-            }
-            if (window.kricThreshold && window.kricThreshold !== "none") {
-                updateKricPatternOptions();
-            }
-            updateHighlighting();
+            }            updateHighlighting();
 
             console.log('✅ Patterns reset and highlighting updated');
         }
@@ -3613,12 +3594,7 @@
                         highlightCorrespondingLyrics(patternPositions, patternColors[colorIndex], `KRIC-${kricFilter}`, patternIndex);
                     });
                 });
-
-                // Sync KRIC Sankey highlighting for all selected patterns
-                selectedPatterns.forEach(pattern => {
-                    syncKricSankeySelectionForPattern(pattern.pattern);
-                });
-
+                
                 patternDetails += `<h4>${kricFilter.toUpperCase()} Selected Patterns</h4>`;
                 patternDetails += '<ul>';
                 selectedPatterns.forEach(p => {
@@ -4264,13 +4240,11 @@
 
             // Clear previous Sankey selections first
             document.querySelectorAll('.sankey-link').forEach(link => {
-                link.classList.remove('selected-band', 'dramatic-kpic-glow');
+                link.classList.remove('selected-band');
                 const originalStroke = link.getAttribute('data-original-stroke');
                 const originalWidth = link.getAttribute('data-original-width');
                 if (originalStroke) link.style.stroke = originalStroke;
                 if (originalWidth) link.style.strokeWidth = originalWidth;
-                link.style.filter = '';
-                link.style.animation = '';
             });
 
             // Remove grace prefixes for Sankey matching
@@ -4292,17 +4266,16 @@
                     link.setAttribute('data-original-stroke', currentStroke);
                     link.setAttribute('data-original-width', currentWidth);
 
-                    // Apply DRAMATIC 2-layer highlighting: glow behind + original on top
-                    link.style.stroke = '#ff0000'; // Bright red
-                    link.style.strokeWidth = Math.max(8, parseInt(currentWidth) * 1.5);
-                    link.style.opacity = '1.0';
+                    // Apply DRAMATIC highlighting to match tablature intensity
+                    link.style.stroke = '#ff0000'; // Bright red like tablature
+                    link.style.strokeWidth = Math.max(12, parseInt(currentWidth) * 3); // Much thicker
+                    link.style.opacity = '1.0'; // Full opacity
 
-                    // Add dramatic glow effect directly to the original band
-                    link.style.filter = 'drop-shadow(0 0 8px #ff0000) drop-shadow(0 0 16px #ff0000) drop-shadow(0 0 24px #ff0000)';
+                    // Triple glow effect to match tablature
+                    link.style.filter = 'drop-shadow(0 0 15px #ff0000) drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 45px #ff0000)';
+
+                    // Add pulsing animation for extra drama
                     link.style.animation = 'sankeyPulse 2s ease-in-out infinite';
-
-                    // Add CSS class for additional glow via stylesheet
-                    link.classList.add('dramatic-kpic-glow');
 
                     foundBands++;
                     console.log(`✅ DRAMATICALLY highlighted Sankey band: ${bandPattern} (stroke: ${link.style.stroke}, width: ${link.style.strokeWidth})`);
@@ -4310,56 +4283,6 @@
             });
 
             console.log(`🎯 Total bands highlighted: ${foundBands}`);
-        }
-
-        function syncKricSankeySelectionForPattern(pattern) {
-            console.log(`🔄 syncKricSankeySelectionForPattern called with pattern:`, pattern);
-
-            // Clear previous KRIC Sankey selections first
-            document.querySelectorAll('#rhythm-sankey-svg .sankey-link').forEach(link => {
-                link.classList.remove('selected-band', 'dramatic-kric-glow');
-                const originalStroke = link.getAttribute('data-original-stroke');
-                const originalWidth = link.getAttribute('data-original-width');
-                if (originalStroke) link.style.stroke = originalStroke;
-                if (originalWidth) link.style.strokeWidth = originalWidth;
-                link.style.filter = '';
-                link.style.animation = '';
-            });
-
-            // Find and highlight matching KRIC Sankey band
-            const patternStr = pattern.join('-');
-            console.log(`🔍 Looking for KRIC Sankey band with pattern: ${patternStr}`);
-
-            let foundBands = 0;
-            document.querySelectorAll('#rhythm-sankey-svg .sankey-link').forEach(link => {
-                const bandPattern = link.getAttribute('data-pattern-raw');
-                if (bandPattern === patternStr) {
-                    link.classList.add('selected-band');
-                    const currentStroke = link.style.stroke || link.getAttribute('stroke');
-                    const currentWidth = link.style.strokeWidth || link.getAttribute('stroke-width');
-
-                    // Store original values
-                    link.setAttribute('data-original-stroke', currentStroke);
-                    link.setAttribute('data-original-width', currentWidth);
-
-                    // Apply DRAMATIC 2-layer highlighting: blue glow for KRIC
-                    link.style.stroke = '#2196f3'; // Bright blue
-                    link.style.strokeWidth = Math.max(8, parseInt(currentWidth) * 1.5);
-                    link.style.opacity = '1.0';
-
-                    // Add dramatic blue glow effect
-                    link.style.filter = 'drop-shadow(0 0 8px #2196f3) drop-shadow(0 0 16px #2196f3) drop-shadow(0 0 24px #2196f3)';
-                    link.style.animation = 'kricPulse 2s ease-in-out infinite';
-
-                    // Add CSS class for additional glow via stylesheet
-                    link.classList.add('dramatic-kric-glow');
-
-                    foundBands++;
-                    console.log(`✅ Created 2-layer blue glow for KRIC Sankey band: ${bandPattern}`);
-                }
-            });
-
-            console.log(`🎯 Total KRIC bands highlighted: ${foundBands}`);
         }
 
         function syncTablatureHighlighting(pattern) {
@@ -5230,7 +5153,7 @@
                 return;
             }
             const note = notes[currentNoteIndex];
-            const quarterNoteMs = 60000 / tempo; // 4th note duration in ms
+            const quarterNoteMs = 60000 / tempo; // Quarter note duration in ms
 
             // Get actual duration from the duration text in the tablature
             let noteDurationBeats = 0.5; // Default eighth note
@@ -5259,12 +5182,12 @@
             // Convert duration value to beats (quarter note = 1.0)
             // In tablature: 0.5 = grace note, 1 = sixteenth, 2 = eighth, 4 = quarter, 8 = half, 16 = whole
             if (durationValue === 0.5) noteDurationBeats = 0.125;      // Grace note (very short)
-            else if (durationValue === 1) noteDurationBeats = 0.25;    // 16th note
-            else if (durationValue === 2) noteDurationBeats = 0.5;     // 8th note
-            else if (durationValue === 3) noteDurationBeats = 0.75;    // Dotted 8th
-            else if (durationValue === 4) noteDurationBeats = 1.0;     // 4th note
-            else if (durationValue === 8) noteDurationBeats = 2.0;     // 2nd note
-            else if (durationValue === 16) noteDurationBeats = 4.0;    // 1st note
+            else if (durationValue === 1) noteDurationBeats = 0.25;    // Sixteenth note
+            else if (durationValue === 2) noteDurationBeats = 0.5;     // Eighth note
+            else if (durationValue === 3) noteDurationBeats = 0.75;    // Dotted eighth
+            else if (durationValue === 4) noteDurationBeats = 1.0;     // Quarter note
+            else if (durationValue === 8) noteDurationBeats = 2.0;     // Half note
+            else if (durationValue === 16) noteDurationBeats = 4.0;    // Whole note
             else noteDurationBeats = durationValue / 4;                // General formula
 
             console.log(`Note ${currentNoteIndex}: duration value=${durationValue} → ${noteDurationBeats} beats`);
@@ -5914,13 +5837,8 @@
                 // Generate and display KPIC-2 & KRIC-2 Sankey diagrams
                 lyricsSection.style.display = 'none';
                 try {
-                    // Get the current mode from either Sankey mode or analysis mode
-                    let currentMode = document.querySelector('input[name="sankeyMode"]:checked')?.value;
-                    if (!currentMode) {
-                        // If no Sankey mode is set, derive from analysis mode
-                        const analysisMode = document.querySelector('input[name="analysisMode"]:checked')?.value || 'full';
-                        currentMode = analysisMode === 'main_melody' ? 'main' : 'all';
-                    }
+                    // Get the current selected mode or default to 'all'
+                    const currentMode = document.querySelector('input[name="sankeyMode"]:checked')?.value || 'all';
                     console.log('Opening Sankey view with mode:', currentMode);
 
                     // First reset all notes to visible
@@ -5941,34 +5859,6 @@
                 } catch (error) {
                     console.error('Error generating Sankey diagrams:', error);
                     contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating Sankey diagrams. Check console for details.</div>';
-                    contentArea.style.display = 'block';
-                }
-            } else if (contentType === 'kpic3-kric3-sankey') {
-                // Generate and display KPIC-3 & KRIC-3 Sankey diagrams
-                lyricsSection.style.display = 'none';
-                try {
-                    // Get the current mode from either Sankey mode or analysis mode
-                    let currentMode = document.querySelector('input[name="sankeyMode"]:checked')?.value;
-                    if (!currentMode) {
-                        // If no Sankey mode is set, derive from analysis mode
-                        const analysisMode = document.querySelector('input[name="analysisMode"]:checked')?.value || 'full';
-                        currentMode = analysisMode === 'main_melody' ? 'main' : 'all';
-                    }
-                    console.log('Opening KPIC-3 & KRIC-3 Sankey view with mode:', currentMode);
-
-                    // First reset all notes to visible
-                    document.querySelectorAll('.note-circle').forEach(circle => {
-                        circle.style.display = 'block';
-                        circle.style.opacity = '1';
-                    });
-
-                    // Generate KPIC-3 & KRIC-3 diagrams
-                    generateKpic3Kric3SankeyDiagrams(currentMode);
-
-                    contentArea.style.display = 'block';
-                } catch (error) {
-                    console.error('Error generating KPIC-3 & KRIC-3 Sankey diagrams:', error);
-                    contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating KPIC-3 & KRIC-3 Sankey diagrams. Check console for details.</div>';
                     contentArea.style.display = 'block';
                 }
             }
@@ -6035,15 +5925,15 @@
 
                     // Classify based on spacing (same logic for main and grace notes)
                     if (spacing > 400) {
-                        durationType = isGrace ? 'g1st' : '1st';
+                        durationType = isGrace ? 'grace-whole' : 'whole';
                     } else if (spacing > 200) {
-                        durationType = isGrace ? 'g2nd' : '2nd';
+                        durationType = isGrace ? 'grace-half' : 'half';
                     } else if (spacing > 100) {
-                        durationType = isGrace ? 'g4th' : '4th';
+                        durationType = isGrace ? 'grace-quarter' : 'quarter';
                     } else if (spacing > 50) {
-                        durationType = isGrace ? 'g8th' : '8th';
+                        durationType = isGrace ? 'grace-eighth' : 'eighth';
                     } else {
-                        durationType = isGrace ? 'g16th' : '16th';
+                        durationType = isGrace ? 'grace-sixteenth' : 'sixteenth';
                     }
                 } else {
                     // Last note, check previous spacing
@@ -6053,18 +5943,18 @@
                         const spacing = cx - prevCx;
 
                         if (spacing > 400) {
-                            durationType = isGrace ? 'g1st' : '1st';
+                            durationType = isGrace ? 'grace-whole' : 'whole';
                         } else if (spacing > 200) {
-                            durationType = isGrace ? 'g2nd' : '2nd';
+                            durationType = isGrace ? 'grace-half' : 'half';
                         } else if (spacing > 100) {
-                            durationType = isGrace ? 'g4th' : '4th';
+                            durationType = isGrace ? 'grace-quarter' : 'quarter';
                         } else if (spacing > 50) {
-                            durationType = isGrace ? 'g8th' : '8th';
+                            durationType = isGrace ? 'grace-eighth' : 'eighth';
                         } else {
-                            durationType = isGrace ? 'g16th' : '16th';
+                            durationType = isGrace ? 'grace-sixteenth' : 'sixteenth';
                         }
                     } else {
-                        durationType = isGrace ? 'g4th' : '4th'; // Default
+                        durationType = isGrace ? 'grace-quarter' : 'quarter'; // Default
                     }
                 }
 
@@ -6243,8 +6133,8 @@
                         { type: 'grace-quarter', thickness: 24, color: '#FFD700', label: 'Grace Quarter' },
                         { type: 'eighth', thickness: 14, color: '#008080', label: 'Eighth' },
                         { type: 'grace-eighth', thickness: 14, color: '#FFD700', label: 'Grace Eighth' },
-                        { type: '16th', thickness: 8, color: '#008080', label: '16th' },
-                        { type: 'g16th', thickness: 8, color: '#FFD700', label: 'g16th' }
+                        { type: 'sixteenth', thickness: 8, color: '#008080', label: 'Sixteenth' },
+                        { type: 'grace-sixteenth', thickness: 8, color: '#FFD700', label: 'Grace Sixteenth' }
                     ];
 
                     // Render bars for each duration type that exists
@@ -6703,11 +6593,6 @@
                 const isGrace = circle.getAttribute('data-is-grace') === 'true';
                 if (isGrace) graceCount++;
 
-                // Skip grace notes in main mode (same as KRIC pattern generation)
-                if (kpicMode === 'main' && isGrace) {
-                    return;
-                }
-
                 // Find string/pitch
                 let closestString = null;
                 let minDistance = Infinity;
@@ -6719,39 +6604,30 @@
                     }
                 }
 
-                // Get actual duration from tablature text (same as KRIC dropdown)
-                let durationValue = 2; // Default
-                const durationTexts = document.querySelectorAll('text[style*="font-size: 10px"]');
-
-                durationTexts.forEach(text => {
-                    const textX = parseFloat(text.getAttribute('data-base-x') || text.getAttribute('x'));
-                    const textY = parseFloat(text.getAttribute('data-base-y') || text.getAttribute('y'));
-
-                    // Duration text is typically at the same X and about 20px above the note
-                    if (Math.abs(textX - cx) < 5 && Math.abs(textY - (cy - 20)) < 30) {
-                        const value = parseFloat(text.textContent);
-                        if (!isNaN(value)) {
-                            durationValue = value;
-                        }
-                    }
-                });
-
-                // Use the actual duration values from the tablature
-                let duration = durationValue.toString();
-
-                // Add grace prefix if this is a grace note (same as KRIC pattern generation)
-                const rhythmDuration = isGrace ? 'g' + duration : duration;
+                // Determine duration based on spacing
+                let duration = 'quarter';
+                const nextNote = noteCircles[index + 1];
+                if (nextNote) {
+                    const nextCx = parseFloat(nextNote.getAttribute('data-base-x') || nextNote.getAttribute('cx'));
+                    const spacing = nextCx - cx;
+                    if (spacing > 400) duration = 'whole';
+                    else if (spacing > 200) duration = 'half';
+                    else if (spacing > 100) duration = 'quarter';
+                    else if (spacing > 50) duration = 'eighth';
+                    else duration = 'sixteenth';
+                }
 
                 noteData.push({
                     index: index,
                     pitch: closestString && stringInfo[closestString] ? stringInfo[closestString].note : 'Unknown',
                     stringNum: closestString || '0',
-                    duration: rhythmDuration,
+                    duration: duration,
                     cx: cx,
                     isGrace: isGrace
                 });
             });
 
+            console.log(`Total notes: ${noteData.length}, Grace notes: ${graceCount}, Mode: ${kpicMode}`);
 
             // Calculate KPIC-2 transitions (pitch to pitch) based on mode
             if (kpicMode === 'all') {
@@ -6913,65 +6789,27 @@
             }
 
             // Calculate KRIC-2 transitions (rhythm to rhythm)
-            // Use actual duration values from tablature
             const durationRanks = {
-                '0.5': 0.5,
-                '1': 1,
-                '2': 2,
-                '3': 3,
-                '4': 4,
-                '5': 5,
-                '6': 6,
-                '7': 7,
-                '8': 8
+                'whole': 4,
+                'half': 2,
+                'quarter': 1,
+                'eighth': 0.5,
+                'sixteenth': 0.25
             };
 
-            // Apply mode-based filtering for KRIC (same as KPIC)
-            if (kpicMode === 'main') {
-                // Main notes mode - exclude grace notes for KRIC
-                for (let i = 0; i < noteData.length - 1; i++) {
-                    if (!noteData[i].isGrace && !noteData[i + 1].isGrace) {
-                        const from = noteData[i].duration;
-                        const to = noteData[i + 1].duration;
-                        const key = `${from}|||${to}|||main-main`;
-                        if (!rhythmTransitions[key]) {
-                            rhythmTransitions[key] = 0;
-                        }
-                        rhythmTransitions[key]++;
-                    }
+            for (let i = 0; i < noteData.length - 1; i++) {
+                const from = noteData[i].duration;
+                const to = noteData[i + 1].duration;
+                const key = `${from}|||${to}`;
+                if (!rhythmTransitions[key]) {
+                    rhythmTransitions[key] = 0;
                 }
-            } else {
-                // All notes mode - include all transitions with proper types
-                for (let i = 0; i < noteData.length - 1; i++) {
-                    const from = noteData[i].duration;
-                    const to = noteData[i + 1].duration;
-                    const fromIsGrace = from.startsWith('g');
-                    const toIsGrace = to.startsWith('g');
-
-                    // Determine transition type
-                    let transitionType;
-                    if (fromIsGrace && toIsGrace) {
-                        transitionType = 'grace-grace';
-                    } else if (fromIsGrace && !toIsGrace) {
-                        transitionType = 'grace-main';
-                    } else if (!fromIsGrace && toIsGrace) {
-                        transitionType = 'main-grace';
-                    } else {
-                        transitionType = 'main-main';
-                    }
-
-                    const key = `${from}|||${to}|||${transitionType}`;
-                    if (!rhythmTransitions[key]) {
-                        rhythmTransitions[key] = 0;
-                    }
-                    rhythmTransitions[key]++;
-                }
+                rhythmTransitions[key]++;
             }
 
             // Calculate totals for verification and ranking
             const kpicTotal = Object.values(pitchTransitions).reduce((sum, count) => sum + count, 0);
             const kricTotal = Object.values(rhythmTransitions).reduce((sum, count) => sum + count, 0);
-
             const totalNoteTransitions = noteData.length - 1;
 
             // Create transition rankings for tooltips
@@ -6998,7 +6836,7 @@
             console.log('Rhythm transitions found:', Object.keys(rhythmTransitions).length);
             console.log('Rhythm transition details:', rhythmTransitions);
             const pitchSankeyHTML = generateSankeyHTML('pitch', pitchTransitions, noteData, null, graceTransitions, kpicMode, pitchRankingMap, rhythmTransitions, rhythmRankingMap, kpicTotal);
-            const rhythmSankeyHTML = generateSankeyHTML('rhythm', rhythmTransitions, noteData, durationRanks, null, kpicMode, null, rhythmTransitions, rhythmRankingMap, kricTotal);
+            const rhythmSankeyHTML = generateSankeyHTML('rhythm', rhythmTransitions, noteData, durationRanks, null, 'all', rhythmRankingMap);
 
             contentArea.innerHTML = `
                 <div style="padding: 20px;">
@@ -7069,590 +6907,6 @@
             setTimeout(() => {
                 updateSankeyZoom();
             }, 50);
-        }
-
-        // Generate KPIC-3 and KRIC-3 Sankey diagrams
-        function generateKpic3Kric3SankeyDiagrams(kpicMode = 'all') {
-            console.log('generateKpic3Kric3SankeyDiagrams called with mode:', kpicMode);
-            const contentArea = document.getElementById('content-area');
-            if (!contentArea) {
-                console.error('Content area not found');
-                return;
-            }
-
-            // Get KPIC-3 patterns from existing data
-            const analysisMode = kpicMode === 'main' ? 'main' : 'full';
-            let kpic3Patterns = analysisData.kpic_patterns[analysisMode]['kpic-3'] || [];
-            const kric3Patterns = [];  // Empty for now since kric_patterns doesn't exist
-
-            // Extract ALL KPIC-3 patterns to match the dropdown (including single occurrences)
-            const noteCircles = document.querySelectorAll('.note-circle');
-            const allKpic3Patterns = {};
-
-            // Build string mapping
-            const stringLabels = document.querySelectorAll('.string-label');
-            const stringLines = document.querySelectorAll('.string-line');
-            const stringInfo = {};
-
-            stringLines.forEach(line => {
-                const yPos = parseFloat(line.getAttribute('data-base-y1') || line.getAttribute('y1'));
-                let closestLabel = null;
-                let minDistance = Infinity;
-                stringLabels.forEach(label => {
-                    const labelY = parseFloat(label.getAttribute('data-base-y') || label.getAttribute('y'));
-                    const distance = Math.abs(yPos - labelY);
-                    if (distance < minDistance && distance < 20) {
-                        minDistance = distance;
-                        closestLabel = label;
-                    }
-                });
-
-                if (closestLabel) {
-                    const text = closestLabel.textContent;
-                    const match = text.match(/String (\d+): ([A-G]#?\d)/);
-                    if (match) {
-                        const stringNum = match[1];
-                        const note = match[2];
-                        stringInfo[stringNum] = { yPos: yPos, note: note };
-                    }
-                }
-            });
-
-            // Extract all 3-note patterns
-            for (let i = 0; i <= noteCircles.length - 3; i++) {
-                const pattern = [];
-                let allPitchesFound = true;
-
-                // Build the 3-note pattern
-                for (let j = 0; j < 3; j++) {
-                    const note = noteCircles[i + j];
-                    const cy = parseFloat(note.getAttribute('data-base-y') || note.getAttribute('cy'));
-
-                    // Find closest string
-                    let pitch = null;
-                    let minDist = Infinity;
-
-                    for (const [stringNum, info] of Object.entries(stringInfo)) {
-                        const dist = Math.abs(cy - info.yPos);
-                        if (dist < minDist && dist < 30) {
-                            minDist = dist;
-                            pitch = info.note;
-                        }
-                    }
-
-                    if (pitch) {
-                        pattern.push(pitch);
-                    } else {
-                        allPitchesFound = false;
-                        break;
-                    }
-                }
-
-                if (allPitchesFound && pattern.length === 3) {
-                    const key = pattern.join(',');
-                    if (!allKpic3Patterns[key]) {
-                        allKpic3Patterns[key] = {
-                            pattern: pattern,
-                            positions: [],
-                            count: 0
-                        };
-                    }
-                    allKpic3Patterns[key].positions.push(i);
-                    allKpic3Patterns[key].count++;
-                }
-            }
-
-            // Convert to array and combine with existing patterns
-            const dynamicPatterns = Object.values(allKpic3Patterns);
-
-            // Merge with existing patterns, avoiding duplicates
-            dynamicPatterns.forEach(dynPattern => {
-                const exists = kpic3Patterns.some(p =>
-                    JSON.stringify(p.pattern) === JSON.stringify(dynPattern.pattern)
-                );
-                if (!exists) {
-                    kpic3Patterns.push(dynPattern);
-                }
-            });
-
-            // Sort patterns by count (descending) then by pattern string
-            kpic3Patterns.sort((a, b) => {
-                if (b.count !== a.count) return b.count - a.count;
-                return JSON.stringify(a.pattern).localeCompare(JSON.stringify(b.pattern));
-            });
-
-            console.log('KPIC-3 patterns found:', kpic3Patterns.length, '(including all occurrences to match dropdown)');
-            console.log('KRIC-3 patterns found:', kric3Patterns.length);
-
-            // Generate KPIC-3 Sankey HTML
-            const kpic3SankeyHTML = generateKpic3SankeyHTML(kpic3Patterns);
-            const kric3SankeyHTML = generateKric3SankeyHTML(kric3Patterns);
-
-            contentArea.innerHTML = `
-                <div style="padding: 20px;">
-                    <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">📈 KPIC-3 & KRIC-3 Pattern Analysis</h3>
-
-                    <!-- Controls -->
-                    <div style="display: flex; gap: 20px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; color: #495057;">X-Zoom:</label>
-                            <input type="range" id="kpic3-x-zoom" min="0.5" max="3" step="0.1" value="1" style="width: 100%;">
-                            <span id="kpic3-x-zoom-value">1.0x</span>
-                        </div>
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; color: #495057;">Y-Zoom:</label>
-                            <input type="range" id="kpic3-y-zoom" min="0.05" max="3" step="0.01" value="0.67" style="width: 100%;">
-                            <span id="kpic3-y-zoom-value">67%</span>
-                        </div>
-                        <div style="flex: 1;">
-                            <label style="font-weight: bold; color: #495057;">KPIC-3 Mode:</label>
-                            <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
-                                <label style="display: flex; align-items: center; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" name="kpic3Mode" value="all" onchange="regenerateKpic3WithMode()" ${kpicMode === 'all' ? 'checked' : ''} style="margin-right: 4px;">
-                                    All Notes
-                                </label>
-                                <label style="display: flex; align-items: center; font-size: 13px; cursor: pointer;">
-                                    <input type="radio" name="kpic3Mode" value="main" onchange="regenerateKpic3WithMode()" ${kpicMode === 'main' ? 'checked' : ''} style="margin-right: 4px;">
-                                    Main Only
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display: flex; gap: 20px;">
-                        <!-- KPIC-3 Patterns -->
-                        <div style="flex: 1; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <h4 style="text-align: center; color: #3498db;">KPIC-3: Three-Note Pitch Patterns</h4>
-                            <div id="kpic3-patterns" style="overflow: auto; max-height: 600px;">
-                                ` + kpic3SankeyHTML + `
-                            </div>
-                        </div>
-
-                        <!-- KRIC-3 Patterns -->
-                        <div style="flex: 1; background: white; padding: 15px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <h4 style="text-align: center; color: #e74c3c;">KRIC-3: Three-Note Rhythm Patterns</h4>
-                            <div id="kric3-patterns" style="overflow: auto; max-height: 600px;">
-                                ` + kric3SankeyHTML + `
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Add zoom event listeners
-            document.getElementById('kpic3-x-zoom').addEventListener('input', function() {
-                const zoomValue = this.value;
-                document.getElementById('kpic3-x-zoom-value').textContent = zoomValue + 'x';
-                updateKpic3Zoom();
-            });
-
-            document.getElementById('kpic3-y-zoom').addEventListener('input', function() {
-                const zoomValue = this.value;
-                const percentage = Math.round(zoomValue * 100);
-                document.getElementById('kpic3-y-zoom-value').textContent = percentage + '%';
-                updateKpic3Zoom();
-            });
-
-            // Apply initial zoom to match tablature after a delay to ensure elements are rendered
-            setTimeout(() => {
-                updateKpic3Zoom();
-                // Add click handlers to the new Sankey bands
-                addSankeyClickHandlers();
-            }, 50);
-        }
-
-        // Generate KPIC-3 Sankey diagram HTML with 3 columns
-        function generateKpic3SankeyHTML(patterns) {
-            if (!patterns || patterns.length === 0) {
-                return '<div style="text-align: center; padding: 40px; color: #999;">No KPIC-3 patterns found</div>';
-            }
-
-            return generateThreeColumnSankey(patterns, 'pitch');
-        }
-
-        // Generate KRIC-3 Sankey diagram HTML with 3 columns
-        function generateKric3SankeyHTML(patterns) {
-            if (!patterns || patterns.length === 0) {
-                return '<div style="text-align: center; padding: 40px; color: #999;">No KRIC-3 patterns found</div>';
-            }
-
-            return generateThreeColumnSankey(patterns, 'rhythm');
-        }
-
-        // Generate a proper 3-note Sankey diagram with 3 columns
-        function generateThreeColumnSankey(patterns, type) {
-            if (!patterns || patterns.length === 0) {
-                return '<div style="text-align: center; padding: 40px; color: #999;">No patterns found</div>';
-            }
-
-            // Process 3-note patterns to create proper 3-column structure
-            const transitions = {};
-            const nodeSet = new Set();
-
-            patterns.forEach(pattern => {
-                if (pattern.pattern.length === 3) {
-                    const [from, middle, to] = pattern.pattern;
-
-                    // Create transitions for 3-column layout
-                    const key1 = `${from}|||${middle}|||1-2`; // From column 1 to column 2
-                    const key2 = `${middle}|||${to}|||2-3`; // From column 2 to column 3
-
-                    if (!transitions[key1]) transitions[key1] = 0;
-                    if (!transitions[key2]) transitions[key2] = 0;
-
-                    transitions[key1] += pattern.count;
-                    transitions[key2] += pattern.count;
-
-                    nodeSet.add(from);
-                    nodeSet.add(middle);
-                    nodeSet.add(to);
-                }
-            });
-
-            // Generate the 3-column Sankey diagram
-            const svgWidth = 800;
-            const svgHeight = type === 'pitch' ? 700 : 400;
-            const columnWidth = 80;
-            const columnSpacing = 250;
-
-            // Column positions
-            const col1X = 50;
-            const col2X = col1X + columnSpacing;
-            const col3X = col2X + columnSpacing;
-
-            let svg = `<svg width="${svgWidth}" height="${svgHeight}" id="${type}-3col-sankey">`;
-
-            if (type === 'pitch') {
-                // Get all note circles to find which notes are grace notes
-                const noteCircles = document.querySelectorAll('.note-circle');
-                const graceNoteIndices = new Set();
-                noteCircles.forEach(circle => {
-                    if (circle.getAttribute('data-is-grace') === 'true') {
-                        graceNoteIndices.add(parseInt(circle.getAttribute('data-note-index')));
-                    }
-                });
-
-                // Get string positions - ensure D4 is included
-                const stringPositions = {
-                    'D4': 110,  // String 5
-                    'G4': 260,  // String 7
-                    'A4': 320,  // String 8
-                    'C5': 410,  // String 9
-                    'D5': 470,  // String 10
-                    'E5': 530,  // String 11
-                    'G5': 620   // String 12
-                };
-
-                // Draw all 7 nodes in each of the 3 columns
-                // All notes should appear in all columns, just like KPIC-2
-                const nodes = Array.from(nodeSet);
-
-                // Ensure we show all 7 pitches from the string positions
-                // Add all notes from stringPositions to nodeSet to ensure all are displayed
-                Object.keys(stringPositions).forEach(note => nodeSet.add(note));
-
-                // Draw all nodes in all 3 columns
-                Array.from(nodeSet).forEach(note => {
-                    const y = stringPositions[note];
-                    if (y) {
-                        // Column 1: Source notes (all notes shown)
-                        svg += `<rect x="${col1X}" y="${y - 25}" width="${columnWidth}" height="50"
-                                fill="#3498db" opacity="0.8" rx="3"
-                                class="sankey-node-3col" data-node="${note}" data-column="1"/>`;
-                        svg += `<text x="${col1X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                                style="font-size: 14px; fill: white; font-weight: bold;">${note}</text>`;
-
-                        // Column 2: Middle notes (all notes shown)
-                        svg += `<rect x="${col2X}" y="${y - 25}" width="${columnWidth}" height="50"
-                                fill="#e74c3c" opacity="0.8" rx="3"
-                                class="sankey-node-3col" data-node="${note}" data-column="2"/>`;
-                        svg += `<text x="${col2X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                                style="font-size: 14px; fill: white; font-weight: bold;">${note}</text>`;
-
-                        // Column 3: Target notes (all notes shown)
-                        svg += `<rect x="${col3X}" y="${y - 25}" width="${columnWidth}" height="50"
-                                fill="#27ae60" opacity="0.8" rx="3"
-                                class="sankey-node-3col" data-node="${note}" data-column="3"/>`;
-                        svg += `<text x="${col3X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                                style="font-size: 14px; fill: white; font-weight: bold;">${note}</text>`;
-                    }
-                });
-
-                // Draw connecting bands for each 3-note pattern
-                patterns.forEach((pattern, index) => {
-                    const [from, middle, to] = pattern.pattern;
-
-                    // Get y positions directly
-                    const fromY = stringPositions[from];
-                    const middleY = stringPositions[middle];
-                    const toY = stringPositions[to];
-
-                    if (fromY && middleY && toY) {
-                        // Check if any position in this pattern involves a grace note
-                        const hasGraceNote = pattern.positions.some(startPos => {
-                            return graceNoteIndices.has(startPos) ||
-                                   graceNoteIndices.has(startPos + 1) ||
-                                   graceNoteIndices.has(startPos + 2);
-                        });
-
-                        const bandHeight = Math.min(40, Math.max(3, pattern.count * 2));
-                        const opacity = Math.min(0.7, 0.2 + pattern.count * 0.05);
-                        const color = `hsl(${(index * 360 / patterns.length) % 360}, 70%, 50%)`;
-
-                        // Add dashed stroke for grace note patterns
-                        const strokeDasharray = hasGraceNote ? 'stroke-dasharray="5,5"' : '';
-
-                        // Draw path from column 1 to column 2
-                        const path1 = `M ${col1X + columnWidth} ${fromY}
-                                      C ${col1X + columnWidth + 50} ${fromY},
-                                        ${col2X - 50} ${middleY},
-                                        ${col2X} ${middleY}
-                                      L ${col2X} ${middleY + bandHeight}
-                                      C ${col2X - 50} ${middleY + bandHeight},
-                                        ${col1X + columnWidth + 50} ${fromY + bandHeight},
-                                        ${col1X + columnWidth} ${fromY + bandHeight}
-                                      Z`;
-
-                        svg += `<path d="${path1}" fill="${color}" opacity="${opacity}"
-                                ${hasGraceNote ? 'stroke="' + color + '" stroke-width="1" ' + strokeDasharray : ''}
-                                class="sankey-band-3col" data-pattern="${pattern.pattern.join('-')}"
-                                data-positions="${pattern.positions.join(',')}"
-                                data-has-grace="${hasGraceNote}"
-                                onclick="highlightThreeNotePattern('${type}', ${JSON.stringify(pattern.pattern)}, ${JSON.stringify(pattern.positions)})"
-                                style="cursor: pointer;">
-                                <title>${from} → ${middle}: ×${pattern.count}${hasGraceNote ? ' (includes grace notes)' : ''}</title>
-                                </path>`;
-
-                        // Draw path from column 2 to column 3
-                        const path2 = `M ${col2X + columnWidth} ${middleY}
-                                      C ${col2X + columnWidth + 50} ${middleY},
-                                        ${col3X - 50} ${toY},
-                                        ${col3X} ${toY}
-                                      L ${col3X} ${toY + bandHeight}
-                                      C ${col3X - 50} ${toY + bandHeight},
-                                        ${col2X + columnWidth + 50} ${middleY + bandHeight},
-                                        ${col2X + columnWidth} ${middleY + bandHeight}
-                                      Z`;
-
-                        svg += `<path d="${path2}" fill="${color}" opacity="${opacity}"
-                                ${hasGraceNote ? 'stroke="' + color + '" stroke-width="1" ' + strokeDasharray : ''}
-                                class="sankey-band-3col" data-pattern="${pattern.pattern.join('-')}"
-                                data-positions="${pattern.positions.join(',')}"
-                                data-has-grace="${hasGraceNote}"
-                                onclick="highlightThreeNotePattern('${type}', ${JSON.stringify(pattern.pattern)}, ${JSON.stringify(pattern.positions)})"
-                                style="cursor: pointer;">
-                                <title>${middle} → ${to}: ×${pattern.count}${hasGraceNote ? ' (includes grace notes)' : ''}</title>
-                                </path>`;
-                    }
-                });
-
-            } else {
-                // Rhythm type - simpler layout
-                const durationPositions = {
-                    '0.5': 50,
-                    '1': 120,
-                    '2': 190,
-                    '3': 260,
-                    '4': 330,
-                    '8': 400
-                };
-
-                // Ensure we show all possible durations (including grace variants)
-                // Add all possible durations to nodeSet
-                const allDurations = ['0.5', '1', '2', '3', '4', '8', 'g0.5', 'g1', 'g2', 'g3', 'g4', 'g8'];
-                allDurations.forEach(dur => {
-                    if (durationPositions[dur] || durationPositions[dur.replace('g', '')]) {
-                        nodeSet.add(dur);
-                    }
-                });
-
-                // Draw all rhythm nodes in all 3 columns
-                const nodes = Array.from(nodeSet);
-
-                // Draw all nodes in all 3 columns (all durations shown in each column)
-                nodes.forEach(duration => {
-                    // Handle grace note durations
-                    const baseDuration = duration.startsWith('g') ? duration.substring(1) : duration;
-                    const isGrace = duration.startsWith('g');
-                    const y = durationPositions[baseDuration] || durationPositions[duration] || 200;
-
-                    // Add dashed border style for grace notes
-                    const strokeStyle = isGrace ? 'stroke="white" stroke-width="2" stroke-dasharray="5,5"' : '';
-
-                    // Column 1: All durations shown
-                    svg += `<rect x="${col1X}" y="${y - 25}" width="${columnWidth}" height="50"
-                            fill="#9b59b6" opacity="0.8" rx="3" ${strokeStyle}/>`;
-                    svg += `<text x="${col1X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                            style="font-size: 14px; fill: white; font-weight: bold;">${duration}</text>`;
-
-                    // Column 2: All durations shown
-                    svg += `<rect x="${col2X}" y="${y - 25}" width="${columnWidth}" height="50"
-                            fill="#f39c12" opacity="0.8" rx="3" ${strokeStyle}/>`;
-                    svg += `<text x="${col2X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                            style="font-size: 14px; fill: white; font-weight: bold;">${duration}</text>`;
-
-                    // Column 3: All durations shown
-                    svg += `<rect x="${col3X}" y="${y - 25}" width="${columnWidth}" height="50"
-                            fill="#16a085" opacity="0.8" rx="3" ${strokeStyle}/>`;
-                    svg += `<text x="${col3X + columnWidth/2}" y="${y + 5}" text-anchor="middle"
-                            style="font-size: 14px; fill: white; font-weight: bold;">${duration}</text>`;
-                });
-
-                // Draw connecting bands for rhythm patterns
-                patterns.forEach((pattern, index) => {
-                    const [from, middle, to] = pattern.pattern;
-
-                    // Handle grace note durations for Y positions
-                    const fromBase = from.startsWith('g') ? from.substring(1) : from;
-                    const middleBase = middle.startsWith('g') ? middle.substring(1) : middle;
-                    const toBase = to.startsWith('g') ? to.substring(1) : to;
-
-                    const fromY = durationPositions[fromBase] || durationPositions[from] || 200;
-                    const middleY = durationPositions[middleBase] || durationPositions[middle] || 200;
-                    const toY = durationPositions[toBase] || durationPositions[to] || 200;
-
-                    // Check if pattern contains grace notes
-                    const hasGraceNote = from.startsWith('g') || middle.startsWith('g') || to.startsWith('g');
-
-                    const bandHeight = Math.min(30, Math.max(3, pattern.count * 1.5));
-                    const opacity = Math.min(0.7, 0.2 + pattern.count * 0.03);
-                    const color = `hsl(${(index * 360 / patterns.length) % 360}, 60%, 55%)`;
-
-                    // Add dashed stroke for grace note patterns
-                    const strokeDasharray = hasGraceNote ? 'stroke-dasharray="5,5"' : '';
-
-                    // Bands from column 1 to 2 and 2 to 3
-                    const path1 = `M ${col1X + columnWidth} ${fromY}
-                                  C ${col1X + columnWidth + 50} ${fromY},
-                                    ${col2X - 50} ${middleY},
-                                    ${col2X} ${middleY}
-                                  L ${col2X} ${middleY + bandHeight}
-                                  C ${col2X - 50} ${middleY + bandHeight},
-                                    ${col1X + columnWidth + 50} ${fromY + bandHeight},
-                                    ${col1X + columnWidth} ${fromY + bandHeight}
-                                  Z`;
-
-                    const path2 = `M ${col2X + columnWidth} ${middleY}
-                                  C ${col2X + columnWidth + 50} ${middleY},
-                                    ${col3X - 50} ${toY},
-                                    ${col3X} ${toY}
-                                  L ${col3X} ${toY + bandHeight}
-                                  C ${col3X - 50} ${toY + bandHeight},
-                                    ${col2X + columnWidth + 50} ${middleY + bandHeight},
-                                    ${col2X + columnWidth} ${middleY + bandHeight}
-                                  Z`;
-
-                    svg += `<path d="${path1}" fill="${color}" opacity="${opacity}"
-                            ${hasGraceNote ? 'stroke="' + color + '" stroke-width="1" ' + strokeDasharray : ''}
-                            data-has-grace="${hasGraceNote}"
-                            onclick="highlightThreeNotePattern('${type}', ${JSON.stringify(pattern.pattern)}, ${JSON.stringify(pattern.positions)})"
-                            style="cursor: pointer;">
-                            <title>${from} → ${middle}: ×${pattern.count}${hasGraceNote ? ' (includes grace notes)' : ''}</title>
-                            </path>`;
-
-                    svg += `<path d="${path2}" fill="${color}" opacity="${opacity}"
-                            ${hasGraceNote ? 'stroke="' + color + '" stroke-width="1" ' + strokeDasharray : ''}
-                            data-has-grace="${hasGraceNote}"
-                            onclick="highlightThreeNotePattern('${type}', ${JSON.stringify(pattern.pattern)}, ${JSON.stringify(pattern.positions)})"
-                            style="cursor: pointer;">
-                            <title>${middle} → ${to}: ×${pattern.count}${hasGraceNote ? ' (includes grace notes)' : ''}</title>
-                            </path>`;
-                });
-            }
-
-            svg += '</svg>';
-
-            // Add column labels
-            svg += `<div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px; color: #666;">
-                        <span style="margin-left: 50px;">From</span>
-                        <span>Middle</span>
-                        <span style="margin-right: 50px;">To</span>
-                    </div>`;
-
-            // Add pattern legend
-            let legend = '<div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">';
-            legend += '<h5 style="margin: 0 0 10px 0; color: #333;">3-Note Patterns (click bands to highlight):</h5>';
-            legend += '<div style="max-height: 200px; overflow-y: auto;">';
-
-            patterns.slice(0, 15).forEach((pattern, index) => {
-                const color = `hsl(${(index * 360 / patterns.length) % 360}, 70%, ${type === 'pitch' ? '60' : '50'}%)`;
-                const patternStr = pattern.pattern.join(' → ');
-                legend += `<div style="margin-bottom: 5px; padding: 8px; background: white; border-radius: 3px; cursor: pointer; border-left: 4px solid ${color};"
-                          onclick="highlightThreeNotePattern('${type}', ${JSON.stringify(pattern.pattern)}, ${JSON.stringify(pattern.positions)})"
-                          onmouseover="this.style.background='#e9ecef'"
-                          onmouseout="this.style.background='white'">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; font-weight: bold; color: #333;">${patternStr}</span>
-                        <span style="font-size: 11px; color: #666; background: #e9ecef; padding: 2px 6px; border-radius: 10px;">×${pattern.count}</span>
-                    </div>
-                    <div style="font-size: 10px; color: #888; margin-top: 4px;">
-                        Positions: ${pattern.positions.slice(0, 5).join(', ')}${pattern.positions.length > 5 ? '...' : ''}
-                    </div>
-                </div>`;
-            });
-            legend += '</div>';
-            legend += '<div style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 3px; font-size: 11px; color: #1565c0;">';
-            legend += '<strong>Note:</strong> The diagram shows true 3-note sequences with From → Middle → To columns. Click bands or patterns to highlight occurrences in the tablature.';
-            legend += '</div>';
-            legend += '</div>';
-
-            return svg + legend;
-        }
-
-        // Highlight 3-note patterns in tablature
-        function highlightThreeNotePattern(type, pattern, positions) {
-            console.log(`Highlighting ${type} 3-note pattern:`, pattern, 'at positions:', positions);
-
-            // Clear previous highlighting
-            document.querySelectorAll('.note-circle').forEach(circle => {
-                circle.style.stroke = '';
-                circle.style.strokeWidth = '';
-                circle.style.filter = '';
-                circle.style.opacity = '0.3';
-            });
-
-            // Highlight the pattern occurrences
-            positions.forEach((startPos, occurrenceIndex) => {
-                const color = `hsl(${(occurrenceIndex * 360 / positions.length) % 360}, 70%, ${type === 'pitch' ? '60' : '50'}%)`;
-
-                for (let i = 0; i < 3; i++) { // 3 notes in the pattern
-                    const noteIndex = startPos + i;
-                    const noteCircle = document.querySelector(`.note-circle[data-note-index="${noteIndex}"]`);
-                    if (noteCircle) {
-                        noteCircle.style.stroke = color;
-                        noteCircle.style.strokeWidth = '3px';
-                        noteCircle.style.filter = `drop-shadow(0 0 6px ${color})`;
-                        noteCircle.style.opacity = '1';
-                    }
-                }
-            });
-        }
-
-
-        // Update KPIC-3 zoom
-        function updateKpic3Zoom() {
-            const xZoom = parseFloat(document.getElementById('kpic3-x-zoom')?.value || 1);
-            const yZoom = parseFloat(document.getElementById('kpic3-y-zoom')?.value || 0.67);
-
-            const kpic3Container = document.getElementById('kpic3-patterns');
-            const kric3Container = document.getElementById('kric3-patterns');
-
-            if (kpic3Container) {
-                kpic3Container.style.transform = `scale(${xZoom}, ${yZoom})`;
-                kpic3Container.style.transformOrigin = 'top left';
-            }
-
-            if (kric3Container) {
-                kric3Container.style.transform = `scale(${xZoom}, ${yZoom})`;
-                kric3Container.style.transformOrigin = 'top left';
-            }
-        }
-
-        // Regenerate KPIC-3 with different mode
-        function regenerateKpic3WithMode() {
-            const selectedMode = document.querySelector('input[name="kpic3Mode"]:checked')?.value || 'all';
-            console.log('Regenerating KPIC-3 with mode:', selectedMode);
-            generateKpic3Kric3SankeyDiagrams(selectedMode);
         }
 
         // Generate Sankey HTML
@@ -7771,7 +7025,12 @@
                     // Standard 2-column layout for all and main modes
                     const nodeKeys = new Set(Object.keys(stringPositions));
                     if (kpicMode === 'all') {
-                        // Don't create separate grace node labels - use the same pitch labels for both
+                        // Add grace note versions for all mode
+                        Object.keys(stringPositions).forEach(key => {
+                            const graceKey = key.replace(/String (\d+): (.+)/, 'String $1: $2 (grace)');
+                            stringPositions[graceKey] = stringPositions[key];
+                            nodeKeys.add(graceKey);
+                        });
                     }
 
                     // Draw all string positions as nodes (both left and right)
@@ -7779,24 +7038,33 @@
                         const originalY = stringPositions[stringKey];
                         const y = originalY;
                         const pitchName = stringKey.split(': ')[1] || stringKey;
+                        const isGraceNode = stringKey.includes('(grace)');
 
-                        // Use consistent node colors (no grace distinction since same pitch)
-                        const leftColor = '#3498db';
-                        const rightColor = '#2ecc71';
+                        // Node colors
+                        const leftColor = isGraceNode ? '#FFD700' : '#3498db';
+                        const rightColor = isGraceNode ? '#FFA500' : '#2ecc71';
 
                         // Left side (From)
                         svg += `<rect x="20" y="${y - 30}" width="${nodeWidth}" height="60"
                                 fill="${leftColor}" opacity="0.8" rx="3"
                                 class="sankey-node" data-node="${stringKey}" data-side="left"/>`;
                         svg += `<text x="${20 + nodeWidth/2}" y="${y + 7}" text-anchor="middle"
-                                style="font-size: 20px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
+                                style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
+                        if (isGraceNode) {
+                            svg += `<text x="${20 + nodeWidth/2}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
 
                         // Right side (To)
                         svg += `<rect x="${svgWidth - nodeWidth - 20}" y="${y - 30}" width="${nodeWidth}" height="60"
                                 fill="${rightColor}" opacity="0.8" rx="3"
                                 class="sankey-node" data-node="${stringKey}" data-side="right"/>`;
                         svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 7}" text-anchor="middle"
-                                style="font-size: 20px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName}</text>`;
+                                style="font-size: ${isGraceNode ? '14px' : '20px'}; fill: white; font-weight: bold; stroke: black; stroke-width: 0.5; paint-order: stroke fill;">${pitchName.replace(' (grace)', '')}</text>`;
+                        if (isGraceNode) {
+                            svg += `<text x="${svgWidth - nodeWidth/2 - 20}" y="${y + 22}" text-anchor="middle"
+                                    style="font-size: 10px; fill: white; font-weight: bold; stroke: black; stroke-width: 0.3; paint-order: stroke fill;">grace</text>`;
+                        }
                     });
                 }
 
@@ -7863,7 +7131,7 @@
                             const strokeColor = isApproach ? 'rgba(255, 140, 0, 0.5)' : 'rgba(255, 165, 0, 0.5)';
                             const dashArray = isApproach ? '12 3 9 4 6 5 3 6 1 7' : '1 7 3 6 6 5 9 4 12 3';
 
-                            svg += `<path d="M ${sourceX} ${adjustedSourceY} C ${midX} ${adjustedSourceY}, ${midX} ${adjustedTargetY}, ${targetX} ${adjustedTargetY}"
+                            svg += `<path d="M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}"
                                     stroke="${strokeColor}"
                                     stroke-width="${thickness}" fill="none"
                                     stroke-dasharray="${dashArray}"
@@ -7882,7 +7150,7 @@
                                     onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
 
                             // Add center label
-                            svg += `<text x="${midX}" y="${(adjustedSourceY + adjustedTargetY) / 2}" text-anchor="middle" pointer-events="none"
+                            svg += `<text x="${midX}" y="${(sourceY + targetY) / 2}" text-anchor="middle" pointer-events="none"
                                     class="sankey-label" data-band-id="kpic-${linkIndex}"
                                     style="font-size: 10px; fill: #FFD700; font-weight: bold;
                                            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
@@ -8150,18 +7418,13 @@
                                         onmousemove="showSankeyTooltip(event, window.sankeyTransitionData.get('${transitionId}'));" />`;
                             }
 
-                            // Add center label with count/total format
+                            // Add center label
                             const labelColor = link.transitionType ? '#FFD700' : '#fff';
                             svg += `<text x="${midX}" y="${(scaledSourceY + scaledTargetY) / 2}" text-anchor="middle" pointer-events="none"
                                     class="sankey-label" data-band-id="kpic-${linkIndex}"
                                     style="font-size: 10px; fill: ${labelColor}; font-weight: bold;
                                            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
                                            transition: font-size 0.2s ease, filter 0.2s ease;">${link.value}</text>`;
-
-                            // Add annotation tag with rank and percentage
-                            if (pitchRankingMap && totalTransitions) {
-                                const ranking = pitchRankingMap.get(fromNote + '-' + toNote);
-                            }
                             }
                         });
                     });
@@ -8170,62 +7433,20 @@
                 svg += '</svg>';
 
             } else {
-                // KRIC-2: Keep existing rhythm layout but add clickability and grace note handling
+                // KRIC-2: Keep existing rhythm layout but add clickability
                 const nodes = new Set();
-
                 Object.entries(transitions).forEach(([key, count]) => {
-                    const parts = key.split('|||');
-                    const from = parts[0];
-                    const to = parts[1];
-                    const transitionType = parts[2]; // Could be 'grace-grace', 'grace-main', 'main-grace', or 'main-main'
-
-                    // Strip grace prefixes for node positioning
-                    const cleanFrom = from.startsWith('g') ? from.substring(1) : from;
-                    const cleanTo = to.startsWith('g') ? to.substring(1) : to;
-
-                    nodes.add(cleanFrom);
-                    nodes.add(cleanTo);
-                    links.push({
-                        source: cleanFrom,
-                        target: cleanTo,
-                        originalSource: from,
-                        originalTarget: to,
-                        value: count,
-                        transitionType: transitionType,
-                        fullKey: key
-                    });
-                });
-
-                // Group links by musical note equivalency (not raw duration values)
-                // Group "8→1" and "8→0.5" together as "2nd→16th" variations
-                const linkGroups = {};
-                links.forEach(link => {
-                    // Convert to musical note names for grouping
-                    const sourceNote = durationToNoteName(link.originalSource).replace('grace ', '');
-                    const targetNote = durationToNoteName(link.originalTarget).replace('grace ', '');
-                    const groupKey = `${sourceNote}|||${targetNote}`;
-
-                    if (!linkGroups[groupKey]) {
-                        linkGroups[groupKey] = [];
-                    }
-                    linkGroups[groupKey].push(link);
-                });
-
-                // Debug: Log groups with multiple transition types
-                Object.entries(linkGroups).forEach(([key, group]) => {
-                    if (group.length > 1) {
-                        const types = group.map(l => l.transitionType).join(', ');
-                        console.log(`🔧 KRIC group ${key.replace('|||', '→')} has ${group.length} transition types: ${types}`);
-                    }
+                    const [from, to] = key.split('|||');
+                    nodes.add(from);
+                    nodes.add(to);
+                    links.push({ source: from, target: to, value: count });
                 });
 
                 // Function to calculate proportional height based on duration
                 function getDurationHeight(duration) {
-                    const baseHeight = 20; // Minimum height
-                    // Strip grace prefix for height calculation
-                    const cleanDuration = duration.startsWith('g') ? duration.substring(1) : duration;
-                    const multiplier = parseFloat(cleanDuration) || 1; // Get duration value
-                    return Math.max(baseHeight, multiplier * 20); // Scale by 20 pixels per unit
+                    const baseHeight = 20; // Base unit for sixteenth note
+                    const multiplier = durationRanks[duration] || 1; // Get duration value
+                    return Math.max(baseHeight, multiplier * 80); // Minimum 20px, scale by 80
                 }
 
                 const nodeArray = Array.from(nodes);
@@ -8237,20 +7458,14 @@
 
                 // Sort nodes by duration rank (largest to smallest - top to bottom)
                 const sortedLeftNodes = leftNodes.sort((a, b) => {
-                    // Strip grace prefix for ranking lookup
-                    const cleanA = a.startsWith('g') ? a.substring(1) : a;
-                    const cleanB = b.startsWith('g') ? b.substring(1) : b;
-                    const rankA = durationRanks[cleanA] || 0;
-                    const rankB = durationRanks[cleanB] || 0;
+                    const rankA = durationRanks[a] || 0;
+                    const rankB = durationRanks[b] || 0;
                     return rankB - rankA; // Descending order (largest first)
                 });
 
                 const sortedRightNodes = rightNodes.sort((a, b) => {
-                    // Strip grace prefix for ranking lookup
-                    const cleanA = a.startsWith('g') ? a.substring(1) : a;
-                    const cleanB = b.startsWith('g') ? b.substring(1) : b;
-                    const rankA = durationRanks[cleanA] || 0;
-                    const rankB = durationRanks[cleanB] || 0;
+                    const rankA = durationRanks[a] || 0;
+                    const rankB = durationRanks[b] || 0;
                     return rankB - rankA; // Descending order (largest first)
                 });
 
@@ -8278,7 +7493,7 @@
 
                 sortedLeftNodes.forEach((node, i) => {
                     const nodeHeight = getDurationHeight(node);
-                    const displayText = durationToNoteName(node); // Use readable note name
+                    const displayText = durationRanks[node] ? `${node} (${durationRanks[node]})` : node;
 
                     // Center Y position for this node
                     const centerY = currentY + nodeHeight / 2;
@@ -8306,7 +7521,7 @@
 
                 sortedRightNodes.forEach((node, i) => {
                     const nodeHeight = getDurationHeight(node);
-                    const displayText = durationToNoteName(node); // Use readable note name
+                    const displayText = durationRanks[node] ? `${node} (${durationRanks[node]})` : node;
 
                     // Center Y position for this node
                     const centerY = currentY + nodeHeight / 2;
@@ -8321,78 +7536,12 @@
                     currentY += nodeHeight + eighthNoteSpacing; // Move to next position with eighth note spacing
                 });
 
-                // Create transition data store for KRIC tooltips
-                if (!window.sankeyRhythmTransitionData) {
-                    window.sankeyRhythmTransitionData = new Map();
-                }
-
-                // Create shared tooltip data for each rhythm pair group (like KPIC)
-                Object.entries(linkGroups).forEach(([groupKey, group]) => {
-                    const baseRhythm = group[0]; // Use first link as reference
-
-                    // Calculate total transitions for percentage
-                    const totalTransitions = Object.values(transitions).reduce((sum, count) => sum + count, 0);
-
-                    // Create combined group information
-                    const groupInfo = {
-                        totalTypes: group.length,
-                        allTypes: group.map(l => l.transitionType),
-                        allCounts: group.map(l => l.value)
-                    };
-
-                    // Get KPIC-2 pitches for this rhythm pair
-                    const pitchInfo = getPitchInfoForRhythmPattern([baseRhythm.originalSource, baseRhythm.originalTarget]);
-
-                    // Create base transition ID using musical note names (same as groupKey)
-                    const baseTransitionId = groupKey.replace('|||', '-');
-
-                    // Find the most frequent transition in this group for primary display
-                    const primaryLink = group.reduce((max, link) => link.value > max.value ? link : max);
-                    const primaryRanking = rhythmRankingMap?.get(primaryLink.fullKey);
-
-                    // Create combined tooltip data for the entire rhythm pair group
-                    const sourceNoteName = durationToNoteName(baseRhythm.originalSource).replace('grace ', '');
-                    const targetNoteName = durationToNoteName(baseRhythm.originalTarget).replace('grace ', '');
-
-                    const combinedTooltipData = {
-                        fromRhythm: sourceNoteName, // Use musical note name
-                        toRhythm: targetNoteName,   // Use musical note name
-                        count: primaryLink.value,
-                        total: totalTransitions,
-                        percentage: ((primaryLink.value / totalTransitions) * 100).toFixed(1),
-                        rank: primaryRanking?.rank || 'N/A',
-                        transitionType: primaryLink.transitionType,
-                        pitchInfo: pitchInfo,
-                        groupInfo: groupInfo // This contains ALL transition types and their counts
-                    };
-
-                    // Store the same combined data for all possible transition IDs in this group
-                    group.forEach(link => {
-                        const specificId = `${link.originalSource}-${link.originalTarget}-${link.transitionType}`;
-                        window.sankeyRhythmTransitionData.set(specificId, combinedTooltipData);
-                    });
-                    // Also store under base ID
-                    window.sankeyRhythmTransitionData.set(baseTransitionId, combinedTooltipData);
-                });
-
-                // Draw grouped links with offset positioning (like KPIC)
-                let globalLinkIndex = 0;
-                Object.values(linkGroups).forEach(group => {
-                    group.forEach((link, groupIndex) => {
-                    const linkIndex = globalLinkIndex++;
+                // Draw rhythm links using stored positions
+                links.forEach((link, linkIndex) => {
                     const sourceY = leftNodePositions[link.source];
                     const targetY = rightNodePositions[link.target];
 
                     if (sourceY !== undefined && targetY !== undefined) {
-                        // Calculate offset for multiple bands (like KPIC)
-                        const groupSize = group.length;
-                        const offsetAmount = groupSize > 1 ? 12 : 0;
-                        const yOffset = groupSize > 1 ? (groupIndex - (groupSize - 1) / 2) * offsetAmount : 0;
-
-                        // Apply offset to Y positions
-                        const adjustedSourceY = sourceY + yOffset;
-                        const adjustedTargetY = targetY + yOffset;
-
                         const thickness = Math.min(20, Math.max(2, link.value * 2));
 
                         const sourceX = 20 + nodeWidth;
@@ -8401,130 +7550,29 @@
 
                         // Extract just the duration names for the pattern
                         const pattern = `["${link.source}", "${link.target}"]`;
-                        // Create pattern raw with actual duration values (including grace prefixes)
-                        const patternRaw = `${link.originalSource}-${link.originalTarget}`;
 
-                        // Create transition ID for tooltip lookup - use musical note names for combined tooltips
-                        const sourceNoteName = durationToNoteName(link.originalSource).replace('grace ', '');
-                        const targetNoteName = durationToNoteName(link.originalTarget).replace('grace ', '');
-                        const transitionId = `${sourceNoteName}-${targetNoteName}`;
+                        svg += `<path d="M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}"
+                                stroke="rgba(231, 76, 60, 0.4)"
+                                stroke-width="${thickness}" fill="none"
+                                class="sankey-link clickable-band"
+                                data-source="${link.source}"
+                                data-target="${link.target}"
+                                data-pattern='${pattern}'
+                                data-pattern-raw='${link.source}-${link.target}'
+                                data-value="${link.value}"
+                                data-band-id="kric-${linkIndex}"
+                                style="cursor: pointer;"
+                                onmouseover="this.style.stroke='rgba(231, 76, 60, 0.7)'; this.style.strokeWidth='${Math.min(25, thickness + 3)}';"
+                                onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(231, 76, 60, 0.4)'; this.style.strokeWidth='${thickness}'; }"
+                                title="${link.source} → ${link.target}: ${link.value} occurrence${link.value > 1 ? 's' : ''}"/>`;
 
-
-                        // Apply directional grace note styling
-                        if (link.transitionType === 'grace-grace') {
-                            // Grace to grace - fully dashed gold
-                            svg += `<path d="M ${sourceX} ${adjustedSourceY} C ${midX} ${adjustedSourceY}, ${midX} ${adjustedTargetY}, ${targetX} ${adjustedTargetY}"
-                                    stroke="rgba(255, 215, 0, 0.6)"
-                                    stroke-width="${thickness}" fill="none"
-                                    stroke-dasharray="3 3"
-                                    class="sankey-link clickable-band"
-                                    data-source="${link.source}"
-                                    data-target="${link.target}"
-                                    data-pattern='${pattern}'
-                                    data-pattern-raw='${patternRaw}'
-                                    data-value="${link.value}"
-                                    data-band-id="kric-${linkIndex}"
-                                    data-transition-type="${link.transitionType}"
-                                    style="cursor: pointer;"
-                                    onmouseover="event.stopPropagation(); this.style.stroke='rgba(255, 215, 0, 0.9)'; this.style.strokeWidth='${Math.min(25, thickness + 3)}'; showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(255, 215, 0, 0.6)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
-                                    onmousemove="showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    title="${link.source} → ${link.target} (${link.transitionType}): ${link.value} occurrence${link.value > 1 ? 's' : ''}"/>`;
-                        } else if (link.transitionType === 'main-grace') {
-                            // Main to grace - solid red transitioning to dashed orange (toward grace side)
-                            const splitPoint = 0.6;
-                            const splitX = sourceX + (targetX - sourceX) * splitPoint;
-                            const splitY = adjustedSourceY + (adjustedTargetY - adjustedSourceY) * splitPoint;
-
-                            svg += `<g>
-                                <path d="M ${sourceX} ${sourceY} C ${sourceX + (midX - sourceX) * splitPoint} ${sourceY}, ${splitX - (splitX - sourceX) * 0.3} ${splitY}, ${splitX} ${splitY}"
-                                    stroke="rgba(231, 76, 60, 0.4)"
-                                    stroke-width="${thickness}" fill="none"
-                                    pointer-events="none"/>
-                                <path d="M ${splitX} ${splitY} C ${splitX + (targetX - splitX) * 0.3} ${splitY}, ${targetX - (targetX - midX) * (1 - splitPoint)} ${targetY}, ${targetX} ${targetY}"
-                                    stroke="rgba(255, 140, 0, 0.5)"
-                                    stroke-width="${thickness}" fill="none"
-                                    stroke-dasharray="12 3 9 4 6 5 3 6 1 7"
-                                    pointer-events="none"/>
-                                <path d="M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}"
-                                    stroke="transparent"
-                                    stroke-width="${thickness + 10}" fill="none"
-                                    class="sankey-link clickable-band"
-                                    data-source="${link.source}"
-                                    data-target="${link.target}"
-                                    data-pattern='${pattern}'
-                                    data-pattern-raw='${patternRaw}'
-                                    data-value="${link.value}"
-                                    data-band-id="kric-${linkIndex}"
-                                    data-transition-type="${link.transitionType}"
-                                    style="cursor: pointer;"
-                                    onmouseover="event.stopPropagation(); this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(25, thickness + 3)}'; p.style.opacity = '0.8'; } }); showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } }); hideSankeyTooltip();"
-                                    onmousemove="showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    title="${link.source} → ${link.target} (${link.transitionType}): ${link.value} occurrence${link.value > 1 ? 's' : ''}">
-                            </g>`;
-                        } else if (link.transitionType === 'grace-main') {
-                            // Grace to main - dashed orange transitioning to solid red (from grace side)
-                            const splitPoint = 0.4;
-                            const splitX = sourceX + (targetX - sourceX) * splitPoint;
-                            const splitY = adjustedSourceY + (adjustedTargetY - adjustedSourceY) * splitPoint;
-
-                            svg += `<g>
-                                <path d="M ${sourceX} ${sourceY} C ${sourceX + (midX - sourceX) * splitPoint} ${sourceY}, ${splitX - (splitX - sourceX) * 0.3} ${splitY}, ${splitX} ${splitY}"
-                                    stroke="rgba(255, 165, 0, 0.5)"
-                                    stroke-width="${thickness}" fill="none"
-                                    stroke-dasharray="1 7 3 6 6 5 9 4 12 3"
-                                    pointer-events="none"/>
-                                <path d="M ${splitX} ${splitY} C ${splitX + (targetX - splitX) * 0.3} ${splitY}, ${targetX - (targetX - midX) * (1 - splitPoint)} ${targetY}, ${targetX} ${targetY}"
-                                    stroke="rgba(231, 76, 60, 0.4)"
-                                    stroke-width="${thickness}" fill="none"
-                                    pointer-events="none"/>
-                                <path d="M ${sourceX} ${sourceY} C ${midX} ${sourceY}, ${midX} ${targetY}, ${targetX} ${targetY}"
-                                    stroke="transparent"
-                                    stroke-width="${thickness + 10}" fill="none"
-                                    class="sankey-link clickable-band"
-                                    data-source="${link.source}"
-                                    data-target="${link.target}"
-                                    data-pattern='${pattern}'
-                                    data-pattern-raw='${patternRaw}'
-                                    data-value="${link.value}"
-                                    data-band-id="kric-${linkIndex}"
-                                    data-transition-type="${link.transitionType}"
-                                    style="cursor: pointer;"
-                                    onmouseover="event.stopPropagation(); this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${Math.min(25, thickness + 3)}'; p.style.opacity = '0.8'; } }); showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    onmouseout="this.parentNode.querySelectorAll('path').forEach((p, i) => { if(i < 2) { p.style.strokeWidth = '${thickness}'; p.style.opacity = '1'; } }); hideSankeyTooltip();"
-                                    onmousemove="showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    title="${link.source} → ${link.target} (${link.transitionType}): ${link.value} occurrence${link.value > 1 ? 's' : ''}">
-                            </g>`;
-                        } else {
-                            // Main to main - solid red
-                            svg += `<path d="M ${sourceX} ${adjustedSourceY} C ${midX} ${adjustedSourceY}, ${midX} ${adjustedTargetY}, ${targetX} ${adjustedTargetY}"
-                                    stroke="rgba(231, 76, 60, 0.4)"
-                                    stroke-width="${thickness}" fill="none"
-                                    class="sankey-link clickable-band"
-                                    data-source="${link.source}"
-                                    data-target="${link.target}"
-                                    data-pattern='${pattern}'
-                                    data-pattern-raw='${patternRaw}'
-                                    data-value="${link.value}"
-                                    data-band-id="kric-${linkIndex}"
-                                    data-transition-type="${link.transitionType}"
-                                    style="cursor: pointer;"
-                                    onmouseover="event.stopPropagation(); this.style.stroke='rgba(231, 76, 60, 0.7)'; this.style.strokeWidth='${Math.min(25, thickness + 3)}'; showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    onmouseout="if(!this.classList.contains('selected-band')) { this.style.stroke='rgba(231, 76, 60, 0.4)'; this.style.strokeWidth='${thickness}'; } hideSankeyTooltip();"
-                                    onmousemove="showRhythmSankeyTooltip(event, window.sankeyRhythmTransitionData.get('${transitionId}'));"
-                                    title="${link.source} → ${link.target} (${link.transitionType}): ${link.value} occurrence${link.value > 1 ? 's' : ''}"/>`;
-                        }
-
-                        // Add center label with count/total format
-                        svg += `<text x="${midX}" y="${(adjustedSourceY + adjustedTargetY) / 2}" text-anchor="middle" pointer-events="none"
+                        // Add center label with selection styling support
+                        svg += `<text x="${midX}" y="${(sourceY + targetY) / 2}" text-anchor="middle" pointer-events="none"
                                 class="sankey-label" data-band-id="kric-${linkIndex}"
                                 style="font-size: 10px; fill: #fff; font-weight: bold;
                                        text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
                                        transition: font-size 0.2s ease, filter 0.2s ease;">${link.value}</text>`;
-
                     }
-                    });
                 });
 
                 svg += '</svg>';
@@ -8560,17 +7608,7 @@
                                 if (b !== this) { // Don't clear THIS band yet
                                     b.classList.remove('selected-band');
                                     if (b.closest('svg').id === 'rhythm-sankey-svg') {
-                                        // Reset KRIC band stroke color based on transition type
-                                        const transitionType = b.getAttribute('data-transition-type');
-                                        if (transitionType === 'grace-grace') {
-                                            b.style.stroke = 'rgba(255, 215, 0, 0.6)';
-                                        } else if (transitionType === 'grace-main') {
-                                            b.style.stroke = 'rgba(255, 165, 0, 0.5)';
-                                        } else if (transitionType === 'main-grace') {
-                                            b.style.stroke = 'rgba(255, 140, 0, 0.5)';
-                                        } else {
-                                            b.style.stroke = 'rgba(231, 76, 60, 0.4)';
-                                        }
+                                        b.style.stroke = 'rgba(231, 76, 60, 0.4)';
                                     } else {
                                         b.style.stroke = 'rgba(52, 152, 219, 0.4)';
                                     }
@@ -8588,21 +7626,7 @@
                         if (wasSelected) {
                             // Deselecting
                             this.classList.remove('selected-band');
-                            if (isKRIC) {
-                                // Reset KRIC band stroke color based on transition type
-                                const transitionType = this.getAttribute('data-transition-type');
-                                if (transitionType === 'grace-grace') {
-                                    this.style.stroke = 'rgba(255, 215, 0, 0.6)';
-                                } else if (transitionType === 'grace-main') {
-                                    this.style.stroke = 'rgba(255, 165, 0, 0.5)';
-                                } else if (transitionType === 'main-grace') {
-                                    this.style.stroke = 'rgba(255, 140, 0, 0.5)';
-                                } else {
-                                    this.style.stroke = 'rgba(231, 76, 60, 0.4)';
-                                }
-                            } else {
-                                this.style.stroke = 'rgba(52, 152, 219, 0.4)';
-                            }
+                            this.style.stroke = isKRIC ? 'rgba(231, 76, 60, 0.4)' : 'rgba(52, 152, 219, 0.4)';
 
                             // Reset label styling
                             if (associatedLabel) {
@@ -8662,17 +7686,7 @@
                                         console.log('Clearing band:', b.getAttribute('data-band-id'));
                                         b.classList.remove('selected-band');
                                         if (b.closest('svg').id === 'rhythm-sankey-svg') {
-                                            // Reset KRIC band stroke color based on transition type
-                                            const transitionType = b.getAttribute('data-transition-type');
-                                            if (transitionType === 'grace-grace') {
-                                                b.style.stroke = 'rgba(255, 215, 0, 0.6)';
-                                            } else if (transitionType === 'grace-main') {
-                                                b.style.stroke = 'rgba(255, 165, 0, 0.5)';
-                                            } else if (transitionType === 'main-grace') {
-                                                b.style.stroke = 'rgba(255, 140, 0, 0.5)';
-                                            } else {
-                                                b.style.stroke = 'rgba(231, 76, 60, 0.4)';
-                                            }
+                                            b.style.stroke = 'rgba(231, 76, 60, 0.4)';
                                         } else {
                                             b.style.stroke = 'rgba(52, 152, 219, 0.4)';
                                         }
@@ -8689,21 +7703,7 @@
 
                             // Set this band as selected
                             this.classList.add('selected-band');
-                            if (isKRIC) {
-                                // Set selected KRIC band stroke color based on transition type
-                                const transitionType = this.getAttribute('data-transition-type');
-                                if (transitionType === 'grace-grace') {
-                                    this.style.stroke = 'rgba(255, 215, 0, 0.9)';
-                                } else if (transitionType === 'grace-main') {
-                                    this.style.stroke = 'rgba(255, 165, 0, 0.8)';
-                                } else if (transitionType === 'main-grace') {
-                                    this.style.stroke = 'rgba(255, 140, 0, 0.8)';
-                                } else {
-                                    this.style.stroke = 'rgba(231, 76, 60, 0.9)';
-                                }
-                            } else {
-                                this.style.stroke = 'rgba(52, 152, 219, 0.9)';
-                            }
+                            this.style.stroke = isKRIC ? 'rgba(231, 76, 60, 0.9)' : 'rgba(52, 152, 219, 0.9)';
 
                             // Enhance label styling
                             if (associatedLabel) {
@@ -8948,60 +7948,29 @@
         function generateKricPatterns() {
             console.log('Generating KRIC patterns from note data');
 
-            // Get current analysis mode
-            const analysisMode = document.querySelector('input[name="analysisMode"]:checked')?.value || 'full';
-            const isMainOnly = analysisMode === 'main_melody';
-
             const noteCircles = document.querySelectorAll('.note-circle');
             const rhythmData = [];
 
-            // Extract rhythm data from notes with grace detection and actual tablature values
-            const graceNoteIndices = [3, 10, 19, 21, 49, 51, 60, 92, 94, 107, 109];
-
+            // Extract rhythm data from notes
             noteCircles.forEach((circle, index) => {
                 const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
-                const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
-                const isGrace = graceNoteIndices.includes(index);
 
-                // Skip grace notes in main-only mode
-                if (isMainOnly && isGrace) {
-                    return;
-                }
-
-                // Get actual duration from tablature text
-                let durationValue = 2; // Default
-                const durationTexts = document.querySelectorAll('text[style*="font-size: 10px"]');
-
-                durationTexts.forEach(text => {
-                    const textX = parseFloat(text.getAttribute('data-base-x') || text.getAttribute('x'));
-                    const textY = parseFloat(text.getAttribute('data-base-y') || text.getAttribute('y'));
-
-                    // Duration text is typically at the same X and about 20px above the note
-                    if (Math.abs(textX - cx) < 5 && Math.abs(textY - (cy - 20)) < 30) {
-                        const value = parseFloat(text.textContent);
-                        if (!isNaN(value)) {
-                            durationValue = value;
-                        }
-                    }
-                });
-
-                // Use actual duration values from tablature
-                let duration = durationValue.toString();
-
-                // Add grace prefix if this is a grace note (only in full mode)
-                const rhythmLabel = (isGrace && !isMainOnly) ? 'g' + duration : duration;
-
-                // Debug logging for first few notes
-                if (index < 10) {
-                    console.log(`Note ${index}: durationValue=${durationValue} → ${rhythmLabel} (grace=${isGrace})`);
+                // Determine duration based on spacing to next note
+                let duration = 'quarter';
+                const nextNote = noteCircles[index + 1];
+                if (nextNote) {
+                    const nextCx = parseFloat(nextNote.getAttribute('data-base-x') || nextNote.getAttribute('cx'));
+                    const spacing = nextCx - cx;
+                    if (spacing > 400) duration = 'whole';
+                    else if (spacing > 200) duration = 'half';
+                    else if (spacing > 100) duration = 'quarter';
+                    else if (spacing > 50) duration = 'eighth';
+                    else duration = 'sixteenth';
                 }
 
                 rhythmData.push({
                     index: index,
-                    duration: rhythmLabel, // Now includes grace prefix
-                    originalDuration: duration, // Keep original for reference
-                    isGrace: isGrace,
-                    durationValue: durationValue, // Store original value for debugging
+                    duration: duration,
                     cx: cx
                 });
             });
@@ -9009,8 +7978,6 @@
             // Generate KRIC patterns for all levels (2 through max possible)
             const maxLevel = Math.min(16, rhythmData.length); // Max 16 levels or note count
             window.kricPatterns = {};
-
-
 
             for (let ngramSize = 2; ngramSize <= maxLevel; ngramSize++) {
                 const patterns = {};
@@ -9196,168 +8163,6 @@
             }
         }
 
-        // Helper function to convert duration values to musical note names
-        function durationToNoteName(duration) {
-            // Strip grace prefix for conversion
-            const cleanDuration = duration.startsWith('g') ? duration.substring(1) : duration;
-            const isGrace = duration.startsWith('g');
-
-            let noteName;
-            switch (cleanDuration) {
-                case '0.5': noteName = '16th'; break;
-                case '1': noteName = '16th'; break;
-                case '2': noteName = '8th'; break;
-                case '3': noteName = 'dotted 8th'; break;
-                case '4': noteName = '4th'; break;
-                case '5': noteName = 'dotted 4th'; break;
-                case '6': noteName = 'dotted 4th+'; break;
-                case '7': noteName = 'dotted 2nd-'; break;
-                case '8': noteName = '2nd'; break;
-                default: noteName = cleanDuration; break;
-            }
-
-            return isGrace ? `grace ${noteName}` : noteName;
-        }
-
-        // Helper function to get pitch information for a rhythm pattern
-        function getPitchInfoForRhythmPattern(rhythmPattern) {
-            const pitchData = [];
-
-            // Get all note elements
-            const noteCircles = document.querySelectorAll('.note-circle');
-
-            // Build rhythm sequence from tablature
-            const rhythmSequence = [];
-            noteCircles.forEach((circle, index) => {
-                const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
-                const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
-                const isGrace = circle.getAttribute('data-is-grace') === 'true';
-
-                // Get duration from tablature
-                let durationValue = 2;
-                const durationTexts = document.querySelectorAll('text[style*="font-size: 10px"]');
-                durationTexts.forEach(text => {
-                    const textX = parseFloat(text.getAttribute('data-base-x') || text.getAttribute('x'));
-                    const textY = parseFloat(text.getAttribute('data-base-y') || text.getAttribute('y'));
-                    if (Math.abs(textX - cx) < 5 && Math.abs(textY - (cy - 20)) < 30) {
-                        const value = parseFloat(text.textContent);
-                        if (!isNaN(value)) {
-                            durationValue = value;
-                        }
-                    }
-                });
-
-                const duration = durationValue.toString();
-                const rhythmLabel = isGrace ? 'g' + duration : duration;
-
-                // Get pitch from string position
-                const stringInfo = {
-                    110: 'D4', 260: 'G4', 320: 'A4', 410: 'C5',
-                    470: 'D5', 530: 'E5', 620: 'G5'
-                };
-                const pitch = stringInfo[Math.round(cy/10)*10] || 'Unknown';
-
-                rhythmSequence.push({ rhythm: rhythmLabel, pitch: pitch, index: index });
-            });
-
-            // Find occurrences of the rhythm pattern and collect associated pitches
-            for (let i = 0; i < rhythmSequence.length - 1; i++) {
-                if (rhythmSequence[i].rhythm === rhythmPattern[0] &&
-                    rhythmSequence[i + 1].rhythm === rhythmPattern[1]) {
-                    pitchData.push({
-                        fromPitch: rhythmSequence[i].pitch,
-                        toPitch: rhythmSequence[i + 1].pitch,
-                        position: i
-                    });
-                }
-            }
-
-            return pitchData;
-        }
-
-        // Function to create and show KRIC Sankey tooltip
-        function showRhythmSankeyTooltip(event, transitionInfo) {
-            // Determine which specific transition type is being hovered
-            const hoveredElement = event.target;
-            const hoveredTransitionType = hoveredElement.getAttribute('data-transition-type');
-
-            // Override the transitionType in transitionInfo with the hovered one
-            if (hoveredTransitionType) {
-                transitionInfo = {...transitionInfo, transitionType: hoveredTransitionType};
-            }
-            // Remove existing tooltip
-            const existingTooltip = document.querySelector('.sankey-tooltip');
-            if (existingTooltip) {
-                existingTooltip.remove();
-            }
-
-            // Create new tooltip
-            const tooltip = document.createElement('div');
-            tooltip.className = 'sankey-tooltip';
-
-            const { fromRhythm, toRhythm, count, total, percentage, rank, transitionType, pitchInfo, groupInfo } = transitionInfo;
-
-            let typeLabel = '';
-            if (transitionType === 'main-grace') typeLabel = ' (Main → Grace)';
-            else if (transitionType === 'grace-main') typeLabel = ' (Grace → Main)';
-            else if (transitionType === 'grace-grace') typeLabel = ' (Grace → Grace)';
-            else typeLabel = ' (Main → Main)';
-
-            // Add group information if multiple types exist
-            let groupSection = '';
-            if (groupInfo && groupInfo.totalTypes > 1) {
-                const typeBreakdown = groupInfo.allTypes.map((type, i) => {
-                    const typeName = type === 'main-grace' ? 'Main→Grace' :
-                                    type === 'grace-main' ? 'Grace→Main' :
-                                    type === 'grace-grace' ? 'Grace→Grace' : 'Main→Main';
-
-                    const isCurrentType = transitionType === type;
-                    const style = isCurrentType ? 'font-weight: bold; color: #FFD700;' : 'color: #CCC;';
-                    return `<span style="${style}">${typeName}: ${groupInfo.allCounts[i]}</span>`;
-                }).join('<br>');
-
-                groupSection = `
-                    <div class="tooltip-section">
-                        <span class="tooltip-label">All Types for ${durationToNoteName(fromRhythm)}→${durationToNoteName(toRhythm)}:</span><br>
-                        ${typeBreakdown}
-                    </div>`;
-            }
-
-            // Create pitch information section
-            let pitchSection = '';
-            if (pitchInfo && pitchInfo.length > 0) {
-                const pitchList = pitchInfo.map(p =>
-                    `<span class="tooltip-pitch">${p.fromPitch}→${p.toPitch}</span>`
-                ).join('<br>');
-                pitchSection = `
-                    <div class="tooltip-section">
-                        <span class="tooltip-label">KPIC-2 Pitches:</span><br>
-                        ${pitchList}
-                    </div>`;
-            }
-
-            tooltip.innerHTML = `
-                <div class="tooltip-title">${durationToNoteName(fromRhythm)} → ${durationToNoteName(toRhythm)}${typeLabel}</div>
-                <div class="tooltip-section">
-                    <span class="tooltip-label">Occurrences:</span> <span class="tooltip-value">${count}/${total}</span>
-                </div>
-                <div class="tooltip-section">
-                    <span class="tooltip-label">Percentage:</span> <span class="tooltip-value">${percentage}%</span>
-                </div>
-                <div class="tooltip-section">
-                    <span class="tooltip-label">Rank:</span> <span class="tooltip-value">#${rank}</span>
-                </div>
-                ${groupSection}
-                ${pitchSection}
-            `;
-
-            // Position tooltip to the right of mouse (avoiding cursor coverage)
-            tooltip.style.left = (event.pageX + 15) + 'px';
-            tooltip.style.top = (event.pageY - 10) + 'px';
-
-            document.body.appendChild(tooltip);
-        }
-
         // Function to create and show Sankey tooltip
         function showSankeyTooltip(event, transitionInfo) {
             // Remove existing tooltip
@@ -9509,14 +8314,9 @@
             const correspondingAnalysisMode = analysisModeMap[selectedMode];
             const analysisRadio = document.querySelector(`input[name="analysisMode"][value="${correspondingAnalysisMode}"]`);
             if (analysisRadio && !analysisRadio.checked) {
-                console.log('🔄 Syncing analysis mode from Sankey:', correspondingAnalysisMode);
                 // Set the radio button without triggering its onchange
                 window.skipSankeySync = true; // Flag to prevent circular update
                 analysisRadio.checked = true;
-
-                // Clear KRIC pattern cache to force regeneration with new mode
-                window.kricPatterns = null;
-
                 // Update the highlighting based on new mode
                 updateHighlighting();
                 window.skipSankeySync = false;

@@ -437,10 +437,12 @@
         .line-break {
             color: #bdc3c7;
             cursor: pointer;
-            margin: 0 2px;
+            margin: 0 1px;
             font-weight: bold;
             opacity: 0.3;
             transition: opacity 0.2s;
+            font-size: 10px;
+            padding: 0 1px;
         }
         
         .line-break:hover {
@@ -1846,13 +1848,14 @@
                 </h3>
             </div>
 
+
             <!-- Collapsible Table Content -->
             <div id="lyrics-table-content" style="display: block;">
                 <table style="width: 100%; border-collapse: collapse; margin: 0 0 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     <thead>
                         <tr>
-                            <th style="width: 50%; padding: 15px; background: #f0f8ff; border: 2px solid #3498db; text-align: center; color: #3498db;">Tiếng Việt (Vietnamese)</th>
-                            <th style="width: 50%; padding: 15px; background: #f8f9fa; border: 2px solid #e74c3c; text-align: center; color: #e74c3c;">English Translation</th>
+                            <th style="width: 65%; padding: 15px; background: #f0f8ff; border: 2px solid #3498db; text-align: center; color: #3498db;">Tiếng Việt (Vietnamese)</th>
+                            <th style="width: 35%; padding: 15px; background: #f8f9fa; border: 2px solid #e74c3c; text-align: center; color: #e74c3c;">English Translation</th>
                         </tr>
                     </thead>
                 <tbody>
@@ -1923,6 +1926,13 @@
                                     <option value="46">46px</option>
                                     <option value="48">48px</option>
                                     <option value="50">50px</option>
+                                </select>
+
+                                <!-- Vietnamese Voice Selector -->
+                                <label style="margin-left: 15px; font-weight: bold; font-size: 10px;">🗣️ Voice:</label>
+                                <select id="vietnamese-voice-selector" onchange="updateVietnameseVoice()" style="margin-left: 5px; padding: 2px 6px; font-size: 10px; border: 1px solid #ccc; border-radius: 3px;">
+                                    <option value="female">👩 Female</option>
+                                    <option value="male">👨 Male</option>
                                 </select>
 
                                 <button id="start-learning-btn" onclick="startLearning()" style="margin-left: 10px; font-size: 9px; padding: 2px 8px; background: #4CAF50; color: white; border: none; border-radius: 2px;">▶️ Start Learning</button>
@@ -4979,9 +4989,46 @@
                 stopBtn.style.background = '#EF5350';
             }
 
+            // Get the line text for tooltips
+            const lineText = lines[lineIndex]?.text || `Line ${lineIndex + 1}`;
+            const shortText = lineText.length > 30 ? lineText.substring(0, 30) + '...' : lineText;
+
+            // Create phonetic guide button
+            const phoneticBtn = document.createElement('button');
+            phoneticBtn.innerHTML = '📝';
+            phoneticBtn.title = `"${shortText}"\n📝 Vietnamese pronunciation guide - Shows how to read this phrase`;
+            phoneticBtn.style.cssText = 'margin-left: 5px; padding: 1px 4px; font-size: 9px; background: #9C27B0; color: white; border: none; border-radius: 2px; cursor: pointer; vertical-align: middle;';
+            phoneticBtn.onclick = (e) => {
+                e.stopPropagation();
+                openPhoneticGuidePopup(lines[lineIndex]?.text);
+            };
+
+            // Create Google Translate button
+            const googleBtn = document.createElement('button');
+            googleBtn.innerHTML = '🌐';
+            googleBtn.title = `"${shortText}"\n🌐 Google Translate - High quality Vietnamese pronunciation`;
+            googleBtn.style.cssText = 'margin-left: 2px; padding: 1px 4px; font-size: 9px; background: #4285F4; color: white; border: none; border-radius: 2px; cursor: pointer; vertical-align: middle;';
+            googleBtn.onclick = (e) => {
+                e.stopPropagation();
+                openGoogleTranslatePopup(lines[lineIndex]?.text);
+            };
+
+            // Create Vietnamese voice button
+            const voiceBtn = document.createElement('button');
+            voiceBtn.innerHTML = '🔊';
+            voiceBtn.title = `"${shortText}"\n🔊 System voice - Basic Vietnamese pronunciation (natural pitch)`;
+            voiceBtn.style.cssText = 'margin-left: 2px; padding: 1px 4px; font-size: 9px; background: #FF7043; color: white; border: none; border-radius: 2px; cursor: pointer; vertical-align: middle;';
+            voiceBtn.onclick = (e) => {
+                e.stopPropagation();
+                playVietnameseNaturalVoice(lines[lineIndex]?.text, lineIndex);
+            };
+
             buttonContainer.appendChild(playBtn);
             buttonContainer.appendChild(loopBtn);
             buttonContainer.appendChild(stopBtn);
+            buttonContainer.appendChild(phoneticBtn);
+            buttonContainer.appendChild(googleBtn);
+            buttonContainer.appendChild(voiceBtn);
 
             return buttonContainer;
         }
@@ -11397,6 +11444,444 @@
                 }
             });
         }
+
+        // Vietnamese lyrics text-to-speech functionality
+        let lyricsSynth = null;
+        let lyricsUtterance = null;
+        let currentVietnameseVoiceSettings = {
+            type: 'male-bac',
+            rate: 0.8,
+            pitch: 1.0,
+            volume: 1.0
+        };
+
+        function openPhoneticGuidePopup(text) {
+            // Create phonetic guide HTML content
+            const phonetic = convertToPhonetic(text);
+
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Vietnamese Pronunciation Guide</title>
+                    <style>
+                        body {
+                            font-family: 'Segoe UI', sans-serif;
+                            padding: 20px;
+                            background: #f8f9fa;
+                            margin: 0;
+                        }
+                        .container {
+                            background: white;
+                            padding: 25px;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                            max-width: 500px;
+                            margin: 0 auto;
+                        }
+                        h2 {
+                            color: #2c3e50;
+                            margin: 0 0 20px 0;
+                            text-align: center;
+                        }
+                        .vietnamese {
+                            font-size: 20px;
+                            margin-bottom: 15px;
+                            color: #333;
+                            padding: 10px;
+                            background: #e8f4fd;
+                            border-radius: 5px;
+                        }
+                        .phonetic {
+                            font-size: 18px;
+                            color: #666;
+                            font-family: monospace;
+                            padding: 10px;
+                            background: #f0f8ff;
+                            border-radius: 5px;
+                            margin-bottom: 20px;
+                        }
+                        .close-btn {
+                            background: #3498db;
+                            color: white;
+                            border: none;
+                            padding: 10px 20px;
+                            border-radius: 5px;
+                            cursor: pointer;
+                            display: block;
+                            margin: 0 auto;
+                            font-size: 14px;
+                        }
+                        .close-btn:hover {
+                            background: #2980b9;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h2>📖 Vietnamese Pronunciation</h2>
+                        <div class="vietnamese"><strong>Vietnamese:</strong><br>${text}</div>
+                        <div class="phonetic"><strong>Phonetic:</strong><br>${phonetic}</div>
+                        <button class="close-btn" onclick="window.close()">✅ Close Window</button>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // Open popup window with phonetic content
+            const popup = window.open(
+                '',
+                'PhoneticGuide',
+                'width=550,height=400,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no'
+            );
+
+            if (popup) {
+                popup.document.write(htmlContent);
+                popup.document.close();
+                popup.focus();
+            }
+        }
+
+        function openGoogleTranslatePopup(text) {
+            // Create popup window for Google Translate
+            const encodedText = encodeURIComponent(text);
+            const url = `https://translate.google.com/?sl=vi&tl=en&text=${encodedText}&op=translate`;
+
+            // Open smaller, easily closable popup window
+            const popup = window.open(
+                url,
+                'GoogleTranslateVoice',
+                'width=600,height=500,scrollbars=yes,resizable=yes,menubar=no,toolbar=no,location=no'
+            );
+
+            // Focus the popup
+            if (popup) {
+                popup.focus();
+            }
+        }
+
+        function playVietnameseNaturalVoice(text, lineIndex) {
+            if ('speechSynthesis' in window) {
+                if (!text) {
+                    alert('No text found for this line.');
+                    return;
+                }
+
+                // Stop any existing speech
+                stopVietnameseSpeech();
+
+                // Create new speech instance
+                lyricsSynth = window.speechSynthesis;
+                lyricsUtterance = new SpeechSynthesisUtterance(text);
+
+                // Find the best Vietnamese voice (avoid English speakers)
+                const voices = lyricsSynth.getVoices();
+                let selectedVoice = null;
+
+                // First priority: Actual Vietnamese voices
+                selectedVoice = voices.find(voice =>
+                    voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+                );
+
+                // Second priority: Asian language voices (better for Vietnamese sounds)
+                if (!selectedVoice) {
+                    selectedVoice = voices.find(voice =>
+                        voice.lang.includes('zh') || voice.lang.includes('ja') || voice.lang.includes('ko')
+                    );
+                }
+
+                // Fallback: Default voice but force Vietnamese language
+                if (!selectedVoice) {
+                    selectedVoice = voices[0]; // Use default
+                }
+
+                // Apply voice
+                if (selectedVoice) {
+                    lyricsUtterance.voice = selectedVoice;
+                }
+                lyricsUtterance.lang = 'vi-VN'; // Force Vietnamese language
+
+                // Set speech parameters - NATURAL pitch, no adjustments
+                lyricsUtterance.rate = 0.8; // Slightly slower for Vietnamese
+                lyricsUtterance.pitch = 1.0; // Natural pitch - no modification
+                lyricsUtterance.volume = 1.0;
+
+                // Event handlers for visual feedback
+                const targetBtn = document.querySelector(`button[title*="Vietnamese voice for line ${lineIndex + 1}"]`);
+                lyricsUtterance.onstart = function() {
+                    if (targetBtn) {
+                        targetBtn.style.background = '#E91E63';
+                        targetBtn.innerHTML = '🔉';
+                    }
+                };
+
+                lyricsUtterance.onend = function() {
+                    if (targetBtn) {
+                        targetBtn.style.background = '#FF7043';
+                        targetBtn.innerHTML = '🔊';
+                    }
+                };
+
+                lyricsUtterance.onerror = function(event) {
+                    console.error('Speech synthesis error:', event);
+                    if (targetBtn) {
+                        targetBtn.style.background = '#FF7043';
+                        targetBtn.innerHTML = '🔊';
+                    }
+                };
+
+                // Start speaking
+                lyricsSynth.speak(lyricsUtterance);
+            } else {
+                alert('Text-to-speech is not supported in this browser.');
+            }
+        }
+
+        function showPhoneticReading(text, lineIndex) {
+            // Create phonetic popup
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                border: 3px solid #3498db;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 500px;
+                font-family: 'Segoe UI', sans-serif;
+            `;
+
+            // Convert to phonetic (basic approximation)
+            const phonetic = convertToPhonetic(text);
+
+            popup.innerHTML = `
+                <h3 style="margin: 0 0 15px 0; color: #2c3e50;">📖 Vietnamese Pronunciation</h3>
+                <div style="font-size: 18px; margin-bottom: 10px; color: #333;">
+                    <strong>Vietnamese:</strong> ${text}
+                </div>
+                <div style="font-size: 16px; margin-bottom: 15px; color: #666; font-family: monospace;">
+                    <strong>Phonetic:</strong> ${phonetic}
+                </div>
+                <div style="text-align: center;">
+                    <button onclick="this.parentElement.parentElement.remove()"
+                            style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                        ✅ Got it
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(popup);
+
+            // Auto-close after 8 seconds
+            setTimeout(() => {
+                if (popup.parentElement) popup.remove();
+            }, 8000);
+        }
+
+        function convertToPhonetic(vietnameseText) {
+            // Basic Vietnamese to phonetic conversion
+            const phoneticMap = {
+                'à': 'ah', 'á': 'ah', 'ả': 'ah', 'ã': 'ah', 'ạ': 'ah',
+                'ă': 'a', 'ằ': 'a', 'ắ': 'a', 'ẳ': 'a', 'ẵ': 'a', 'ặ': 'a',
+                'â': 'aw', 'ầ': 'aw', 'ấ': 'aw', 'ẩ': 'aw', 'ẫ': 'aw', 'ậ': 'aw',
+                'è': 'eh', 'é': 'eh', 'ẻ': 'eh', 'ẽ': 'eh', 'ẹ': 'eh',
+                'ê': 'ay', 'ề': 'ay', 'ế': 'ay', 'ể': 'ay', 'ễ': 'ay', 'ệ': 'ay',
+                'ì': 'ee', 'í': 'ee', 'ỉ': 'ee', 'ĩ': 'ee', 'ị': 'ee',
+                'ò': 'oh', 'ó': 'oh', 'ỏ': 'oh', 'õ': 'oh', 'ọ': 'oh',
+                'ô': 'aw', 'ồ': 'aw', 'ố': 'aw', 'ổ': 'aw', 'ỗ': 'aw', 'ộ': 'aw',
+                'ơ': 'uh', 'ờ': 'uh', 'ớ': 'uh', 'ở': 'uh', 'ỡ': 'uh', 'ợ': 'uh',
+                'ù': 'oo', 'ú': 'oo', 'ủ': 'oo', 'ũ': 'oo', 'ụ': 'oo',
+                'ư': 'oo', 'ừ': 'oo', 'ứ': 'oo', 'ử': 'oo', 'ữ': 'oo', 'ự': 'oo',
+                'ỳ': 'ee', 'ý': 'ee', 'ỷ': 'ee', 'ỹ': 'ee', 'ỵ': 'ee',
+                'đ': 'd',
+                'r': 'z', 'rằng': 'zahng', 'rí': 'zee',
+                'ng': 'ng', 'nh': 'ny', 'ch': 'ch', 'th': 'th', 'ph': 'f',
+                'gi': 'yee', 'qu': 'kw'
+            };
+
+            let result = vietnameseText.toLowerCase();
+
+            // Apply phonetic mappings
+            for (const [viet, phonetic] of Object.entries(phoneticMap)) {
+                result = result.replaceAll(viet, phonetic);
+            }
+
+            return result;
+        }
+
+        function openGoogleTranslateForLine(text) {
+            const encodedText = encodeURIComponent(text);
+            const url = `https://translate.google.com/?sl=vi&tl=en&text=${encodedText}&op=translate`;
+            window.open(url, '_blank');
+        }
+
+        function playSystemVoice(lineText, lineIndex, lines) {
+            if ('speechSynthesis' in window) {
+                // Stop any existing speech
+                stopVietnameseSpeech();
+
+                // Create new speech instance
+                lyricsSynth = window.speechSynthesis;
+                lyricsUtterance = new SpeechSynthesisUtterance(lineText);
+
+                // Apply Vietnamese voice settings
+                applyVietnameseVoiceSettings(lyricsUtterance);
+
+                // Event handlers
+                const readButtons = document.querySelectorAll('.lyrics-playback-buttons button[title*="Read Vietnamese"]');
+                lyricsUtterance.onstart = function() {
+                    readButtons.forEach(btn => {
+                        if (btn.title.includes(`line ${lineIndex + 1}`)) {
+                            btn.style.background = '#E91E63';
+                            btn.innerHTML = '🔊';
+                        }
+                    });
+                };
+
+                lyricsUtterance.onend = function() {
+                    readButtons.forEach(btn => {
+                        btn.style.background = '#9C27B0';
+                        btn.innerHTML = '🗣️';
+                    });
+                };
+
+                lyricsUtterance.onerror = function(event) {
+                    console.error('Speech synthesis error:', event);
+                    readButtons.forEach(btn => {
+                        btn.style.background = '#9C27B0';
+                        btn.innerHTML = '🗣️';
+                    });
+                    alert('Error playing Vietnamese: ' + event.error);
+                };
+
+                // Start speaking
+                lyricsSynth.speak(lyricsUtterance);
+            } else {
+                alert('Text-to-speech is not supported in this browser.');
+            }
+        }
+
+        function stopVietnameseSpeech() {
+            if (lyricsSynth && lyricsSynth.speaking) {
+                lyricsSynth.cancel();
+            }
+            // Reset all read buttons
+            document.querySelectorAll('.lyrics-playback-buttons button[title*="Read Vietnamese"]').forEach(btn => {
+                btn.style.background = '#9C27B0';
+                btn.innerHTML = '🗣️';
+            });
+        }
+
+        function applyVietnameseVoiceSettings(utterance) {
+            const voices = speechSynthesis.getVoices();
+            let selectedVoice = null;
+
+            // Check if user has selected a specific voice from test page
+            const savedVoice = localStorage.getItem('selectedVietnameseVoice');
+            if (savedVoice) {
+                try {
+                    const voiceData = JSON.parse(savedVoice);
+                    selectedVoice = voices.find(voice =>
+                        voice.name === voiceData.name && voice.lang === voiceData.lang
+                    );
+                    if (selectedVoice) {
+                        utterance.voice = selectedVoice;
+                        utterance.lang = selectedVoice.lang;
+                        utterance.rate = voiceData.rate || currentVietnameseVoiceSettings.rate;
+                        utterance.pitch = 1.0;
+                        utterance.volume = currentVietnameseVoiceSettings.volume;
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Error loading saved voice:', e);
+                }
+            }
+
+            // Fallback to original voice selection logic
+            const voiceType = currentVietnameseVoiceSettings.type;
+
+            // Try to find specific Vietnamese voices based on selection
+            if (voiceType.includes('male')) {
+                selectedVoice = voices.find(voice =>
+                    (voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')) &&
+                    (voice.name.toLowerCase().includes('male') || voice.name.toLowerCase().includes('nam'))
+                ) || voices.find(voice =>
+                    voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+                );
+            } else if (voiceType.includes('female')) {
+                selectedVoice = voices.find(voice =>
+                    (voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')) &&
+                    (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('nữ'))
+                ) || voices.find(voice =>
+                    voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+                );
+            }
+
+            // Fallback to any Vietnamese voice or default
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice =>
+                    voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+                );
+            }
+
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+                utterance.lang = 'vi-VN';
+            } else {
+                utterance.lang = 'vi-VN';
+            }
+
+            // Apply voice characteristics based on region and gender
+            const settings = getVoiceCharacteristics(voiceType);
+            utterance.rate = currentVietnameseVoiceSettings.rate;
+            utterance.pitch = settings.pitch;
+            utterance.volume = currentVietnameseVoiceSettings.volume;
+        }
+
+        function getVoiceCharacteristics(voiceType) {
+            const characteristics = {
+                'male-bac': { pitch: 0.8, description: 'Northern Male - Lower pitch, clear pronunciation' },
+                'female-bac': { pitch: 1.2, description: 'Northern Female - Higher pitch, clear pronunciation' },
+                'male-trung': { pitch: 0.9, description: 'Central Male - Medium pitch, melodic tone' },
+                'female-trung': { pitch: 1.1, description: 'Central Female - Medium-high pitch, melodic tone' },
+                'male-nam': { pitch: 0.85, description: 'Southern Male - Slightly lower pitch, softer tone' },
+                'female-nam': { pitch: 1.15, description: 'Southern Female - Medium-high pitch, softer tone' }
+            };
+
+            return characteristics[voiceType] || { pitch: 1.0, description: 'Default voice' };
+        }
+
+        function updateVietnameseVoice() {
+            const selector = document.getElementById('vietnamese-voice-selector');
+            currentVietnameseVoiceSettings.type = selector.value;
+
+            // Update pitch based on voice type
+            const characteristics = getVoiceCharacteristics(selector.value);
+            currentVietnameseVoiceSettings.pitch = characteristics.pitch;
+
+            console.log('Vietnamese voice updated:', selector.value, characteristics.description);
+        }
+
+        function updateSpeechRate() {
+            const slider = document.getElementById('speech-rate-slider');
+            const valueDisplay = document.getElementById('speech-rate-value');
+
+            currentVietnameseVoiceSettings.rate = parseFloat(slider.value);
+            valueDisplay.textContent = slider.value + 'x';
+        }
+
+        // Initialize voices when they're loaded
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = function() {
+                // Voices are now loaded
+                console.log('Available voices:', speechSynthesis.getVoices().map(v => v.name + ' (' + v.lang + ')'));
+            };
+        }
+
     </script>
 </body>
 </html>

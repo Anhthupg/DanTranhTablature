@@ -689,37 +689,6 @@
                         </div>
                     </div>
 
-                    <!-- Audio Playback -->
-                    <div class="control-section compact" style="padding: 5px;">
-                        <h4 class="section-title collapsible" onclick="toggleSection('audio')" style="margin-bottom: 5px;">
-                            🎵 Audio <span class="toggle-icon" id="audio-icon">▼</span>
-                        </h4>
-                        <div class="section-content" id="audio-content">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                                <!-- Left: Audio Controls -->
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <button id="initAudioBtn" onclick="initializeAudio()" style="background: #e74c3c; color: white; padding: 4px 8px; font-size: 12px; border: none; border-radius: 3px;">🔊</button>
-                                    <button id="playPauseBtn" onclick="togglePlayback()" disabled style="opacity: 0.5; cursor: not-allowed; padding: 4px 8px; font-size: 12px; border: none; border-radius: 3px;">▶</button>
-                                    <button id="stopBtn" onclick="stopPlayback()" disabled style="opacity: 0.5; cursor: not-allowed; padding: 4px 8px; font-size: 12px; border: none; border-radius: 3px;">⏹</button>
-                                </div>
-
-                                <!-- Right: Tempo -->
-                                <div style="display: flex; align-items: center; gap: 4px;">
-                                    <span style="font-size: 11px;">Tempo:</span>
-                                    <input type="range" id="tempoSlider" min="60" max="200" value="120" onchange="updateTempo()" style="width: 60px;">
-                                    <span id="tempoValue" style="font-size: 11px; min-width: 30px;">120</span>
-                                </div>
-                            </div>
-
-                            <!-- Auto-scroll toggle -->
-                            <div style="margin-top: 8px;">
-                                <label style="display: flex; align-items: center; gap: 5px; font-size: 11px;">
-                                    <input type="checkbox" id="autoScrollToggle" checked onchange="saveAutoScrollPreference()">
-                                    <span>Auto-scroll during playback</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Right Column: Syllables, KPIC/KRIC -->
@@ -1826,6 +1795,18 @@
 
         <!-- Popup Button Panel -->
         <div class="popup-button-panel" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
+            <!-- Audio Controls Inline -->
+            <button id="initAudioBtn" onclick="initializeAudio()" style="background: #e74c3c; color: white; padding: 8px 12px; font-size: 12px; border: none; border-radius: 3px; cursor: pointer; margin: 0 2px;">🔊</button>
+            <button id="playPauseBtn" onclick="togglePlayback()" disabled style="opacity: 0.3; cursor: not-allowed; padding: 8px 12px; font-size: 12px; border: none; border-radius: 3px; background: #bdc3c7; color: #7f8c8d; margin: 0 2px;">▶</button>
+            <button id="stopBtn" onclick="stopPlayback()" disabled style="opacity: 0.3; cursor: not-allowed; padding: 8px 12px; font-size: 12px; border: none; border-radius: 3px; background: #bdc3c7; color: #7f8c8d; margin: 0 2px;">⏹</button>
+            <span style="font-size: 12px; margin: 0 5px;">Tempo:</span>
+            <input type="range" id="tempoSlider" min="60" max="200" value="120" onchange="updateTempo()" style="width: 80px; margin: 0 2px;">
+            <span id="tempoValue" style="font-size: 12px; min-width: 35px; margin: 0 5px;">120 BPM</span>
+            <label style="display: inline-flex; align-items: center; gap: 3px; font-size: 12px; cursor: pointer; margin: 0 5px;">
+                <input type="checkbox" id="autoScrollToggle" checked onchange="saveAutoScrollPreference()">
+                Auto-scroll
+            </label>
+            <span style="margin: 0 10px;">|</span>
             <button onclick="showContent('lyrics')" style="padding: 8px 15px; margin: 0 5px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📝 Lyrics</button>
             <button onclick="showContent('strings-vs-notes')" style="padding: 8px 15px; margin: 0 5px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 Strings vs Notes</button>
             <button onclick="showContent('kpic-kric-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #9b59b6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-2 & KRIC-2</button>
@@ -5194,7 +5175,9 @@
                 const textY = parseFloat(text.getAttribute('y'));
                 // Duration text is typically at the same X and about 20px above the note
                 if (Math.abs(textX - noteX) < 5 && Math.abs(textY - (noteY - 20)) < 30) {
-                    const textContent = text.textContent.trim();
+                    // Check for original duration stored in data attribute first
+                    const originalDuration = text.getAttribute('data-original-duration');
+                    const textContent = originalDuration || text.textContent.trim();
                     const parsedDuration = parseFloat(textContent);
                     if (!isNaN(parsedDuration)) {
                         durationValue = parsedDuration;
@@ -5370,6 +5353,10 @@
                 });
 
                 if (matchingNoteIndex !== null && fingerings[matchingNoteIndex]) {
+                    // Store original duration value in data attribute before replacing
+                    const originalDuration = text.textContent.trim();
+                    text.setAttribute('data-original-duration', originalDuration);
+
                     // Update the text content and make it visible with italic style
                     text.textContent = fingerings[matchingNoteIndex];
                     text.setAttribute('style', 'font-size: 10px; fill: #000; font-weight: bold; opacity: 1.0; font-style: italic;');
@@ -5602,17 +5589,25 @@
                 oscillator.stop(ctx.currentTime + 0.1);
 
                 document.getElementById('initAudioBtn').style.background = '#27ae60';
-                document.getElementById('initAudioBtn').innerHTML = '🔊 Audio Ready';
+                document.getElementById('initAudioBtn').innerHTML = '🔊 Ready';
                 document.getElementById('initAudioBtn').disabled = true;
 
                 const playBtn = document.getElementById('playPauseBtn');
                 const stopBtn = document.getElementById('stopBtn');
+
+                // Enable and style play button
                 playBtn.disabled = false;
                 playBtn.style.opacity = '1';
                 playBtn.style.cursor = 'pointer';
+                playBtn.style.background = '#27ae60';
+                playBtn.style.color = 'white';
+
+                // Enable and style stop button
                 stopBtn.disabled = false;
                 stopBtn.style.opacity = '1';
                 stopBtn.style.cursor = 'pointer';
+                stopBtn.style.background = '#e67e22';
+                stopBtn.style.color = 'white';
 
                 // Update lyrics playback controls to enable buttons
                 updateLyricsPlaybackControls();
@@ -5735,7 +5730,7 @@
             const slider = document.getElementById('tempoSlider');
             const display = document.getElementById('tempoValue');
             tempo = parseInt(slider.value);
-            display.textContent = tempo;
+            display.textContent = tempo + ' BPM';
         }
 
         function togglePlayback() {
@@ -5916,7 +5911,10 @@
                 const textY = parseFloat(text.getAttribute('y'));
                 // Duration text is typically at the same X and about 20px above the note
                 if (Math.abs(textX - noteX) < 5 && Math.abs(textY - (noteY - 20)) < 30) {
-                    const value = parseFloat(text.textContent);
+                    // Check for original duration stored in data attribute first
+                    const originalDuration = text.getAttribute('data-original-duration');
+                    const textContent = originalDuration || text.textContent.trim();
+                    const value = parseFloat(textContent);
                     if (!isNaN(value)) {
                         durationValue = value;
                     }
@@ -6745,7 +6743,7 @@
             }
         }
 
-        // Generate string-note frequency analysis with exact tablature dimensions
+// Generate string-note frequency analysis with exact tablature dimensions
         function generateStringNoteAnalysis() {
             const contentArea = document.getElementById('content-area');
 

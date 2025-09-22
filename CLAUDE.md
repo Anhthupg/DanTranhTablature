@@ -84,3 +84,5 @@ open analytical_tablature.html
 - The string spacing is critical for accurate visualization
 - All Y-coordinates are in SVG coordinate space (top = 0)
 - Pattern highlighting relies on consistent note indexing
+- and #29 should be index?
+- 19 should be the same reason wtih $14 and you got #14 correctly

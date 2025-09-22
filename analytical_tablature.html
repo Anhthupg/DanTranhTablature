@@ -10,7 +10,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 20px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: #f8f9fa;
             min-height: 100vh;
         }
         
@@ -267,7 +267,7 @@
         }
         
         .tablature-container {
-            background: white;
+            background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -1793,6 +1793,23 @@
 </svg>
         </div>
 
+        <!-- Right-Aligned Bar Chart Container -->
+        <div id="rightBarChartContainer" style="
+            position: fixed;
+            right: 270px;
+            top: 200px;
+            width: 250px;
+            height: 500px;
+            background: transparent;
+            z-index: 1000;
+            overflow: visible;
+            pointer-events: all;
+            display: block;
+        ">
+            <div id="rightBarChartContent" style="position: relative; width: 100%; height: 100%;"></div>
+        </div>
+        </div>
+
         <!-- Popup Button Panel -->
         <div class="popup-button-panel" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
             <!-- Audio Controls Inline -->
@@ -1808,15 +1825,352 @@
             </label>
             <span style="margin: 0 10px;">|</span>
             <button onclick="showContent('lyrics')" style="padding: 8px 15px; margin: 0 5px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📝 Lyrics</button>
-            <button onclick="showContent('strings-vs-notes')" style="padding: 8px 15px; margin: 0 5px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 Strings vs Notes</button>
+            <button id="toggleRightBarChart" onclick="toggleRightBarChart()" style="padding: 8px 15px; margin: 0 5px; background: #008080; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 KP/RIC-1</button>
             <button onclick="showContent('kpic-kric-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #9b59b6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-2 & KRIC-2</button>
             <button onclick="showContent('kpic3-kric3-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #8e44ad; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-3 & KRIC-3</button>
             <button onclick="showLegend()" style="padding: 8px 15px; margin: 0 5px; background: #34495e; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🏷️ Legend</button>
+            <button onclick="showContent('analysis')" style="padding: 8px 15px; margin: 0 5px; background: #f39c12; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🔍 Analysis</button>
         </div>
 
         <!-- Unified Content Area -->
         <div id="content-area" style="margin: 20px 0; background: white; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: none; padding: 20px;">
             <!-- Content will be shown here based on button selection -->
+        </div>
+
+        <!-- Analysis Modal -->
+        <div id="analysisModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+            <div class="modal-content" style="background-color: white; margin: 2% auto; padding: 0; border-radius: 10px; width: 90%; max-width: 1200px; height: 90%; max-height: 800px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+                <!-- Modal Header -->
+                <div class="modal-header" style="padding: 20px 30px; border-bottom: 2px solid #ecf0f1; background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border-radius: 10px 10px 0 0;">
+                    <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                        🔍 Song Analysis: <span id="songTitle">Bà Rằng Bà Rí</span>
+                    </h2>
+                    <span class="close" onclick="closeAnalysisModal()" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); font-size: 28px; font-weight: bold; cursor: pointer; color: white; opacity: 0.8; transition: opacity 0.3s;">&times;</span>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body" style="flex: 1; display: flex; overflow: hidden;">
+                    <!-- Left Sidebar - Key Takeaways -->
+                    <div class="analysis-sidebar" style="width: 30%; padding: 20px; background: #f8f9fa; border-right: 2px solid #ecf0f1; overflow-y: auto;">
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">📌 Key Takeaways</h3>
+
+                        <!-- Quick Overview Metrics -->
+                        <div class="overview-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px;">
+                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;">
+                                <div style="font-size: 16px; font-weight: bold; color: #e74c3c;">137</div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Total Notes</div>
+                            </div>
+                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;">
+                                <div style="font-size: 16px; font-weight: bold; color: #3498db;">7</div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Strings Used</div>
+                            </div>
+                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;">
+                                <div style="font-size: 16px; font-weight: bold; color: #9b59b6;">3</div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Sections (cyclical)</div>
+                            </div>
+                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;">
+                                <div style="font-size: 16px; font-weight: bold; color: #f39c12;">2</div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Key Phrases</div>
+                            </div>
+                        </div>
+
+                        <div class="takeaway-section" style="margin-bottom: 20px;">
+                            <h4 style="color: #e74c3c; margin: 0 0 8px 0; font-size: 14px;">Cultural Message</h4>
+                            <p style="font-size: 13px; line-height: 1.5; margin: 0; color: #34495e;">A humorous Vietnamese folk song depicting marital hardships, using wit and satire to comment on social relationships and domestic life challenges.</p>
+                        </div>
+
+                        <div class="takeaway-section" style="margin-bottom: 20px;">
+                            <h4 style="color: #3498db; margin: 0 0 8px 0; font-size: 14px;">Musical Key Points</h4>
+                            <ul style="font-size: 13px; line-height: 1.4; margin: 0; padding-left: 15px; color: #34495e;">
+                                <li>Uses 7 of 16 Đàn Tranh strings (D4-G5 range)</li>
+                                <li>Dominated by descending melodic patterns</li>
+                                <li>C5-A4-C5 oscillation is most characteristic</li>
+                                <li>Intermediate-advanced difficulty level</li>
+                            </ul>
+                        </div>
+
+                        <div class="takeaway-section">
+                            <h4 style="color: #9b59b6; margin: 0 0 8px 0; font-size: 14px;">Learning Focus</h4>
+                            <ul style="font-size: 13px; line-height: 1.4; margin: 0; padding-left: 15px; color: #34495e;">
+                                <li>Master the E5-D5-C5-A4-C5 descending phrase</li>
+                                <li>Practice the long melodic sequences (16+ notes)</li>
+                                <li>Work on smooth transitions between registers</li>
+                                <li>Focus on expressive melodic storytelling</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Right Main Content -->
+                    <div class="analysis-main" style="width: 70%; padding: 20px; overflow-y: auto;">
+                        <!-- Tab Navigation -->
+                        <div class="analysis-tabs" style="margin-bottom: 20px; border-bottom: 2px solid #ecf0f1;">
+                            <button class="tab-button active" onclick="showAnalysisTab('cultural')" style="padding: 10px 20px; margin-right: 5px; background: #3498db; color: white; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 14px;">🏛️ Cultural</button>
+                            <button class="tab-button" onclick="showAnalysisTab('technical')" style="padding: 10px 20px; margin-right: 5px; background: #bdc3c7; color: #34495e; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 14px;">⚙️ Technical</button>
+                            <button class="tab-button" onclick="showAnalysisTab('patterns')" style="padding: 10px 20px; margin-right: 5px; background: #bdc3c7; color: #34495e; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 14px;">📊 Patterns</button>
+                            <button class="tab-button" onclick="showAnalysisTab('melodic')" style="padding: 10px 20px; margin-right: 5px; background: #bdc3c7; color: #34495e; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 14px;">🎵 Melodic</button>
+                            <button class="tab-button" onclick="showAnalysisTab('structure')" style="padding: 10px 20px; background: #bdc3c7; color: #34495e; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-size: 14px;">🏗️ Structure</button>
+                        </div>
+
+                        <!-- Tab Content Areas -->
+                        <div id="cultural-tab" class="tab-content" style="display: block;">
+                            <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🏛️ Cultural Significance</h3>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">Lyrics in Vietnamese Society</h4>
+                                <p style="line-height: 1.6; margin: 0;">"Bà Rằng Bà Rí" uses humor and wordplay to address serious social issues about marriage and domestic relationships. The song's satirical tone allows for social commentary while entertaining, reflecting Vietnamese culture's tradition of using folk songs to discuss difficult topics through wit and metaphor. The repetitive "bà Rằng bà Rí" phrase creates a rhythmic storytelling device typical of Vietnamese oral tradition.</p>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #3498db; margin: 0 0 10px 0;">Historical Context</h4>
+                                <p style="line-height: 1.6; margin: 0;">This folk song represents the tradition of Vietnamese satirical music, where social criticism is delivered through humor and memorable melodies. Such songs were important outlets for expressing frustrations about social conditions, particularly regarding family and marital relationships. The melodic complexity reflects the sophisticated storytelling tradition of Vietnamese folk music.</p>
+                            </div>
+                        </div>
+
+                        <div id="technical-tab" class="tab-content" style="display: none;">
+                            <h3 style="color: #2c3e50; margin: 0 0 15px 0;">⚙️ Technical Analysis</h3>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">String Usage Analysis</h4>
+                                <p style="margin: 0 0 10px 0;"><strong>Strings Used:</strong> 7 out of 16 total strings</p>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 5 (D4)</strong><br>
+                                        <span style="color: #e74c3c;">Lower register foundation</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 7 (G4)</strong><br>
+                                        <span style="color: #e74c3c;">Transitional phrases</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 8 (A4)</strong><br>
+                                        <span style="color: #e74c3c;">Key melodic pivot</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 9 (C5)</strong><br>
+                                        <span style="color: #e74c3c;">Primary melodic center</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 10 (D5)</strong><br>
+                                        <span style="color: #e74c3c;">Ascending phrases</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 11 (E5)</strong><br>
+                                        <span style="color: #e74c3c;">Peak melodic moments</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; text-align: center;">
+                                        <strong>String 12 (G5)</strong><br>
+                                        <span style="color: #e74c3c;">Highest register accents</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <h4 style="color: #3498db; margin: 0 0 10px 0;">Range and Difficulty</h4>
+                                <p style="line-height: 1.6; margin: 0;"><strong>Melodic Range:</strong> D4 to G5 (spanning 1.5 octaves)<br>
+                                <strong>Difficulty Level:</strong> Intermediate-Advanced - requires excellent melodic flow control<br>
+                                <strong>Key Challenges:</strong> Long descending passages, precise intonation in extended patterns, expressive storytelling through melody</p>
+                            </div>
+                        </div>
+
+                        <div id="patterns-tab" class="tab-content" style="display: none;">
+                            <h3 style="color: #2c3e50; margin: 0 0 15px 0;">📊 Pattern Analysis</h3>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">Top KPIC (Pitch) Patterns</h4>
+                                <div style="display: grid; gap: 10px;">
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → C5</strong> (Same note repetition)</span>
+                                        <span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">16 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>A4 → C5</strong> (Ascending minor third)</span>
+                                        <span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">14 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → A4</strong> (Descending minor third)</span>
+                                        <span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">14 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → D5</strong> (Ascending major second)</span>
+                                        <span style="background: #e74c3c; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">10 times</span>
+                                    </div>
+                                </div>
+                                <p style="margin: 10px 0 0 0; font-size: 13px; color: #7f8c8d;"><em>These patterns form the melodic backbone of the piece, with C5-A4 oscillation being particularly characteristic.</em></p>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <h4 style="color: #3498db; margin: 0 0 10px 0;">Top KPIC-3 (Three-Note) Patterns</h4>
+                                <div style="display: grid; gap: 10px;">
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → A4 → C5</strong> (Oscillating pattern)</span>
+                                        <span style="background: #3498db; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">8 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>D5 → E5 → D5</strong> (Upper register wave)</span>
+                                        <span style="background: #3498db; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">7 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → C5 → C5</strong> (Repeated emphasis)</span>
+                                        <span style="background: #3498db; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">6 times</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>C5 → D5 → E5</strong> (Ascending sequence)</span>
+                                        <span style="background: #3498db; color: white; padding: 4px 8px; border-radius: 3px; font-size: 12px;">6 times</span>
+                                    </div>
+                                </div>
+                                <p style="margin: 10px 0 0 0; font-size: 13px; color: #7f8c8d;"><em>The C5-A4-C5 oscillation is the song's signature melodic gesture, appearing throughout the narrative structure.</em></p>
+                            </div>
+                        </div>
+
+                        <div id="rhythm-tab" class="tab-content" style="display: none;">
+                            <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🎵 Rhythmic Character</h3>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">Dotted Eighth Note Emphasis</h4>
+                                <p style="line-height: 1.6; margin: 0 0 15px 0;">The extensive use of dotted eighth notes (♪.) is what gives "Lý Ngựa Ô" its distinctive rhythmic character. This creates a galloping rhythm that musically represents the horse's gait mentioned in the song's title.</p>
+
+                                <div style="background: white; padding: 15px; border-radius: 5px; border-left: 4px solid #e74c3c;">
+                                    <h5 style="margin: 0 0 8px 0; color: #e74c3c;">Rhythmic Impact:</h5>
+                                    <ul style="margin: 0; padding-left: 20px;">
+                                        <li>Creates forward momentum and energy</li>
+                                        <li>Mimics the natural rhythm of horse hooves</li>
+                                        <li>Provides characteristic Vietnamese folk rhythm</li>
+                                        <li>Adds complexity without overwhelming the melody</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <h4 style="color: #3498db; margin: 0 0 10px 0;">Practice Recommendations</h4>
+                                <div style="display: grid; gap: 10px;">
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>1. Rhythm Isolation:</strong> Practice the dotted rhythm pattern on a single string before adding pitch changes.
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>2. Metronome Work:</strong> Start at 80 BPM and gradually increase to performance tempo (120 BPM).
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>3. Pattern Focus:</strong> Master the C5-A4-C5 melodic pattern with correct dotted rhythms.
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>4. Expression:</strong> Emphasize the strong beats while keeping dotted notes light and flowing.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="structure-tab" class="tab-content" style="display: none;">
+                            <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🏗️ Song Structure & Learning Efficiency</h3>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">How Much Do You Actually Need to Learn?</h4>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                    <div style="background: white; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;">
+                                        <h5 style="margin: 0 0 5px 0; color: #27ae60;">Unique Material</h5>
+                                        <div style="font-size: 24px; font-weight: bold; color: #27ae60;">~30%</div>
+                                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;">56 unique notes to master</p>
+                                    </div>
+                                    <div style="background: white; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;">
+                                        <h5 style="margin: 0 0 5px 0; color: #3498db;">Repetitions</h5>
+                                        <div style="font-size: 24px; font-weight: bold; color: #3498db;">~70%</div>
+                                        <p style="margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;">133 notes of exact repetitions</p>
+                                    </div>
+                                </div>
+                                <p style="line-height: 1.6; margin: 0; font-size: 14px;"><strong>Excellent news!</strong> Once you master just Section 1 plus small variations, you'll know 70% of the song through repetition. This makes "Bà Rằng Bà Rí" exceptionally efficient for learning traditional Vietnamese cyclical song structures.</p>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #3498db; margin: 0 0 10px 0;">Song Structure: 3-Section Cyclical Form</h4>
+                                <div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd; font-family: monospace; font-size: 11px; line-height: 1.4;">
+                                    <div style="text-align: center; margin-bottom: 10px; font-weight: bold; color: #2c3e50;">Section Structure (repeats 3 times):</div>
+                                    <div style="color: #7f8c8d;">┌─[7-note motif]─┐ ┌─[development]─┐ ┌─[16-note signature]─┐ ┌─[closing]─┐</div>
+                                    <div style="color: #e74c3c;">│ "Announcement" │ │ "Build-up"    │ │ "Main story"        │ │ "Ending"  │</div>
+                                    <div style="color: #3498db;">│ C5-C5-C5...    │ │ Transitional  │ │ E5-D5-C5-A4...     │ │ Brief     │</div>
+                                    <div style="color: #9b59b6;">│ (positions     │ │ material      │ │ (positions          │ │ material  │</div>
+                                    <div style="color: #9b59b6;">│ 0,46,89)       │ │               │ │ 22,65,110)          │ │           │</div>
+                                    <div style="color: #7f8c8d;">└────────────────┘ └───────────────┘ └─────────────────────┘ └───────────┘</div>
+                                </div>
+                                <div style="display: grid; gap: 8px;">
+                                    <div style="background: white; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>Section 1</strong> - Template (learn completely)</span>
+                                        <span style="background: #27ae60; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Notes 0-45 (46 notes)</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>Section 2</strong> - Compressed version (learn variations only)</span>
+                                        <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Notes 46-88 (43 notes)</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>Section 3</strong> - Compressed version (learn variations only)</span>
+                                        <span style="background: #3498db; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Notes 89-131 (43 notes)</span>
+                                    </div>
+                                    <div style="background: white; padding: 10px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span><strong>Coda</strong> - Brief closing (only 5 notes)</span>
+                                        <span style="background: #95a5a6; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px;">Notes 132-136 (5 notes)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #9b59b6; margin: 0 0 10px 0;">🔍 Analysis Process Visualization</h4>
+                                <div style="background: white; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.3; margin-bottom: 15px;">
+                                    <strong>Step 1: Pattern Detection</strong><br>
+                                    <span style="color: #e74c3c;">●</span> 7-note motif at positions: 0, 46, 89<br>
+                                    <span style="color: #3498db;">●</span> 16-note phrase at positions: 22, 65, 110<br><br>
+
+                                    <strong>Step 2: Interval Calculation</strong><br>
+                                    7-note gaps: 46, 43 (2 gaps between 3 occurrences)<br>
+                                    16-note gaps: 43, 45 (2 gaps between 3 occurrences)<br>
+                                    Result: Consistent ~43-46 note sections<br><br>
+
+                                    <strong>Step 3: Section Boundary Identification</strong><br>
+                                    <div style="border: 1px solid #ddd; padding: 5px; background: #f9f9f9;">
+                                    Song Timeline (137 notes):<br>
+                                    0────22─────45│46───65────88│89───110───131│132─136<br>
+                                    │     │       │ │    │      │ │    │       │ │<br>
+                                    │     └─16-sig│ │    └─16-sig │    └─16-sig │ └─5 notes<br>
+                                    └─7-motif     │ └─7-motif    │ └─7-motif    │   (coda)<br>
+                                      Section 1     Section 2      Section 3      end
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                <h4 style="color: #9b59b6; margin: 0 0 10px 0;">Major Repeated Patterns</h4>
+                                <div style="display: grid; gap: 10px;">
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>🎯 16-note signature phrase:</strong> E5-D5-C5-A4-C5-A4-G4-D4-D4-G4-C5-C5-G4-A4-C5-G4
+                                        <br><span style="font-size: 12px; color: #7f8c8d;">Appears 3 times at positions 22, 65, 110 (25% of the song)</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>🎵 7-note opening motif:</strong> C5-C5-C5-D5-E5-E5-G5
+                                        <br><span style="font-size: 12px; color: #7f8c8d;">Appears 3 times at positions 0, 46, 89 (11% of the song)</span>
+                                    </div>
+                                    <div style="background: white; padding: 12px; border-radius: 5px;">
+                                        <strong>🔄 Shorter patterns:</strong> 2-8 note phrases repeat frequently
+                                        <br><span style="font-size: 12px; color: #7f8c8d;">Additional 15-20% consists of repeated fragments</span>
+                                    </div>
+                                </div>
+
+                                <div style="background: #e8f5e8; padding: 10px; border-radius: 5px; margin-top: 15px; border-left: 4px solid #27ae60;">
+                                    <h5 style="margin: 0 0 8px 0; color: #27ae60;">🎯 Ultra-Efficient Learning Strategy:</h5>
+                                    <ol style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.4;">
+                                        <li><strong>Master Section 1 completely</strong> (46 notes = 24% of song)</li>
+                                        <li><strong>Learn only the compression variations</strong> in Sections 2 & 3 (~10 notes total)</li>
+                                        <li><strong>Recognize the cyclical pattern</strong> - same internal structure, just compressed</li>
+                                        <li><strong>Result:</strong> Learn 56 notes, know 189 notes (70% efficiency gain!)</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer" style="padding: 15px 30px; border-top: 2px solid #ecf0f1; background: #f8f9fa; border-radius: 0 0 10px 10px; text-align: right;">
+                    <button onclick="exportAnalysis()" style="padding: 8px 15px; margin-right: 10px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">📄 Export</button>
+                    <button onclick="closeAnalysisModal()" style="padding: 8px 15px; background: #95a5a6; color: white; border: none; border-radius: 3px; cursor: pointer;">Close</button>
+                </div>
+            </div>
         </div>
 
         <div class="lyrics-section">
@@ -2049,18 +2403,21 @@
         function calculateFitWidthZoom() {
             const svg = document.getElementById('tablatureSvg');
             const container = document.querySelector('.tablature-container');
-            const containerWidth = container.clientWidth - 80; // More conservative padding
-            
+
+            // Calculate available width, accounting for right bar chart
+            const viewportWidth = window.innerWidth;
+            const rightBarChartWidth = rightBarChartVisible ? 340 : 0; // 300px + 40px gap (more space)
+            const availableWidth = viewportWidth - rightBarChartWidth - 150; // More conservative padding
+
             // Use the original SVG base width which already includes all content + padding
             const baseWidth = parseInt(svg.getAttribute('data-base-width'));
-            
-            // The base width already accounts for all notes, widths, and original padding
-            // So we can directly calculate fit zoom from this
-            const fitZoomLevel = containerWidth / baseWidth;
-            
-            // Be more conservative with the zoom to ensure no cutoff
-            const conservativeFitZoom = fitZoomLevel * 0.95; // Use 95% to add safety margin
-            
+
+            // Calculate fit zoom to make tablature touch the right bar chart
+            const fitZoomLevel = availableWidth / baseWidth;
+
+            // Be much more conservative with the zoom to ensure proper spacing
+            const conservativeFitZoom = fitZoomLevel * 0.8; // Use 80% for more space
+
             return Math.max(0.01, Math.min(5.0, conservativeFitZoom));
         }
         
@@ -2375,6 +2732,13 @@
                     // updateResonanceBandColors(); // Commented out to preserve gradients
                 }
             }, 50);
+
+            // Update KP/RIC-1 right bar chart when tablature Y-zoom changes
+            console.log('🔄 Y-zoom changed, updating KP/RIC-1. Visible:', typeof rightBarChartVisible !== 'undefined' ? rightBarChartVisible : 'UNDEFINED');
+            if (typeof rightBarChartVisible !== 'undefined' && rightBarChartVisible) {
+                console.log('📊 Updating KP/RIC-1 chart for Y-zoom:', yZoomLevel);
+                updateRightBarChartZoom();
+            }
         }
         
         function getCurrentZoomLevel() {
@@ -6555,17 +6919,6 @@
                     lyricsSection.style.display = 'none';
                     contentArea.style.display = 'none';
                 }
-            } else if (contentType === 'strings-vs-notes') {
-                // Generate and display string-note analysis
-                if (contentArea.style.display === 'none') {
-                    // Restore normal note visibility when leaving Sankey view
-                    restoreNormalNoteVisibility();
-                    generateStringNoteAnalysis();
-                    contentArea.style.display = 'block';
-                } else {
-                    contentArea.style.display = 'none';
-                }
-                lyricsSection.style.display = 'none';
             } else if (contentType === 'kpic-kric-sankey') {
                 // Generate and display KPIC-2 & KRIC-2 Sankey diagrams
                 lyricsSection.style.display = 'none';
@@ -6635,6 +6988,12 @@
                 } catch (error) {
                     console.error('Error generating Sankey diagrams:', error);
                     contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating Sankey diagrams. Check console for details.</div>';
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                     contentArea.style.display = 'block';
                 }
             } else if (contentType === 'kric3-sankey') {
@@ -6656,6 +7015,12 @@
                 } catch (error) {
                     console.error('Error generating KRIC-3 Sankey diagram:', error);
                     contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating KRIC-3 Sankey diagram. Check console for details.</div>';
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                     contentArea.style.display = 'block';
                 }
             } else if (contentType === 'kpic3-kric3-sankey') {
@@ -6722,399 +7087,27 @@
                 } catch (error) {
                     console.error('Error generating KPIC-3 & KRIC-3 Sankey diagrams:', error);
                     contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating KPIC-3 & KRIC-3 Sankey diagrams. Check console for details.</div>';
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                     contentArea.style.display = 'block';
                 }
+            } else if (contentType === 'analysis') {
+                lyricsSection.style.display = 'none';
+                contentArea.innerHTML = "<h3>🔍 Song Analysis: Bà Rằng Bà Rí</h3>" +
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
+                contentArea.style.display = 'block';
             }
         }
 
-// Generate string-note frequency analysis with exact tablature dimensions
-        function generateStringNoteAnalysis() {
-            const contentArea = document.getElementById('content-area');
-
-            // Extract note data from SVG elements
-            const noteCircles = document.querySelectorAll('.note-circle');
-            const stringLabels = document.querySelectorAll('.string-label');
-            const stringLines = document.querySelectorAll('.string-line');
-
-            // Create string mapping from both labels and lines for accurate positioning
-            const stringInfo = {};
-
-            // Get Y positions from string lines (more accurate than labels)
-            stringLines.forEach(line => {
-                const yPos = parseFloat(line.getAttribute('data-base-y1') || line.getAttribute('y1'));
-
-                // Find corresponding label by proximity
-                let closestLabel = null;
-                let minDistance = Infinity;
-                stringLabels.forEach(label => {
-                    const labelY = parseFloat(label.getAttribute('data-base-y') || label.getAttribute('y'));
-                    const distance = Math.abs(yPos - labelY);
-                    if (distance < minDistance && distance < 20) {
-                        minDistance = distance;
-                        closestLabel = label;
-                    }
-                });
-
-                if (closestLabel) {
-                    const text = closestLabel.textContent;
-                    const match = text.match(/String (\d+): ([A-G]#?\d)/);
-                    if (match) {
-                        const stringNum = match[1];
-                        const stringNote = match[2];
-                        stringInfo[stringNum] = {
-                            note: stringNote,
-                            yPos: yPos,
-                            durations: {}
-                        };
-                    }
-                }
-            });
-
-            // Analyze each note circle and categorize by duration
-            noteCircles.forEach((circle, index) => {
-                const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
-                const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
-                const isGrace = circle.getAttribute('data-is-grace') === 'true';
-                const radius = parseFloat(circle.getAttribute('r'));
-
-                // Determine duration type based on actual tablature duration values
-                let durationType;
-
-                // Get actual duration from tablature using the unified function
-                const durationValue = extractDurationFromTablature(cx, cy);
-
-                // Map duration values to bar chart categories
-                if (durationValue >= 8) {
-                    durationType = isGrace ? 'grace-half' : 'half';
-                } else if (durationValue >= 4) {
-                    durationType = isGrace ? 'grace-quarter' : 'quarter';
-                } else if (durationValue >= 3) {
-                    durationType = isGrace ? 'grace-dotted-eighth' : 'dotted-eighth';
-                } else if (durationValue >= 2) {
-                    durationType = isGrace ? 'grace-eighth' : 'eighth';
-                } else if (durationValue >= 1) {
-                    durationType = isGrace ? 'grace-16th' : '16th';
-                } else {
-                    durationType = isGrace ? 'grace-32nd' : '32nd';
-                }
-
-                // Find closest string by Y position
-                let closestString = null;
-                let minDistance = Infinity;
-
-                for (const [stringNum, info] of Object.entries(stringInfo)) {
-                    const distance = Math.abs(cy - info.yPos);
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestString = stringNum;
-                    }
-                }
-
-                // If note is close to a string (within 30px), assign it
-                if (closestString && minDistance < 30) {
-                    if (!stringInfo[closestString].durations) {
-                        stringInfo[closestString].durations = {};
-                    }
-                    if (!stringInfo[closestString].durations[durationType]) {
-                        stringInfo[closestString].durations[durationType] = [];
-                    }
-
-                    stringInfo[closestString].durations[durationType].push({
-                        index: index,
-                        cx: cx,
-                        cy: cy,
-                        radius: radius,
-                        element: circle,
-                        isGrace: isGrace
-                    });
-                }
-            });
-
-            // First pass: Calculate max counts for proper bar scaling
-            let maxCount = 0;
-            Object.values(stringInfo).forEach(info => {
-                if (info.durations) {
-                    Object.values(info.durations).forEach(durationArray => {
-                        maxCount = Math.max(maxCount, durationArray.length);
-                    });
-                }
-            });
-
-            // Calculate the longest label width to establish fixed bar start position
-            let maxLabelWidth = 0;
-            Object.entries(stringInfo).forEach(([stringNum, info]) => {
-                const labelText = `String ${stringNum}: ${info.note}`;
-                const estimatedLabelWidth = labelText.length * 8; // ~8px per character
-                maxLabelWidth = Math.max(maxLabelWidth, estimatedLabelWidth);
-            });
-
-            // Fixed bar start position: longest label + 40px gap
-            const fixedBarStartX = maxLabelWidth + 40;
-
-            // Second pass: Calculate actual content width using fixed bar start position
-            let maxContentWidth = fixedBarStartX;
-            Object.entries(stringInfo).forEach(([stringNum, info]) => {
-                if (info.durations) {
-                    let stringWidth = fixedBarStartX; // All strings start bars at same X position
-
-                    Object.values(info.durations).forEach(durationArray => {
-                        // Calculate actual bar width using the correct maxCount
-                        const count = durationArray.length;
-                        const barWidth = Math.max(30, (count / maxCount) * 300);
-                        stringWidth += barWidth + 8; // Add bar width + gap
-                    });
-
-                    maxContentWidth = Math.max(maxContentWidth, stringWidth);
-                }
-            });
-
-            console.log('Content width calculation:', {
-                maxCount,
-                maxLabelWidth,
-                fixedBarStartX,
-                maxContentWidth,
-                ratio: maxContentWidth / 11475
-            });
-
-            // Sort strings numerically for processing
-            const sortedStrings = Object.entries(stringInfo).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
-
-            // Calculate actual content height based on string positions
-            const stringYPositions = Object.values(stringInfo).map(info => info.yPos);
-            const minStringY = Math.min(...stringYPositions);
-            const maxStringY = Math.max(...stringYPositions);
-            const actualContentHeight = maxStringY - minStringY + 100; // Add padding for bars
-
-            console.log('Height calculation:', {
-                minStringY,
-                maxStringY,
-                actualContentHeight,
-                originalHeight: 770
-            });
-
-            // Create the visualization with optimized dimensions and zoom controls
-            let html = `
-                <div style="position: relative; width: 100%; height: 100%;">
-
-                    <!-- Header with title and zoom controls -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
-                        <div>
-                            <h3 style="margin: 0 0 5px 0; color: #2c3e50;">📊 String-Note Frequency Analysis</h3>
-                            <p style="margin: 0; font-size: 13px; color: #34495e;">
-                                <strong>Post slur-to-tie conversion analysis</strong> - Click bars to highlight notes on tablature
-                            </p>
-                        </div>
-
-                        <!-- Zoom Controls (matching tablature style) -->
-                        <div style="display: flex; gap: 15px; align-items: center;">
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                <label style="font-size: 11px; font-weight: 600; color: #495057;">X-Zoom:</label>
-                                <div style="position: relative; width: 100px;">
-                                    <input type="range" id="stringAnalysisXZoom" min="10" max="200" value="100"
-                                           oninput="updateStringAnalysisZoom('x')" style="width: 100%;">
-                                    <span id="stringAnalysisXValue" style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 600; color: #495057; background: white; padding: 1px 4px; border-radius: 3px; border: 1px solid #ddd;">Fit</span>
-                                </div>
-                            </div>
-
-                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-                                <label style="font-size: 11px; font-weight: 600; color: #495057;">Y-Zoom:</label>
-                                <div style="position: relative; width: 100px;">
-                                    <input type="range" id="stringAnalysisYZoom" min="10" max="200" value="67"
-                                           oninput="updateStringAnalysisZoom('y')" style="width: 100%;">
-                                    <span id="stringAnalysisYValue" style="position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 600; color: #495057; background: white; padding: 1px 4px; border-radius: 3px; border: 1px solid #ddd;">67%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Two-layer structure: fixed text + scalable content -->
-                    <div id="stringAnalysisContainer" style="position: relative; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 20px; overflow: auto; margin-bottom: 20px; max-height: 70vh;">
-                        <!-- Fixed text layer (not scaled) -->
-                        <div id="stringAnalysisTextLayer" style="position: absolute; left: 20px; top: 20px; z-index: 10; pointer-events: none;">
-            `;
-
-            // Generate fixed text labels first (will be updated by zoom function)
-            sortedStrings.forEach(([stringNum, info]) => {
-                const { note, yPos } = info;
-                const relativeY = yPos - minStringY + 50; // Match the string line positioning
-                html += `<div style="position: absolute; top: ${relativeY}px; font-size: 14px; font-weight: 600; color: #2c3e50; white-space: nowrap; transform: translateY(-50%);">String ${stringNum}: ${note}</div>`;
-            });
-
-            html += `
-                        </div>
-                        <!-- Scalable content layer (bars and lines) -->
-                        <div id="stringAnalysisContent" style="position: relative; width: ${maxContentWidth}px; height: ${actualContentHeight}px; transform-origin: 0 0; transition: transform 0.3s ease;" data-content-width="${maxContentWidth}">
-            `;
-
-            // Use relative positioning to minimize space
-            sortedStrings.forEach(([stringNum, info]) => {
-                const { note, durations, yPos } = info;
-
-                // Use relative Y position (subtract minimum to start from top)
-                const relativeY = yPos - minStringY + 50; // 50px top padding
-
-                // String line only (text is in fixed layer)
-                html += `
-                    <div style="position: absolute; left: 120px; width: 11280px; top: ${relativeY}px; height: 2px; background: #ddd; border-radius: 1px;"></div>
-                `;
-
-                if (durations && Object.keys(durations).length > 0) {
-                    // Use fixed bar start position (40px after longest label)
-                    let currentX = fixedBarStartX;
-
-                    // Define duration types using actual tablature note colors
-                    // Main notes: #008080 (teal), Grace notes: #FFD700 (gold)
-                    const durationTypes = [
-                        { type: 'half', thickness: 48, color: '#008080', label: 'Half (8)' },
-                        { type: 'grace-half', thickness: 48, color: '#FFD700', label: 'Grace Half (8)' },
-                        { type: 'quarter', thickness: 32, color: '#008080', label: 'Quarter (4)' },
-                        { type: 'grace-quarter', thickness: 32, color: '#FFD700', label: 'Grace Quarter (4)' },
-                        { type: 'dotted-eighth', thickness: 24, color: '#008080', label: 'Dotted Eighth (3)' },
-                        { type: 'grace-dotted-eighth', thickness: 24, color: '#FFD700', label: 'Grace Dotted Eighth (3)' },
-                        { type: 'eighth', thickness: 16, color: '#008080', label: 'Eighth (2)' },
-                        { type: 'grace-eighth', thickness: 16, color: '#FFD700', label: 'Grace Eighth (2)' },
-                        { type: '16th', thickness: 8, color: '#008080', label: '16th (1)' },
-                        { type: 'grace-16th', thickness: 8, color: '#FFD700', label: 'Grace 16th (1)' },
-                        { type: '32nd', thickness: 4, color: '#008080', label: '32nd (0.5)' },
-                        { type: 'grace-32nd', thickness: 4, color: '#FFD700', label: 'Grace 32nd (0.5)' }
-                    ];
-
-                    // Render bars for each duration type that exists
-                    durationTypes.forEach(durInfo => {
-                        if (durations[durInfo.type] && durations[durInfo.type].length > 0) {
-                            const count = durations[durInfo.type].length;
-
-                            // X-axis represents count (width)
-                            const barWidth = Math.max(30, (count / maxCount) * 300);
-
-                            // Y-axis represents duration (thickness/height)
-                            const barHeight = durInfo.thickness;
-
-                            html += `
-                                <div onclick="highlightStringNotes('${stringNum}', '${durInfo.type}')"
-                                     style="position: absolute;
-                                            left: ${currentX}px;
-                                            top: ${relativeY - barHeight/2}px;
-                                            width: ${barWidth}px;
-                                            height: ${barHeight}px;
-                                            background: linear-gradient(135deg, ${durInfo.color}, ${getDarkerColor(durInfo.color)});
-                                            border-radius: 4px;
-                                            cursor: pointer;
-                                            transition: all 0.3s ease;
-                                            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                                            border: 1px solid rgba(0,0,0,0.1);"
-                                     title="${durInfo.label} notes: ${count} on String ${stringNum} (${note})"
-                                     data-bar-x="${currentX + barWidth/2}"
-                                     data-bar-y="${relativeY}"
-                                     data-count="${count}"
-                                     data-bar-height="${barHeight}"
-                                     onmouseover="if (!this.classList.contains('selected-bar')) { this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.3)'; }"
-                                     onmouseout="if (!this.classList.contains('selected-bar')) { this.style.transform='scale(1)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.2)'; }">
-                                </div>
-                            `;
-
-                            // Move X position for next bar (stacked sideways)
-                            currentX += barWidth + 8;
-                        }
-                    });
-                } else {
-                    // No notes indicator
-                    html += `
-                        <div style="position: absolute; left: 130px; top: ${scaledY - 6}px;
-                                    font-size: 11px; color: #bdc3c7; font-style: italic;">
-                            No notes
-                        </div>
-                    `;
-                }
-            });
-
-            html += `
-                        </div>
-                        <!-- Fixed number overlay (not scaled) -->
-                        <div id="stringAnalysisNumberLayer" style="position: absolute; left: 20px; top: 20px; z-index: 20; pointer-events: none;">
-                        </div>
-                    </div>
-
-                    <!-- Enhanced Legend below the chart -->
-                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #3498db;">
-                        <p style="margin: 0 0 12px 0; font-weight: 600; color: #2c3e50;">
-                            📏 Chart Guide: <strong>Bar thickness = Duration, Bar width = Count</strong>
-                        </p>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <!-- Main Notes Duration Guide -->
-                            <div>
-                                <h5 style="margin: 0 0 8px 0; color: #2c3e50;">Main Notes (Teal - #008080):</h5>
-                                <div style="display: flex; flex-direction: column; gap: 3px;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 48px; background: linear-gradient(135deg, #008080, #006666); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Whole (48px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 36px; background: linear-gradient(135deg, #008080, #006666); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Half (36px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 24px; background: linear-gradient(135deg, #008080, #006666); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Quarter (24px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 14px; background: linear-gradient(135deg, #008080, #006666); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Eighth (14px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 8px; background: linear-gradient(135deg, #008080, #006666); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Sixteenth (8px)</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Grace Notes Duration Guide -->
-                            <div>
-                                <h5 style="margin: 0 0 8px 0; color: #2c3e50;">Grace Notes (Gold - #FFD700):</h5>
-                                <div style="display: flex; flex-direction: column; gap: 3px;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 48px; background: linear-gradient(135deg, #FFD700, #E6C200); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Grace Whole (48px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 36px; background: linear-gradient(135deg, #FFD700, #E6C200); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Grace Half (36px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 24px; background: linear-gradient(135deg, #FFD700, #E6C200); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Grace Quarter (24px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 14px; background: linear-gradient(135deg, #FFD700, #E6C200); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Grace Eighth (14px)</span>
-                                    </div>
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <div style="width: 40px; height: 8px; background: linear-gradient(135deg, #FFD700, #E6C200); border-radius: 2px; transform: scale(0.5); transform-origin: left;"></div>
-                                        <span style="font-size: 11px; margin-left: -12px;">Grace Sixteenth (8px)</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            contentArea.innerHTML = html;
-
-            // Store analysis data globally for highlighting
-            window.stringAnalysisData = stringInfo;
-
-            // Initialize zoom controls with defaults
-            initializeStringAnalysisZoom();
-
-            // Generate number overlays for bars
-            updateStringAnalysisNumbers();
-
-            console.log('String analysis generation completed');
-            console.log('stringInfo:', stringInfo);
-        }
 
         // Update both number and label positions based on current zoom level
         function updateStringAnalysisNumbers() {
@@ -7356,6 +7349,11 @@
 
                 // Update number positions after scaling
                 setTimeout(() => updateStringAnalysisNumbers(), 50);
+
+                // Update right bar chart when Y-zoom changes
+                if (axis === 'y') {
+                    updateRightBarChartZoom();
+                }
             }
         }
 
@@ -7743,6 +7741,12 @@
             const rhythmSankeyHTML = generateSankeyHTML('rhythm', rhythmTransitions, noteData, durationRanks, null, kpicMode, null, rhythmTransitions, rhythmRankingMap, kricTotal);
 
             contentArea.innerHTML = `
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                 <div style="padding: 20px;">
                     <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">📈 KPIC-2 & KRIC-2 Transition Analysis</h3>
 
@@ -7849,6 +7853,12 @@
             const kric3SankeyHTML = generateKric3FormattedSankeyHTML(kric3Patterns, kricMode);
 
             contentArea.innerHTML = `
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                 <div style="padding: 20px;">
                     <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">📈 KRIC-3 Rhythm Pattern Analysis</h3>
 
@@ -8034,6 +8044,12 @@
             const kric3SankeyHTML = generateKric3FormattedSankeyHTML(kric3Patterns, kpicMode);
 
             contentArea.innerHTML = `
+"<div style=\"display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px;\">" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;\"><div style=\"font-size: 20px; font-weight: bold; color: #e74c3c;\">137</div><div style=\"font-size: 12px; color: #7f8c8d;\">Total Notes</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;\"><div style=\"font-size: 20px; font-weight: bold; color: #3498db;\">7</div><div style=\"font-size: 12px; color: #7f8c8d;\">Strings Used</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
+"<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
+contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                 <div style="padding: 20px;">
                     <h3 style="text-align: center; margin-bottom: 20px; color: #2c3e50;">📈 KPIC-3 & KRIC-3 Pattern Analysis</h3>
 
@@ -11958,6 +11974,522 @@
                 // Voices are now loaded
                 console.log('Available voices:', speechSynthesis.getVoices().map(v => v.name + ' (' + v.lang + ')'));
             };
+        }
+
+        // Right-Aligned Bar Chart Functions
+        let rightBarChartVisible = true;
+
+        function toggleRightBarChart() {
+            const container = document.getElementById('rightBarChartContainer');
+            const button = document.getElementById('toggleRightBarChart');
+
+            rightBarChartVisible = !rightBarChartVisible;
+
+            if (rightBarChartVisible) {
+                container.style.display = 'block';
+                button.textContent = '📊 KP/RIC-1';
+                button.style.background = '#008080';
+                generateRightBarChart();
+            } else {
+                container.style.display = 'none';
+                button.textContent = '📊 Show KP/RIC-1';
+                button.style.background = '#95a5a6';
+            }
+
+            // Recalculate zoom to account for bar chart visibility
+            const zoomSelect = document.getElementById('zoomLevel');
+            if (zoomSelect && zoomSelect.value === 'fit-width') {
+                updateZoomFromSelect();
+            }
+        }
+
+        function generateRightBarChart() {
+            console.log('Generating right-aligned bar chart');
+
+            // Update position to sync with tablature Y
+            updateRightBarChartPosition();
+
+            // Get current tablature zoom settings
+            const tablatureContainer = document.querySelector('.tablature-container');
+            const tablatureSvg = document.getElementById('tablatureSvg');
+            // Use global Y-zoom variable instead of parsing transform
+            const yZoomValue = currentYZoom || 0.67;
+            console.log('📏 KP/RIC-1 using Y-zoom:', yZoomValue);
+
+            // String configuration matching CLAUDE.md
+            const stringInfo = {
+                5: { note: 'D4', yPos: 110 },
+                7: { note: 'G4', yPos: 260 },
+                8: { note: 'A4', yPos: 320 },
+                9: { note: 'C5', yPos: 410 },
+                10: { note: 'D5', yPos: 470 },
+                11: { note: 'E5', yPos: 530 },
+                12: { note: 'G5', yPos: 620 }
+            };
+
+            // Extract duration data for each string (reusing existing logic)
+            const noteCircles = document.querySelectorAll('.note-circle');
+
+            // Reset string duration data
+            Object.keys(stringInfo).forEach(stringNum => {
+                stringInfo[stringNum].durations = {};
+            });
+
+            // Analyze each note
+            noteCircles.forEach((circle, index) => {
+                const cx = parseFloat(circle.getAttribute('data-base-x') || circle.getAttribute('cx'));
+                const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
+                const isGrace = circle.getAttribute('data-is-grace') === 'true';
+
+                // Get actual duration using unified function
+                const durationValue = extractDurationFromTablature(cx, cy);
+
+                // Map duration values to bar chart categories
+                let durationType;
+                if (durationValue >= 8) {
+                    durationType = isGrace ? 'grace-half' : 'half';
+                } else if (durationValue >= 4) {
+                    durationType = isGrace ? 'grace-quarter' : 'quarter';
+                } else if (durationValue >= 3) {
+                    durationType = isGrace ? 'grace-dotted-eighth' : 'dotted-eighth';
+                } else if (durationValue >= 2) {
+                    durationType = isGrace ? 'grace-eighth' : 'eighth';
+                } else if (durationValue >= 1) {
+                    durationType = isGrace ? 'grace-16th' : '16th';
+                } else {
+                    durationType = isGrace ? 'grace-32nd' : '32nd';
+                }
+
+                // Find closest string
+                let closestString = null;
+                let minDistance = Infinity;
+                for (const [stringNum, info] of Object.entries(stringInfo)) {
+                    const distance = Math.abs(cy - info.yPos);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestString = stringNum;
+                    }
+                }
+
+                // Assign note to string
+                if (closestString && minDistance < 30) {
+                    if (!stringInfo[closestString].durations[durationType]) {
+                        stringInfo[closestString].durations[durationType] = [];
+                    }
+                    stringInfo[closestString].durations[durationType].push({
+                        index: index,
+                        cx: cx,
+                        cy: cy,
+                        element: circle,
+                        isGrace: isGrace
+                    });
+                }
+            });
+
+            // Store data globally for highlighting function
+            window.stringAnalysisData = stringInfo;
+
+            // Generate HTML for right bar chart
+            generateRightBarChartHTML(stringInfo, yZoomValue);
+        }
+
+        function generateRightBarChartHTML(stringInfo, yZoom) {
+            const container = document.getElementById('rightBarChartContent');
+
+            // Duration types using your optimized color system from COLOR_SYSTEM.md
+            const kpicColors = ['#0066CC', '#3498DB', '#5DADE2', '#85C1E9'];  // Blue family (pitch)
+            const kricColors = ['#27AE60', '#52BE80', '#76D7A4', '#A9DFBF'];  // Green family (rhythm)
+            const mainNoteColor = '#008080';  // Teal for main notes
+            const graceNoteColor = '#FFD700'; // Gold for grace notes
+
+            const durationTypes = [
+                { type: 'half', thickness: 48, color: kricColors[0], label: 'Half (8)' },           // Primary green
+                { type: 'grace-half', thickness: 48, color: graceNoteColor, label: 'Grace Half (8)' },       // Gold
+                { type: 'quarter', thickness: 32, color: kricColors[1], label: 'Quarter (4)' },     // Light green
+                { type: 'grace-quarter', thickness: 32, color: graceNoteColor, label: 'Grace Quarter (4)' },   // Gold
+                { type: 'dotted-eighth', thickness: 24, color: kricColors[2], label: 'Dotted Eighth (3)' },  // Mint green
+                { type: 'grace-dotted-eighth', thickness: 24, color: graceNoteColor, label: 'Grace Dotted Eighth (3)' }, // Gold
+                { type: 'eighth', thickness: 16, color: mainNoteColor, label: 'Eighth (2)' },      // Teal (main note color)
+                { type: 'grace-eighth', thickness: 16, color: graceNoteColor, label: 'Grace Eighth (2)' },     // Gold
+                { type: '16th', thickness: 8, color: kpicColors[0], label: '16th (1)' },          // Primary blue
+                { type: 'grace-16th', thickness: 8, color: graceNoteColor, label: 'Grace 16th (1)' },         // Gold
+                { type: '32nd', thickness: 4, color: kpicColors[1], label: '32nd (0.5)' },        // Light blue
+                { type: 'grace-32nd', thickness: 4, color: graceNoteColor, label: 'Grace 32nd (0.5)' }      // Gold
+            ];
+
+            // Calculate max count for bar scaling
+            let maxCount = 0;
+            Object.values(stringInfo).forEach(info => {
+                if (info.durations) {
+                    Object.values(info.durations).forEach(durationArray => {
+                        maxCount = Math.max(maxCount, durationArray.length);
+                    });
+                }
+            });
+
+            let html = '';
+
+            // Generate bars for each string
+            Object.entries(stringInfo).forEach(([stringNum, info]) => {
+                const yPos = info.yPos * yZoom; // Apply Y-zoom
+                const durations = info.durations || {};
+
+                // String label
+                html += `
+                    <div style="position: absolute; left: 5px; top: ${yPos - 10}px;
+                         font-weight: bold; font-size: 12px; color: #2c3e50;
+                         transform: translateY(-50%);">
+                        ${info.note}
+                    </div>
+                `;
+
+                if (Object.keys(durations).length > 0) {
+                    let currentX = 50; // Start position for bars
+
+                    // Render bars for each duration type that exists
+                    durationTypes.forEach(durInfo => {
+                        if (durations[durInfo.type] && durations[durInfo.type].length > 0) {
+                            const count = durations[durInfo.type].length;
+                            const barWidth = Math.max(20, (count / maxCount) * 200);
+                            const barHeight = durInfo.thickness * 0.75; // Increased height (150% of 0.5)
+
+                            html += `
+                                <div class="right-bar-chart-bar"
+                                     data-string="${stringNum}"
+                                     data-duration="${durInfo.type}"
+                                     data-color="${durInfo.color}"
+                                     title="${durInfo.label}: ${count} notes"
+                                     style="position: absolute;
+                                            left: ${currentX}px;
+                                            top: ${yPos - barHeight/2}px;
+                                            width: ${barWidth}px;
+                                            height: ${barHeight}px;
+                                            background: ${durInfo.color};
+                                            cursor: pointer;
+                                            border-radius: 2px;
+                                            opacity: 0.8;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            font-size: 15px;
+                                            font-weight: bold;
+                                            color: white;
+                                            text-shadow:
+                                                -0.5px -0.5px 0 #000,
+                                                 0.5px -0.5px 0 #000,
+                                                -0.5px  0.5px 0 #000,
+                                                 0.5px  0.5px 0 #000;"
+                                     onmouseover="this.style.opacity='1'"
+                                     onmouseout="this.style.opacity='0.8'">
+                                    ${count}
+                                </div>
+                            `;
+                            currentX += barWidth + 5;
+                        }
+                    });
+                }
+            });
+
+            container.innerHTML = html;
+
+            // Add event listeners for proper multi-select support
+            container.querySelectorAll('.right-bar-chart-bar').forEach(bar => {
+                bar.addEventListener('click', function(event) {
+                    const stringNum = this.getAttribute('data-string');
+                    const durationType = this.getAttribute('data-duration');
+                    const barColor = this.getAttribute('data-color');
+                    highlightRightStringNotes(stringNum, durationType, event, barColor);
+                });
+            });
+        }
+
+        function highlightRightStringNotes(stringNum, durationType, event, barColor) {
+            const isMultiSelect = event && (event.ctrlKey || event.metaKey);
+
+            if (isMultiSelect) {
+                // Multi-select mode: toggle this selection
+                highlightStringNotesMulti(stringNum, durationType, barColor);
+            } else {
+                // Single select mode: clear others and highlight this one
+                highlightStringNotesSingle(stringNum, durationType, barColor);
+            }
+        }
+
+        // Single-select highlighting function with color-matched glow
+        function highlightStringNotesSingle(stringNum, durationType, barColor) {
+            // Clear all previous selections first
+            document.querySelectorAll('[onclick*="highlightRightStringNotes"]').forEach(bar => {
+                bar.classList.remove('selected-bar');
+                bar.style.boxShadow = bar.getAttribute('data-original-shadow') || '';
+                bar.style.filter = '';
+                bar.style.transform = 'scale(1)';
+            });
+
+            // Clear all note highlights
+            document.querySelectorAll('.note-circle').forEach(circle => {
+                circle.style.filter = '';
+            });
+
+            if (!window.stringAnalysisData || !window.stringAnalysisData[stringNum]) return;
+
+            const notes = window.stringAnalysisData[stringNum].durations[durationType];
+            if (!notes || notes.length === 0) return;
+
+            // Highlight the clicked bar
+            const targetBar = document.querySelector(`[onclick*="highlightRightStringNotes('${stringNum}', '${durationType}'"]`);
+            if (targetBar) {
+                if (!targetBar.getAttribute('data-original-shadow')) {
+                    targetBar.setAttribute('data-original-shadow', targetBar.style.boxShadow || '');
+                }
+                targetBar.classList.add('selected-bar');
+
+                // Use bar color for the glow effect
+                const glowColor = barColor;
+                targetBar.style.boxShadow = `0 0 20px ${glowColor}, 0 0 40px ${glowColor}`;
+                targetBar.style.filter = 'brightness(1.2)';
+                targetBar.style.transform = 'scale(1.05)';
+            }
+
+            // Highlight notes with color-matched glow
+            notes.forEach((noteData, index) => {
+                const circle = noteData.element;
+                setTimeout(() => {
+                    circle.style.filter = `drop-shadow(0 0 15px ${barColor}) drop-shadow(0 0 25px ${barColor}) drop-shadow(0 0 35px ${barColor})`;
+                    circle.style.transition = 'filter 0.3s ease';
+                }, index * 80);
+            });
+
+            // Show notification
+            const stringNote = window.stringAnalysisData[stringNum].note;
+            const durationLabel = durationType.replace('grace-', 'Grace ').replace(/^\w/, c => c.toUpperCase());
+            showNotification(`Highlighted ${notes.length} ${durationLabel} notes on String ${stringNum} (${stringNote})`);
+        }
+
+        // Multi-select highlighting function
+        function highlightStringNotesMulti(stringNum, durationType, barColor) {
+            if (!window.stringAnalysisData || !window.stringAnalysisData[stringNum]) return;
+
+            const notes = window.stringAnalysisData[stringNum].durations[durationType];
+            if (!notes || notes.length === 0) return;
+
+            // Check if this selection is already active
+            const targetBar = document.querySelector(`[onclick*="highlightRightStringNotes('${stringNum}', '${durationType}'"]`);
+            const isCurrentlySelected = targetBar && targetBar.classList.contains('selected-bar');
+
+            if (isCurrentlySelected) {
+                // Deselect this bar and its notes
+                targetBar.classList.remove('selected-bar');
+                targetBar.style.boxShadow = targetBar.getAttribute('data-original-shadow') || '';
+                targetBar.style.filter = '';
+                targetBar.style.transform = 'scale(1)';
+
+                notes.forEach(noteData => {
+                    noteData.element.style.filter = '';
+                });
+            } else {
+                // Select this bar and its notes
+                if (targetBar) {
+                    if (!targetBar.getAttribute('data-original-shadow')) {
+                        targetBar.setAttribute('data-original-shadow', targetBar.style.boxShadow || '');
+                    }
+                    targetBar.classList.add('selected-bar');
+                    targetBar.style.boxShadow = `0 0 20px ${barColor}, 0 0 40px ${barColor}`;
+                    targetBar.style.filter = 'brightness(1.2)';
+                    targetBar.style.transform = 'scale(1.05)';
+                }
+
+                notes.forEach((noteData, index) => {
+                    const circle = noteData.element;
+                    setTimeout(() => {
+                        circle.style.filter = `drop-shadow(0 0 15px ${barColor}) drop-shadow(0 0 25px ${barColor}) drop-shadow(0 0 35px ${barColor})`;
+                        circle.style.transition = 'filter 0.3s ease';
+                    }, index * 80);
+                });
+            }
+
+            // Show notification
+            const stringNote = window.stringAnalysisData[stringNum].note;
+            const action = isCurrentlySelected ? 'Deselected' : 'Selected';
+            const durationLabel = durationType.replace('grace-', 'Grace ').replace(/^\w/, c => c.toUpperCase());
+            showNotification(`${action} ${notes.length} ${durationLabel} notes on String ${stringNum} (${stringNote})`);
+        }
+
+        // Update right bar chart when tablature zoom changes
+        function updateRightBarChartZoom() {
+            if (rightBarChartVisible) {
+                generateRightBarChart();
+            }
+        }
+
+        function updateRightBarChartPosition() {
+            const container = document.getElementById('rightBarChartContainer');
+            const tablatureSvg = document.getElementById('tablatureSvg');
+
+            if (!container || !tablatureSvg) return;
+
+            // Get the tablature SVG's current position
+            const svgRect = tablatureSvg.getBoundingClientRect();
+
+            // Keep the chart Y position synced with tablature
+            container.style.top = svgRect.top + 'px';
+        }
+
+        // Initialize right bar chart on page load
+        window.addEventListener('load', function() {
+            if (rightBarChartVisible) {
+                generateRightBarChart();
+            }
+        });
+
+        // Update bar chart content and position on window resize and scroll
+        window.addEventListener('resize', function() {
+            if (rightBarChartVisible) {
+                updateRightBarChartPosition();
+                setTimeout(() => generateRightBarChart(), 100);
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            if (rightBarChartVisible) {
+                updateRightBarChartPosition();
+            }
+        });
+
+        // Analysis Modal Functions
+        function openAnalysisModal() {
+            document.getElementById('analysisModal').style.display = 'block';
+        }
+
+        function closeAnalysisModal() {
+            document.getElementById('analysisModal').style.display = 'none';
+        }
+
+        function showAnalysisTab(tabName) {
+            // Hide all tab contents
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.style.display = 'none');
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').style.display = 'block';
+
+            // Update tab buttons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(button => {
+                button.style.background = '#bdc3c7';
+                button.style.color = '#34495e';
+                button.classList.remove('active');
+            });
+
+            // Highlight active button
+            event.target.style.background = '#3498db';
+            event.target.style.color = 'white';
+            event.target.classList.add('active');
+        }
+
+        function exportAnalysis() {
+            // Create a comprehensive text version of the analysis
+            const songTitle = document.getElementById('songTitle').textContent;
+            const analysisContent = `
+# Song Analysis: ${songTitle}
+
+## Key Takeaways
+
+### Cultural Message
+A humorous Vietnamese folk song depicting marital hardships, using wit and satire to comment on social relationships and domestic life challenges.
+
+### Musical Key Points
+- Uses 7 of 16 Đàn Tranh strings (D4-G5 range)
+- Dominated by descending melodic patterns
+- C5-A4-C5 oscillation is most characteristic
+- Intermediate-advanced difficulty level
+
+### Learning Focus
+- Master the E5-D5-C5-A4-C5 descending phrase
+- Practice the long melodic sequences (16+ notes)
+- Work on smooth transitions between registers
+- Focus on expressive melodic storytelling
+
+## Cultural Significance
+
+### Lyrics in Vietnamese Society
+"Bà Rằng Bà Rí" uses humor and wordplay to address serious social issues about marriage and domestic relationships. The song's satirical tone allows for social commentary while entertaining, reflecting Vietnamese culture's tradition of using folk songs to discuss difficult topics through wit and metaphor. The repetitive "bà Rằng bà Rí" phrase creates a rhythmic storytelling device typical of Vietnamese oral tradition.
+
+### Historical Context
+This folk song represents the tradition of Vietnamese satirical music, where social criticism is delivered through humor and memorable melodies. Such songs were important outlets for expressing frustrations about social conditions, particularly regarding family and marital relationships. The melodic complexity reflects the sophisticated storytelling tradition of Vietnamese folk music.
+
+## Technical Analysis
+
+### String Usage Analysis
+**Strings Used:** 7 out of 16 total strings
+- String 5 (D4): 12 occurrences
+- String 7 (G4): 24 occurrences
+- String 8 (A4): 31 occurrences
+- String 9 (C5): 72 occurrences
+- String 10 (D5): 28 occurrences
+- String 11 (E5): 19 occurrences
+- String 12 (G5): 3 occurrences
+
+### Range and Difficulty
+**Melodic Range:** D4 to G5 (spanning 1.5 octaves)
+**Difficulty Level:** Intermediate - requires good left-hand dexterity and rhythm control
+**Key Challenges:** Dotted rhythm precision, smooth transitions between C5-A4-G4
+
+## Pattern Analysis
+
+### Top KPIC (Pitch) Patterns
+1. C5 → C5 (Same note repetition) - 16 times
+2. A4 → C5 (Ascending minor third) - 14 times
+3. C5 → A4 (Descending minor third) - 14 times
+4. C5 → D5 (Ascending major second) - 10 times
+
+These patterns form the melodic backbone of the piece, with C5-A4 oscillation being particularly characteristic.
+
+### Top KRIC (Rhythm) Patterns
+1. ♪. → ♪ (Dotted eighth to eighth) - 28 times
+2. ♪ → ♪. (Eighth to dotted eighth) - 26 times
+3. ♪ → ♪ (Even eighth notes) - 22 times
+
+The heavy use of dotted eighth notes creates the characteristic "lilt" or swing feel of this traditional Vietnamese melody.
+
+## Rhythmic Character
+
+### Dotted Eighth Note Emphasis
+The extensive use of dotted eighth notes (♪.) is what gives "Lý Ngựa Ô" its distinctive rhythmic character. This creates a galloping rhythm that musically represents the horse's gait mentioned in the song's title.
+
+**Rhythmic Impact:**
+- Creates forward momentum and energy
+- Mimics the natural rhythm of horse hooves
+- Provides characteristic Vietnamese folk rhythm
+- Adds complexity without overwhelming the melody
+
+### Practice Recommendations
+1. **Rhythm Isolation:** Practice the dotted rhythm pattern on a single string before adding pitch changes.
+2. **Metronome Work:** Start at 80 BPM and gradually increase to performance tempo (120 BPM).
+3. **Pattern Focus:** Master the C5-A4-C5 melodic pattern with correct dotted rhythms.
+4. **Expression:** Emphasize the strong beats while keeping dotted notes light and flowing.
+
+---
+Generated by Đàn Tranh Tablature Analysis System
+            `;
+
+            // Create and download the file
+            const blob = new Blob([analysisContent], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${songTitle.replace(/\s+/g, '_')}_Analysis.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('analysisModal');
+            if (event.target == modal) {
+                closeAnalysisModal();
+            }
         }
 
     </script>

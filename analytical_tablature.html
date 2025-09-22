@@ -1825,7 +1825,7 @@
             </label>
             <span style="margin: 0 10px;">|</span>
             <button onclick="showContent('lyrics')" style="padding: 8px 15px; margin: 0 5px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📝 Lyrics</button>
-            <button id="toggleRightBarChart" onclick="toggleRightBarChart()" style="padding: 8px 15px; margin: 0 5px; background: #008080; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 KP/RIC-1</button>
+            <button id="toggleRightBarChart" onclick="toggleRightBarChart()" style="padding: 8px 15px; margin: 0 5px; background: #e74c3c; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📊 Hide KP/RIC-1</button>
             <button onclick="showContent('kpic-kric-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #9b59b6; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-2 & KRIC-2</button>
             <button onclick="showContent('kpic3-kric3-sankey')" style="padding: 8px 15px; margin: 0 5px; background: #8e44ad; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">📈 KPIC-3 & KRIC-3</button>
             <button onclick="showLegend()" style="padding: 8px 15px; margin: 0 5px; background: #34495e; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">🏷️ Legend</button>
@@ -6917,22 +6917,33 @@
             console.log('Highlighted:', vietnameseText);
         }
 
+        // Global variable to track current content type
+        let currentContentType = null;
+
         // Toggle content areas for analysis tools
         function showContent(contentType) {
             const contentArea = document.getElementById('content-area');
             const lyricsSection = document.querySelector('.lyrics-section');
 
+            // If the same content type is clicked, toggle it off
+            if (currentContentType === contentType) {
+                contentArea.style.display = 'none';
+                lyricsSection.style.display = 'block';
+                currentContentType = null;
+                updateButtonStates(null);
+                restoreNormalNoteVisibility();
+                return;
+            }
+
+            // Set the new current content type
+            currentContentType = contentType;
+
             if (contentType === 'lyrics') {
-                // Toggle lyrics section visibility
-                if (lyricsSection.style.display === 'none') {
-                    // Restore normal note visibility when leaving Sankey view
-                    restoreNormalNoteVisibility();
-                    lyricsSection.style.display = 'block';
-                    contentArea.style.display = 'none';
-                } else {
-                    lyricsSection.style.display = 'none';
-                    contentArea.style.display = 'none';
-                }
+                // Show lyrics section and hide content area
+                restoreNormalNoteVisibility();
+                lyricsSection.style.display = 'block';
+                contentArea.style.display = 'none';
+                updateButtonStates('lyrics');
             } else if (contentType === 'kpic-kric-sankey') {
                 // Generate and display KPIC-2 & KRIC-2 Sankey diagrams
                 lyricsSection.style.display = 'none';
@@ -6999,6 +7010,7 @@
                     }, 100);
 
                     contentArea.style.display = 'block';
+                    updateButtonStates('kpic-kric-sankey');
                 } catch (error) {
                     console.error('Error generating Sankey diagrams:', error);
                     contentArea.innerHTML = '<div style="padding: 20px; color: red;">Error generating Sankey diagrams. Check console for details.</div>';
@@ -7009,6 +7021,7 @@
 "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
 contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
                     contentArea.style.display = 'block';
+                    updateButtonStates('kpic-kric-sankey');
                 }
             } else if (contentType === 'kric3-sankey') {
                 // Generate and display KRIC-3 Sankey diagram only
@@ -7118,9 +7131,36 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
 "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
 "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
 contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
-contentArea.innerHTML += "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;\"><h4 style=\"color: #e74c3c; margin: 0 0 10px 0;\">🎨 Visual Section Comparison</h4><button onclick=\"showSectionComparison()\" style=\"background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-bottom: 10px;\">Show Section Overlay</button><div id=\"sectionComparisonContainer\" style=\"display: none; background: white; padding: 20px; border-radius: 5px; margin-top: 10px;\"><div style=\"margin-bottom: 15px;\"><span style=\"color: #27ae60; font-weight: bold;\">■ Identical</span> &nbsp;<span style=\"color: #f39c12; font-weight: bold;\">■ Variation</span> &nbsp;<span style=\"color: #9b59b6; font-weight: bold;\">■ Closing</span></div><canvas id=\"sectionCanvas\" width=\"900\" height=\"250\" style=\"border: 1px solid #ddd; width: 100%;\"></canvas></div></div>";
+contentArea.innerHTML += "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;\"><h4 style=\"color: #e74c3c; margin: 0 0 10px 0;\">🎨 Visual Section Comparison</h4><div style=\"background: #fff3cd; padding: 12px; border-radius: 5px; margin-bottom: 10px; font-size: 13px; line-height: 1.4;\"><strong>Each section has 4 parts:</strong><br>🎵 <strong>Opening</strong>: 7-note motif (C5-C5-C5-D5-E5-E5-G5) - announces each section<br>🔄 <strong>Development</strong>: Transitional material - varies between sections (compressed in 2&3)<br>✨ <strong>Signature</strong>: 16-note main phrase - identical in all sections<br>🏁 <strong>Closing</strong>: Brief ending - similar but different lengths (8,8,6 notes)</div><button onclick=\"showSectionComparison()\" style=\"background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-bottom: 10px;\">Show Section Overlay</button><div id=\"sectionComparisonContainer\" style=\"display: none; background: white; padding: 20px; border-radius: 5px; margin-top: 10px;\"><div style=\"margin-bottom: 15px;\"><span style=\"color: #27ae60; font-weight: bold;\">■ Identical Patterns</span> (Opening motif + Signature phrase) &nbsp;<span style=\"color: #f39c12; font-weight: bold;\">■ Variation Zones</span> (Development sections) &nbsp;<span style=\"color: #9b59b6; font-weight: bold;\">■ Closing Material</span> (Similar but different lengths)</div><canvas id=\"sectionCanvas\" width=\"900\" height=\"250\" style=\"border: 1px solid #ddd; width: 100%;\"></canvas></div></div>";
                 contentArea.style.display = 'block';
+                updateButtonStates('analysis');
             }
+        }
+
+        // Function to update button visual states
+        function updateButtonStates(activeContentType) {
+            // Define button mappings with their default colors
+            const buttonMappings = [
+                { selector: 'button[onclick*="showContent(\'lyrics\')"]', contentType: 'lyrics', defaultColor: '#e74c3c', activeText: '📝 Hide Lyrics', defaultText: '📝 Lyrics' },
+                { selector: 'button[onclick*="showContent(\'kpic-kric-sankey\')"]', contentType: 'kpic-kric-sankey', defaultColor: '#9b59b6', activeText: '📈 Hide KPIC-2 & KRIC-2', defaultText: '📈 KPIC-2 & KRIC-2' },
+                { selector: 'button[onclick*="showContent(\'kpic3-kric3-sankey\')"]', contentType: 'kpic3-kric3-sankey', defaultColor: '#8e44ad', activeText: '📈 Hide KPIC-3 & KRIC-3', defaultText: '📈 KPIC-3 & KRIC-3' },
+                { selector: 'button[onclick*="showContent(\'analysis\')"]', contentType: 'analysis', defaultColor: '#f39c12', activeText: '🔍 Hide Analysis', defaultText: '🔍 Analysis' }
+            ];
+
+            buttonMappings.forEach(mapping => {
+                const button = document.querySelector(mapping.selector);
+                if (button) {
+                    if (activeContentType === mapping.contentType) {
+                        // Active state - red background, "Hide" text
+                        button.style.background = '#e74c3c';
+                        button.textContent = mapping.activeText;
+                    } else {
+                        // Default state - original color, "Show" text
+                        button.style.background = mapping.defaultColor;
+                        button.textContent = mapping.defaultText;
+                    }
+                }
+            });
         }
 
 
@@ -12002,13 +12042,13 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
 
             if (rightBarChartVisible) {
                 container.style.display = 'block';
-                button.textContent = '📊 KP/RIC-1';
-                button.style.background = '#008080';
+                button.textContent = '📊 Hide KP/RIC-1';
+                button.style.background = '#e74c3c'; // Red for "hide" state
                 generateRightBarChart();
             } else {
                 container.style.display = 'none';
-                button.textContent = '📊 Show KP/RIC-1';
-                button.style.background = '#95a5a6';
+                button.textContent = '📊 KP/RIC-1';
+                button.style.background = '#008080'; // Original teal for "show" state
             }
 
             // Recalculate zoom to account for bar chart visibility
@@ -12405,13 +12445,20 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
             const container = document.getElementById('sectionComparisonContainer');
             const canvas = document.getElementById('sectionCanvas');
             const ctx = canvas.getContext('2d');
+            const button = event.target; // Get the button that was clicked
 
             // Toggle visibility
             if (container.style.display === 'none') {
                 container.style.display = 'block';
                 drawSectionComparison(ctx, canvas);
+                button.textContent = 'Hide Section Overlay';
+                button.style.background = '#e74c3c'; // Red for "hide"
             } else {
                 container.style.display = 'none';
+                button.textContent = 'Show Section Overlay';
+                button.style.background = '#3498db'; // Blue for "show"
+                // Clear any active highlights when hiding
+                clearSectionHighlight();
             }
         }
 
@@ -12542,6 +12589,174 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
             ctx.fillStyle = '#7f8c8d';
             ctx.font = '11px Arial';
             ctx.fillText('Alignment shows how sections repeat with variations. Green = Identical, Orange = Variations, Purple = Closing material', 80, 240);
+
+            // Add click instruction
+            ctx.fillStyle = '#3498db';
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText('💡 Click any colored block to highlight that section in the tablature and lyrics!', 80, 220);
+
+            // Add click event listener to canvas
+            canvas.onclick = function(event) {
+                handleSectionClick(event, canvas, sections, identicalPatterns, variationZones, closings);
+            };
+        }
+
+        function handleSectionClick(event, canvas, sections, identicalPatterns, variationZones, closings) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            const scaleX = 800 / 137; // Same scale as drawing
+
+            // Check which section was clicked
+            let clickedSection = null;
+            let clickedRange = null;
+
+            // Check section headers first
+            sections.forEach((section, idx) => {
+                if (y >= section.y - 20 && y <= section.y + 70) {
+                    // Convert X coordinate to note position
+                    const notePos = Math.floor((x - 80) / scaleX);
+
+                    // Check if click is within this section's range
+                    if (notePos >= section.start && notePos <= section.end) {
+                        clickedSection = idx;
+
+                        // Determine which part was clicked
+                        if (notePos >= section.start && notePos <= section.start + 6) {
+                            clickedRange = { start: section.start, end: section.start + 6, type: 'opening', name: 'Opening Motif' };
+                        } else if (idx === 0 && notePos >= 22 && notePos <= 37) {
+                            clickedRange = { start: 22, end: 37, type: 'signature', name: 'Signature Phrase' };
+                        } else if (idx === 1 && notePos >= 65 && notePos <= 80) {
+                            clickedRange = { start: 65, end: 80, type: 'signature', name: 'Signature Phrase' };
+                        } else if (idx === 2 && notePos >= 110 && notePos <= 125) {
+                            clickedRange = { start: 110, end: 125, type: 'signature', name: 'Signature Phrase' };
+                        } else if (idx === 0 && notePos >= 7 && notePos <= 21) {
+                            clickedRange = { start: 7, end: 21, type: 'development', name: 'Development (Section 1)' };
+                        } else if (idx === 1 && notePos >= 53 && notePos <= 64) {
+                            clickedRange = { start: 53, end: 64, type: 'development', name: 'Development (Section 2)' };
+                        } else if (idx === 2 && notePos >= 96 && notePos <= 109) {
+                            clickedRange = { start: 96, end: 109, type: 'development', name: 'Development (Section 3)' };
+                        } else if (idx === 0 && notePos >= 38 && notePos <= 45) {
+                            clickedRange = { start: 38, end: 45, type: 'closing', name: 'Closing (Section 1)' };
+                        } else if (idx === 1 && notePos >= 81 && notePos <= 88) {
+                            clickedRange = { start: 81, end: 88, type: 'closing', name: 'Closing (Section 2)' };
+                        } else if (idx === 2 && notePos >= 126 && notePos <= 131) {
+                            clickedRange = { start: 126, end: 131, type: 'closing', name: 'Closing (Section 3)' };
+                        }
+                    }
+                }
+            });
+
+            if (clickedRange) {
+                highlightSectionInTablature(clickedRange);
+                highlightSectionInLyrics(clickedRange);
+                showSectionInfo(clickedRange);
+            }
+        }
+
+        function highlightSectionInTablature(range) {
+            // Clear previous highlights
+            const notes = document.querySelectorAll('.note-circle');
+            notes.forEach(note => {
+                note.classList.remove('section-highlight');
+            });
+
+            // Add new highlights
+            notes.forEach(note => {
+                const noteIndex = parseInt(note.getAttribute('data-note-index'));
+                if (noteIndex >= range.start && noteIndex <= range.end) {
+                    note.classList.add('section-highlight');
+                }
+            });
+
+            // Add CSS for highlighting if not exists
+            if (!document.querySelector('#section-highlight-style')) {
+                const style = document.createElement('style');
+                style.id = 'section-highlight-style';
+                style.textContent = `
+                    .section-highlight {
+                        stroke: #e74c3c !important;
+                        stroke-width: 4 !important;
+                        filter: drop-shadow(0 0 8px #e74c3c) !important;
+                        animation: pulse-highlight 1.5s ease-in-out infinite;
+                    }
+                    @keyframes pulse-highlight {
+                        0%, 100% { opacity: 1; }
+                        50% { opacity: 0.6; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        function highlightSectionInLyrics(range) {
+            // This function would highlight corresponding lyrics
+            // For now, show which notes are being highlighted
+            console.log(`Highlighting notes ${range.start}-${range.end} (${range.name})`);
+
+            // You could extend this to highlight lyrics based on note positions
+            // if lyrics data includes note-to-syllable mapping
+        }
+
+        function showSectionInfo(range) {
+            // Create or update info panel
+            let infoPanel = document.getElementById('section-info-panel');
+            if (!infoPanel) {
+                infoPanel = document.createElement('div');
+                infoPanel.id = 'section-info-panel';
+                infoPanel.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: white;
+                    border: 2px solid #3498db;
+                    border-radius: 8px;
+                    padding: 15px;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                    z-index: 1000;
+                    max-width: 300px;
+                    font-family: Arial, sans-serif;
+                `;
+                document.body.appendChild(infoPanel);
+            }
+
+            const typeColors = {
+                'opening': '#27ae60',
+                'development': '#f39c12',
+                'signature': '#27ae60',
+                'closing': '#9b59b6'
+            };
+
+            infoPanel.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: ${typeColors[range.type]};">${range.name}</h4>
+                    <button onclick="clearSectionHighlight()" style="background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 4px 8px; cursor: pointer;">×</button>
+                </div>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>Notes:</strong> ${range.start}-${range.end} (${range.end - range.start + 1} notes)</p>
+                <p style="margin: 5px 0; font-size: 14px;"><strong>Type:</strong> ${range.type.charAt(0).toUpperCase() + range.type.slice(1)}</p>
+                <p style="margin: 5px 0; font-size: 12px; color: #7f8c8d;">Highlighted in red in the tablature above</p>
+            `;
+
+            // Auto-close after 10 seconds
+            setTimeout(() => {
+                if (infoPanel && infoPanel.parentNode) {
+                    clearSectionHighlight();
+                }
+            }, 10000);
+        }
+
+        function clearSectionHighlight() {
+            // Remove highlights from notes
+            const notes = document.querySelectorAll('.note-circle');
+            notes.forEach(note => {
+                note.classList.remove('section-highlight');
+            });
+
+            // Remove info panel
+            const infoPanel = document.getElementById('section-info-panel');
+            if (infoPanel) {
+                infoPanel.remove();
+            }
         }
 
         function exportAnalysis() {

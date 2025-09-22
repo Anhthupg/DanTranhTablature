@@ -2110,6 +2110,20 @@
                                 </div>
                             </div>
 
+                            <!-- Visual Section Comparison -->
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <h4 style="color: #e74c3c; margin: 0 0 10px 0;">🎨 Visual Section Comparison</h4>
+                                <button onclick="showSectionComparison()" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-bottom: 10px;">Show Section Overlay</button>
+                                <div id="sectionComparisonContainer" style="display: none; background: white; padding: 20px; border-radius: 5px; margin-top: 10px;">
+                                    <div style="margin-bottom: 15px;">
+                                        <span style="color: #27ae60; font-weight: bold;">■ Identical</span> &nbsp;
+                                        <span style="color: #f39c12; font-weight: bold;">■ Variation</span> &nbsp;
+                                        <span style="color: #e74c3c; font-weight: bold;">■ Unique</span>
+                                    </div>
+                                    <canvas id="sectionCanvas" width="900" height="250" style="border: 1px solid #ddd; width: 100%;"></canvas>
+                                </div>
+                            </div>
+
                             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
                                 <h4 style="color: #9b59b6; margin: 0 0 10px 0;">🔍 Analysis Process Visualization</h4>
                                 <div style="background: white; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.3; margin-bottom: 15px;">
@@ -7104,6 +7118,7 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
 "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;\"><div style=\"font-size: 20px; font-weight: bold; color: #9b59b6;\">3</div><div style=\"font-size: 12px; color: #7f8c8d;\">Sections (cyclical)</div></div>" +
 "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;\"><div style=\"font-size: 20px; font-weight: bold; color: #f39c12;\">2</div><div style=\"font-size: 12px; color: #7f8c8d;\">Key Phrases</div></div></div>";
 contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;\"><div style=\"background: #e8f5e8; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #27ae60;\"><h5 style=\"margin: 0 0 5px 0; color: #27ae60;\">Learn Only</h5><div style=\"font-size: 24px; font-weight: bold; color: #27ae60;\">56 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">40.9% of song</p></div><div style=\"background: #f0f8ff; padding: 15px; border-radius: 5px; text-align: center; border-left: 4px solid #3498db;\"><h5 style=\"margin: 0 0 5px 0; color: #3498db;\">Know Entire Song</h5><div style=\"font-size: 24px; font-weight: bold; color: #3498db;\">137 notes</div><p style=\"margin: 5px 0 0 0; font-size: 12px; color: #7f8c8d;\">59% efficiency gain!</p></div></div>";
+contentArea.innerHTML += "<div style=\"background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;\"><h4 style=\"color: #e74c3c; margin: 0 0 10px 0;\">🎨 Visual Section Comparison</h4><button onclick=\"showSectionComparison()\" style=\"background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; margin-bottom: 10px;\">Show Section Overlay</button><div id=\"sectionComparisonContainer\" style=\"display: none; background: white; padding: 20px; border-radius: 5px; margin-top: 10px;\"><div style=\"margin-bottom: 15px;\"><span style=\"color: #27ae60; font-weight: bold;\">■ Identical</span> &nbsp;<span style=\"color: #f39c12; font-weight: bold;\">■ Variation</span> &nbsp;<span style=\"color: #9b59b6; font-weight: bold;\">■ Closing</span></div><canvas id=\"sectionCanvas\" width=\"900\" height=\"250\" style=\"border: 1px solid #ddd; width: 100%;\"></canvas></div></div>";
                 contentArea.style.display = 'block';
             }
         }
@@ -12384,6 +12399,149 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
             event.target.style.background = '#3498db';
             event.target.style.color = 'white';
             event.target.classList.add('active');
+        }
+
+        function showSectionComparison() {
+            const container = document.getElementById('sectionComparisonContainer');
+            const canvas = document.getElementById('sectionCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Toggle visibility
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                drawSectionComparison(ctx, canvas);
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        function drawSectionComparison(ctx, canvas) {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Define the three sections with their notes
+            // Section 1: Notes 0-45 (46 notes)
+            // Section 2: Notes 46-88 (43 notes)
+            // Section 3: Notes 89-131 (43 notes)
+
+            const sections = [
+                { start: 0, end: 45, y: 30, label: "Section 1 (0-45)" },
+                { start: 46, end: 88, y: 100, label: "Section 2 (46-88)" },
+                { start: 89, end: 131, y: 170, label: "Section 3 (89-131)" }
+            ];
+
+            // Key structural elements that are identical across sections
+            const identicalPatterns = [
+                // 7-note opening motif: positions 0, 46, 89
+                { positions: [0, 46, 89], length: 7, name: "Opening Motif" },
+                // 16-note signature phrase: positions 22, 65, 110
+                { positions: [22, 65, 110], length: 16, name: "Signature Phrase" }
+            ];
+
+            // Variation zones (transitional development)
+            const variationZones = [
+                { section: 0, start: 7, end: 21 },  // Section 1 transition
+                { section: 1, start: 53, end: 64 }, // Section 2 transition (compressed)
+                { section: 2, start: 96, end: 109 } // Section 3 transition
+            ];
+
+            // Draw section backgrounds
+            sections.forEach((section, idx) => {
+                // Draw section label
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(section.label, 10, section.y - 5);
+
+                // Draw section background bar
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(80, section.y, 800, 50);
+            });
+
+            // Scale factor to fit notes into canvas width
+            const scaleX = 800 / 137; // 137 total notes
+
+            // Draw identical patterns (green)
+            ctx.fillStyle = '#27ae60';
+            identicalPatterns.forEach(pattern => {
+                pattern.positions.forEach((pos, idx) => {
+                    const section = sections[idx];
+                    if (section) {
+                        const x = 80 + (pos * scaleX);
+                        const width = pattern.length * scaleX;
+                        ctx.fillRect(x, section.y + 10, width, 30);
+
+                        // Add pattern label on first section only
+                        if (idx === 0) {
+                            ctx.fillStyle = 'white';
+                            ctx.font = '10px Arial';
+                            ctx.fillText(pattern.name, x + 2, section.y + 27);
+                            ctx.fillStyle = '#27ae60';
+                        }
+                    }
+                });
+            });
+
+            // Draw variation zones (orange)
+            ctx.fillStyle = '#f39c12';
+            variationZones.forEach(zone => {
+                const section = sections[zone.section];
+                const x = 80 + (zone.start * scaleX);
+                const width = (zone.end - zone.start + 1) * scaleX;
+                ctx.fillRect(x, section.y + 10, width, 30);
+
+                // Label variations
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText('Variation', x + 2, section.y + 27);
+                ctx.fillStyle = '#f39c12';
+            });
+
+            // Draw closing material (different lengths)
+            ctx.fillStyle = '#9b59b6';
+            const closings = [
+                { section: 0, start: 38, end: 45 }, // 8 notes
+                { section: 1, start: 81, end: 88 }, // 8 notes
+                { section: 2, start: 126, end: 131 } // 6 notes (compressed)
+            ];
+
+            closings.forEach(closing => {
+                const section = sections[closing.section];
+                const x = 80 + (closing.start * scaleX);
+                const width = (closing.end - closing.start + 1) * scaleX;
+                ctx.fillRect(x, section.y + 10, width, 30);
+
+                ctx.fillStyle = 'white';
+                ctx.font = '10px Arial';
+                ctx.fillText('Closing', x + 2, section.y + 27);
+                ctx.fillStyle = '#9b59b6';
+            });
+
+            // Draw connection lines between identical patterns
+            ctx.strokeStyle = '#27ae60';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+
+            identicalPatterns.forEach(pattern => {
+                // Connect opening motifs
+                for (let i = 0; i < pattern.positions.length - 1; i++) {
+                    const x1 = 80 + (pattern.positions[i] * scaleX) + (pattern.length * scaleX / 2);
+                    const y1 = sections[i].y + 55;
+                    const x2 = 80 + (pattern.positions[i + 1] * scaleX) + (pattern.length * scaleX / 2);
+                    const y2 = sections[i + 1].y + 5;
+
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+            });
+
+            ctx.setLineDash([]);
+
+            // Add legend at bottom
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '11px Arial';
+            ctx.fillText('Alignment shows how sections repeat with variations. Green = Identical, Orange = Variations, Purple = Closing material', 80, 240);
         }
 
         function exportAnalysis() {

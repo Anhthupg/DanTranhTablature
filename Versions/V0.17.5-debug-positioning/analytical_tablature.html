@@ -6694,6 +6694,16 @@
                 if (syllableNotes.length > 0) {
                     lineNotes.push(...syllableNotes);
 
+                    // Also collect any grace notes that come immediately after this note
+                    const mainNoteIndex = syllable.position;
+                    const subsequentGraceNotes = allNotes.filter(note => {
+                        return note.isGrace && note.noteIndex > mainNoteIndex && note.noteIndex < mainNoteIndex + 2;
+                    });
+                    if (subsequentGraceNotes.length > 0) {
+                        lineNotes.push(...subsequentGraceNotes);
+                        console.log(`🎵 Added ${subsequentGraceNotes.length} grace notes after syllable "${syllable.text}"`);
+                    }
+
                     // For melismatic syllables, we need to find additional consecutive notes
                     if (syllable.element.classList.contains('melismatic')) {
                         // Debug: console.log(`🔍 Syllable "${syllable.text}" is melismatic`);
@@ -6759,14 +6769,36 @@
             const noteX = parseFloat(noteElement.getAttribute('cx'));
             const noteY = parseFloat(noteElement.getAttribute('cy'));
 
-            // Look for duration text near this note
-            const durationValue = extractDurationFromTablature(noteX, noteY);
+            // Look for duration text near this note (EXACT copy from main playback system)
+            const durationTexts = document.querySelectorAll('text[style*="font-size: 10px"]');
+            let durationValue = 2; // Default to 8th note (value 2)
 
-            // Convert duration value to beats
-            if (durationValue >= 4) noteDurationBeats = 1; // Quarter note or longer
-            else if (durationValue >= 2) noteDurationBeats = 0.5; // Eighth note
-            else if (durationValue >= 1) noteDurationBeats = 0.25; // Sixteenth note
-            else noteDurationBeats = 0.125; // Thirty-second note or shorter
+            durationTexts.forEach(text => {
+                const textX = parseFloat(text.getAttribute('x'));
+                const textY = parseFloat(text.getAttribute('y'));
+                // Duration text is typically at the same X and about 20px above the note
+                if (Math.abs(textX - noteX) < 5 && Math.abs(textY - (noteY - 20)) < 30) {
+                    // Check for original duration stored in data attribute first
+                    const originalDuration = text.getAttribute('data-original-duration');
+                    const textContent = originalDuration || text.textContent.trim();
+                    const value = parseFloat(textContent);
+                    if (!isNaN(value)) {
+                        durationValue = value;
+                    }
+                }
+            });
+
+            console.log(`Lyrics Note ${currentIndex}: duration value=${durationValue} → calculating beats...`);
+
+            // Convert duration value to beats (EXACT copy from main playback system)
+            if (durationValue === 0.5) noteDurationBeats = 0.125;      // Grace note (very short)
+            else if (durationValue === 1) noteDurationBeats = 0.25;    // 16th note
+            else if (durationValue === 2) noteDurationBeats = 0.5;     // 8th note
+            else if (durationValue === 3) noteDurationBeats = 0.75;    // Dotted 8th
+            else if (durationValue === 4) noteDurationBeats = 1.0;     // 4th note
+            else if (durationValue === 8) noteDurationBeats = 2.0;     // 2nd note
+            else if (durationValue === 16) noteDurationBeats = 4.0;    // 1st note
+            else noteDurationBeats = durationValue / 4;                // General formula
 
             // Grace notes have shorter duration
             if (note.isGrace) {
@@ -6774,6 +6806,7 @@
             }
 
             const delay = quarterNoteMs * noteDurationBeats;
+            console.log(`Lyrics Note ${currentIndex}: final delay=${delay}ms (tempo=${tempo}, quarterNote=${quarterNoteMs}ms)`);
 
             // Highlight the note
             note.element.classList.add('active-note-glow');

@@ -2426,6 +2426,113 @@
                 sectionBg.setAttribute('data-base-width', (endBaseCenterX + 12) - (startBaseCenterX - 12));
                 sectionGroup.appendChild(sectionBg);
 
+                // Add section-level band and buttons (above the part buttons)
+                const sectionBandY = y - 35; // Position section band above part buttons
+                const sectionPlayButtonX = startX + 5;
+                const sectionStopButtonX = startX + 30;
+
+                // Create section-level background band
+                const sectionBand = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                sectionBand.setAttribute('x', startX);
+                sectionBand.setAttribute('y', sectionBandY);
+                sectionBand.setAttribute('width', sectionWidth);
+                sectionBand.setAttribute('height', 15);
+                sectionBand.setAttribute('fill', '#e8f4f8');
+                sectionBand.setAttribute('stroke', '#3498db');
+                sectionBand.setAttribute('stroke-width', '1');
+                sectionBand.setAttribute('rx', '2');
+                sectionBand.setAttribute('opacity', '0.8');
+                sectionBand.setAttribute('data-base-x', startBaseCenterX - 12);
+                sectionBand.setAttribute('data-base-width', (endBaseCenterX + 12) - (startBaseCenterX - 12));
+                sectionGroup.appendChild(sectionBand);
+
+                // Create section-level play button
+                const sectionPlayButton = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                sectionPlayButton.setAttribute('x', sectionPlayButtonX);
+                sectionPlayButton.setAttribute('y', sectionBandY - 15);
+                sectionPlayButton.setAttribute('width', '20');
+                sectionPlayButton.setAttribute('height', '12');
+                sectionPlayButton.setAttribute('fill', audioContext ? '#2980b9' : '#ccc');
+                sectionPlayButton.setAttribute('stroke', '#fff');
+                sectionPlayButton.setAttribute('stroke-width', '1');
+                sectionPlayButton.setAttribute('rx', '2');
+                sectionPlayButton.setAttribute('cursor', audioContext ? 'pointer' : 'not-allowed');
+                sectionPlayButton.setAttribute('data-section-index', sectionIdx);
+                sectionPlayButton.setAttribute('data-button-type', 'section-play');
+                sectionPlayButton.setAttribute('data-base-x', startBaseCenterX - 12 + 5);
+
+                // Create section play button text
+                const sectionPlayText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                sectionPlayText.setAttribute('x', sectionPlayButtonX + 10);
+                sectionPlayText.setAttribute('y', sectionBandY - 15 + 8);
+                sectionPlayText.setAttribute('text-anchor', 'middle');
+                sectionPlayText.setAttribute('font-size', '8');
+                sectionPlayText.setAttribute('fill', '#fff');
+                sectionPlayText.setAttribute('font-weight', 'bold');
+                sectionPlayText.setAttribute('pointer-events', 'none');
+                sectionPlayText.setAttribute('data-base-x', startBaseCenterX - 12 + 5 + 10);
+                sectionPlayText.textContent = '▶';
+
+                // Create section-level stop button
+                const sectionStopButton = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                sectionStopButton.setAttribute('x', sectionStopButtonX);
+                sectionStopButton.setAttribute('y', sectionBandY - 15);
+                sectionStopButton.setAttribute('width', '20');
+                sectionStopButton.setAttribute('height', '12');
+                sectionStopButton.setAttribute('fill', audioContext ? '#c0392b' : '#ccc');
+                sectionStopButton.setAttribute('stroke', '#fff');
+                sectionStopButton.setAttribute('stroke-width', '1');
+                sectionStopButton.setAttribute('rx', '2');
+                sectionStopButton.setAttribute('cursor', audioContext ? 'pointer' : 'not-allowed');
+                sectionStopButton.setAttribute('data-section-index', sectionIdx);
+                sectionStopButton.setAttribute('data-button-type', 'section-stop');
+                sectionStopButton.setAttribute('data-base-x', startBaseCenterX - 12 + 5 + 25);
+
+                // Create section stop button text
+                const sectionStopText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                sectionStopText.setAttribute('x', sectionStopButtonX + 10);
+                sectionStopText.setAttribute('y', sectionBandY - 15 + 8);
+                sectionStopText.setAttribute('text-anchor', 'middle');
+                sectionStopText.setAttribute('font-size', '8');
+                sectionStopText.setAttribute('fill', '#fff');
+                sectionStopText.setAttribute('font-weight', 'bold');
+                sectionStopText.setAttribute('pointer-events', 'none');
+                sectionStopText.setAttribute('data-base-x', startBaseCenterX - 12 + 5 + 25 + 10);
+                sectionStopText.textContent = '⏹';
+
+                // Add section-level click handlers
+                if (audioContext) {
+                    sectionPlayButton.onclick = () => playFullSectionSequence(sectionIdx);
+                    sectionStopButton.onclick = () => stopSectionPlayback();
+                }
+
+                // Add section tooltips
+                const sectionPlayTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                sectionPlayTitle.textContent = audioContext ? `Play entire ${section.label} (notes ${section.start}-${section.end})` : 'Enable Audio first';
+                sectionPlayButton.appendChild(sectionPlayTitle);
+
+                const sectionStopTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+                sectionStopTitle.textContent = audioContext ? `Stop ${section.label} playback` : 'Enable Audio first';
+                sectionStopButton.appendChild(sectionStopTitle);
+
+                // Add section label above the band
+                const sectionLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                sectionLabel.setAttribute('x', startX + sectionWidth / 2);
+                sectionLabel.setAttribute('y', sectionBandY - 18);
+                sectionLabel.setAttribute('text-anchor', 'middle');
+                sectionLabel.setAttribute('font-size', '12');
+                sectionLabel.setAttribute('font-weight', 'bold');
+                sectionLabel.setAttribute('fill', '#2c3e50');
+                sectionLabel.setAttribute('data-base-x', (startBaseCenterX + endBaseCenterX) / 2);
+                sectionLabel.textContent = `${section.label}`;
+
+                sectionGroup.appendChild(sectionBand);
+                sectionGroup.appendChild(sectionPlayButton);
+                sectionGroup.appendChild(sectionPlayText);
+                sectionGroup.appendChild(sectionStopButton);
+                sectionGroup.appendChild(sectionStopText);
+                sectionGroup.appendChild(sectionLabel);
+
                 // Add play/stop buttons for each part (sub-section) above the section bar
                 section.parts.forEach((part, partIdx) => {
                     const partStartNote = document.getElementById(`note-${part.start}`);
@@ -2580,17 +2687,6 @@
                     sectionGroup.appendChild(partLabel);
                 });
 
-                // Add section label
-                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                label.setAttribute('x', startX + sectionWidth / 2);
-                label.setAttribute('y', y - 5);
-                label.setAttribute('text-anchor', 'middle');
-                label.setAttribute('font-size', '11');
-                label.setAttribute('font-weight', 'bold');
-                label.setAttribute('fill', '#2c3e50');
-                label.setAttribute('data-base-x', (startBaseCenterX + endBaseCenterX) / 2);
-                label.textContent = `${section.label} (${section.notes})`;
-                sectionGroup.appendChild(label);
             });
 
             // Update positions based on current zoom
@@ -2955,15 +3051,88 @@
             playbackTimeouts.push(timeout);
         }
 
+        function playFullSectionSequence(sectionIndex) {
+            if (!audioContext) {
+                alert('Please click "Enable Audio" first.');
+                return;
+            }
+
+            // Stop any existing playback
+            stopPlayback();
+            stopLyricsLinePlayback();
+            stopSectionPlayback();
+
+            // Define section note ranges
+            const sections = [
+                { start: 0, end: 45, label: "Section 1" },
+                { start: 46, end: 88, label: "Section 2" },
+                { start: 89, end: 131, label: "Section 3" }
+            ];
+
+            if (sectionIndex < 0 || sectionIndex >= sections.length) return;
+
+            const section = sections[sectionIndex];
+            console.log(`🎵 Playing entire ${section.label} (notes ${section.start}-${section.end})`);
+
+            // Collect notes for this entire section
+            const allNotes = collectAllNotes();
+            const sectionNotes = allNotes.filter(note => {
+                const noteIndex = parseInt(note.element.getAttribute('data-note-index'));
+                return noteIndex >= section.start && noteIndex <= section.end;
+            });
+
+            if (sectionNotes.length === 0) {
+                console.log('No notes found for this section');
+                return;
+            }
+
+            // Set playback state for full section
+            sectionPlaybackState.isPlaying = true;
+            sectionPlaybackState.currentSectionIndex = sectionIndex;
+            sectionPlaybackState.currentPartIndex = -1; // -1 indicates full section playback
+
+            // Update button appearance
+            updateSectionButtonStates();
+
+            // Start playback from first note of section using original timing system
+            isPlaying = true;
+            currentNoteIndex = 0;
+            playPartSequenceInternal(sectionNotes, section.end);
+        }
+
         function stopSectionPlayback() {
             sectionPlaybackState.isPlaying = false;
             sectionPlaybackState.currentSectionIndex = -1;
+            sectionPlaybackState.currentPartIndex = -1;
             stopPlayback();
             updateSectionButtonStates();
             console.log('🔇 Section playback stopped');
         }
 
         function updateSectionButtonStates() {
+            // Update section-level play button appearance
+            document.querySelectorAll('#sectionMarkers rect[data-button-type="section-play"]').forEach((button) => {
+                const sectionIndex = parseInt(button.getAttribute('data-section-index'));
+                const isCurrentlyPlayingFullSection = sectionPlaybackState.isPlaying &&
+                    sectionPlaybackState.currentSectionIndex === sectionIndex &&
+                    sectionPlaybackState.currentPartIndex === -1; // -1 means full section
+
+                // Update styles
+                if (isCurrentlyPlayingFullSection) {
+                    button.setAttribute('fill', '#3498db'); // Bright blue when playing full section
+                } else {
+                    button.setAttribute('fill', audioContext ? '#2980b9' : '#ccc');
+                }
+                button.setAttribute('cursor', audioContext ? 'pointer' : 'not-allowed');
+
+                // Update click handler
+                if (audioContext) {
+                    button.onclick = () => playFullSectionSequence(sectionIndex);
+                } else {
+                    button.onclick = null;
+                }
+            });
+
             // Update part play button appearance based on current state
             document.querySelectorAll('#sectionMarkers rect[data-button-type="part-play"]').forEach((button) => {
                 const sectionIndex = parseInt(button.getAttribute('data-section-index'));
@@ -2995,7 +3164,7 @@
 
                 // Update styles
                 if (isCurrentlyPlaying) {
-                    button.setAttribute('fill', '#FFD700'); // Gold when playing
+                    button.setAttribute('fill', '#FFD700'); // Gold when playing specific part
                 } else {
                     button.setAttribute('fill', audioContext ? partColor : '#ccc');
                 }
@@ -3009,12 +3178,16 @@
                 }
             });
 
-            // Update part stop button appearance
-            document.querySelectorAll('#sectionMarkers rect[data-button-type="part-stop"]').forEach(button => {
+            // Update stop button appearance (both section and part stop buttons)
+            document.querySelectorAll('#sectionMarkers rect[data-button-type*="stop"]').forEach(button => {
                 const isAnyPlaying = sectionPlaybackState.isPlaying;
 
                 // Update styles
-                button.setAttribute('fill', isAnyPlaying ? '#EF5350' : (audioContext ? '#666' : '#ccc'));
+                if (button.getAttribute('data-button-type') === 'section-stop') {
+                    button.setAttribute('fill', isAnyPlaying ? '#e74c3c' : (audioContext ? '#c0392b' : '#ccc'));
+                } else {
+                    button.setAttribute('fill', isAnyPlaying ? '#EF5350' : (audioContext ? '#666' : '#ccc'));
+                }
                 button.setAttribute('cursor', audioContext ? 'pointer' : 'not-allowed');
 
                 // Update click handler

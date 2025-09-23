@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Diagnostic & Audio Download</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .section h2 {
+            color: #495057;
+            margin-top: 0;
+        }
+
+        .voice-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .voice-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .voice-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .voice-details {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .voice-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .test-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .download-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .syllable-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .syllable-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .syllable-text {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .syllable-controls {
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+        }
+
+        .small-btn {
+            padding: 3px 6px;
+            font-size: 10px;
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .recording-status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 5px;
+            border: 1px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <a href="analytical_tablature.html" class="back-btn">← Back to Tablature</a>
+
+    <div class="container">
+        <h1>🔍 Voice Diagnostic & Audio Download</h1>
+
+        <!-- Current Voice Info -->
+        <div class="section">
+            <h2>🎤 Current Voice Being Used</h2>
+            <div id="current-voice-info">
+                <button onclick="getCurrentVoiceInfo()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🔍 Analyze Current Voice</button>
+            </div>
+        </div>
+
+        <!-- All Available Voices -->
+        <div class="section">
+            <h2>📋 All Available System Voices</h2>
+            <div id="all-voices" class="voice-list">
+                <!-- Will be populated -->
+            </div>
+        </div>
+
+        <!-- Individual Syllables -->
+        <div class="section">
+            <h2>🗣️ Individual Syllable Testing & Download</h2>
+            <div id="syllable-section">
+                <button onclick="loadSyllables()" style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">📝 Load Vietnamese Syllables</button>
+                <div id="syllables-grid" class="syllable-grid" style="display: none;">
+                    <!-- Will be populated with syllables -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Recording -->
+        <div class="section">
+            <h2>💾 Audio Download Options</h2>
+            <div id="download-section">
+                <p><strong>Note:</strong> Browser TTS doesn't directly provide downloadable files, but here are options:</p>
+                <button onclick="startRecording()" id="record-btn" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">🎙️ Record Speech</button>
+                <button onclick="stopRecording()" id="stop-record-btn" style="background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-left: 10px;" disabled>⏹️ Stop Recording</button>
+
+                <div id="recording-status" class="recording-status" style="display: none;">
+                    <strong>📹 Recording Status:</strong> <span id="status-text">Ready</span>
+                    <div id="recorded-audio" style="margin-top: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRecording = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        const vietnameseSyllables = [
+            "Bà", "Rằng", "bà", "Rí", "ới", "rằng", "đi", "là", "đâu",
+            "khắp", "chốn", "nối", "dây", "tơ", "hồng", "cái", "duyên",
+            "ông", "chồng", "làm", "khổ", "đời", "tôi", "ơi", "bé",
+            "tẹo", "tèo", "teo", "chân", "cà", "kheo", "lúc", "phải",
+            "cõng", "khóc", "bồng", "ngáy", "Đêm", "thời", "nằm",
+            "co", "ăn", "lười", "biếng", "chẳng", "lo", "học", "hành"
+        ];
+
+        function getCurrentVoiceInfo() {
+            const voices = speechSynthesis.getVoices();
+
+            // Find the voice being used by our app
+            let currentVoice = voices.find(voice =>
+                voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+            ) || voices.find(voice =>
+                voice.lang.includes('zh') || voice.lang.includes('ja') || voice.lang.includes('ko')
+            ) || voices[0];
+
+            const infoDiv = document.getElementById('current-voice-info');
+            infoDiv.innerHTML = `
+                <div style="background: white; padding: 15px; border-radius: 5px; border: 1px solid #ddd;">
+                    <h3>🎤 Voice Currently Used by Your App:</h3>
+                    <p><strong>Name:</strong> ${currentVoice.name}</p>
+                    <p><strong>Language:</strong> ${currentVoice.lang}</p>
+                    <p><strong>Local/Network:</strong> ${currentVoice.localService ? 'Local (High Quality)' : 'Network (Standard)'}</p>
+                    <p><strong>Default:</strong> ${currentVoice.default ? 'Yes' : 'No'}</p>
+                    <p><strong>Voice URI:</strong> ${currentVoice.voiceURI}</p>
+                    <button onclick="testCurrentVoice('${currentVoice.name}')" style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 3px; cursor: pointer; margin-top: 10px;">🔊 Test "bé" with this voice</button>
+                </div>
+            `;
+        }
+
+        function testCurrentVoice(voiceName) {
+            const voices = speechSynthesis.getVoices();
+            const voice = voices.find(v => v.name === voiceName);
+
+            const utterance = new SpeechSynthesisUtterance("bé");
+            if (voice) utterance.voice = voice;
+            utterance.lang = 'vi-VN';
+            utterance.rate = 0.8;
+            utterance.pitch = 1.0;
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function loadAllVoices() {
+            const voices = speechSynthesis.getVoices();
+            const container = document.getElementById('all-voices');
+
+            container.innerHTML = '';
+
+            voices.forEach((voice, index) => {
+                const voiceDiv = document.createElement('div');
+                voiceDiv.className = 'voice-item';
+
+                voiceDiv.innerHTML = `
+                    <div class="voice-name">${voice.name}</div>
+                    <div class="voice-details">
+                        <strong>Lang:</strong> ${voice.lang}<br>
+                        <strong>Local:</strong> ${voice.localService ? 'Yes' : 'No'}<br>
+                        <strong>Default:</strong> ${voice.default ? 'Yes' : 'No'}<br>
+                        <strong>URI:</strong> ${voice.voiceURI}
+                    </div>
+                    <div class="voice-controls">
+                        <button class="test-btn" onclick="testVoice(${index}, 'bé')">🔊 Test "bé"</button>
+                        <button class="download-btn" onclick="recordVoice(${index}, 'bé')">💾 Record</button>
+                    </div>
+                `;
+
+                container.appendChild(voiceDiv);
+            });
+        }
+
+        function testVoice(voiceIndex, text) {
+            const voices = speechSynthesis.getVoices();
+            const voice = voices[voiceIndex];
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+            utterance.rate = 0.8;
+            utterance.pitch = 1.0;
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function loadSyllables() {
+            const container = document.getElementById('syllables-grid');
+            container.style.display = 'grid';
+            container.innerHTML = '';
+
+            vietnameseSyllables.forEach(syllable => {
+                const syllableDiv = document.createElement('div');
+                syllableDiv.className = 'syllable-item';
+
+                syllableDiv.innerHTML = `
+                    <div class="syllable-text">${syllable}</div>
+                    <div class="syllable-controls">
+                        <button class="small-btn" onclick="testSyllable('${syllable}')" style="background: #3498db;">🔊</button>
+                        <button class="small-btn" onclick="recordSyllable('${syllable}')" style="background: #27ae60;">💾</button>
+                        <button class="small-btn" onclick="openGoogleForSyllable('${syllable}')" style="background: #4285F4;">🌐</button>
+                    </div>
+                `;
+
+                container.appendChild(syllableDiv);
+            });
+        }
+
+        function testSyllable(syllable) {
+            const voices = speechSynthesis.getVoices();
+            const bestVoice = voices.find(voice =>
+                voice.lang.includes('vi') || voice.name.toLowerCase().includes('viet')
+            ) || voices.find(voice =>
+                voice.lang.includes('zh') || voice.lang.includes('ja') || voice.lang.includes('ko')
+            ) || voices[0];
+
+            const utterance = new SpeechSynthesisUtterance(syllable);
+            if (bestVoice) utterance.voice = bestVoice;
+            utterance.lang = 'vi-VN';
+            utterance.rate = 0.8;
+            utterance.pitch = 1.0;
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function openGoogleForSyllable(syllable) {
+            const encodedText = encodeURIComponent(syllable);
+            const url = `https://translate.google.com/?sl=vi&tl=en&text=${encodedText}&op=translate`;
+            window.open(url, 'GoogleSyllable', 'width=500,height=400');
+        }
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+
+                    const recordedDiv = document.getElementById('recorded-audio');
+                    recordedDiv.innerHTML = `
+                        <audio controls style="width: 100%; margin: 10px 0;">
+                            <source src="${audioUrl}" type="audio/wav">
+                        </audio>
+                        <br>
+                        <a href="${audioUrl}" download="vietnamese_syllable.wav" style="background: #27ae60; color: white; padding: 8px 15px; text-decoration: none; border-radius: 3px; margin: 5px;">💾 Download Audio</a>
+                    `;
+                };
+
+                mediaRecorder.start();
+
+                document.getElementById('record-btn').disabled = true;
+                document.getElementById('stop-record-btn').disabled = false;
+                document.getElementById('status-text').textContent = 'Recording... Speak now!';
+                document.getElementById('recording-status').style.display = 'block';
+            })
+            .catch(err => {
+                alert('Error accessing microphone: ' + err.message);
+            });
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+
+            document.getElementById('record-btn').disabled = false;
+            document.getElementById('stop-record-btn').disabled = true;
+            document.getElementById('status-text').textContent = 'Recording complete!';
+        }
+
+        function recordVoice(voiceIndex, text) {
+            alert(`Recording feature: This would record "${text}" using voice #${voiceIndex}. Browser TTS doesn't provide direct audio file output, but you can use screen recording or the microphone recording feature above.`);
+        }
+
+        function recordSyllable(syllable) {
+            if (confirm(`Record "${syllable}"? This will start microphone recording. Say the syllable after clicking OK.`)) {
+                startRecording();
+                setTimeout(() => {
+                    testSyllable(syllable);
+                }, 1000);
+            }
+        }
+
+        // Initialize
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = function() {
+                loadAllVoices();
+            };
+        }
+
+        setTimeout(() => {
+            loadAllVoices();
+            getCurrentVoiceInfo();
+        }, 500);
+
+        // Show current voice info on load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(getCurrentVoiceInfo, 1000);
+        });
+    </script>
+</body>
+</html>

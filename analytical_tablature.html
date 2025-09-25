@@ -1017,20 +1017,11 @@
 </g>
 <text x="20" y="30" class="title">Analytical Đàn Tranh Tablature</text>
 <text x="20" y="50" style="font-family: Arial; font-size: 14px; fill: #666;">KPIC/KRIC Analysis with Interactive Highlighting</text>
-<line x1="120" y1="110" x2="11455" y2="110" class="string-line" data-base-x2="11455" data-base-y1="110" data-base-y2="110"/>
-<text x="20" y="115" class="string-label" data-base-y="115">String 5: D4</text>
-<line x1="120" y1="260.0" x2="11455" y2="260.0" class="string-line" data-base-x2="11455" data-base-y1="260.0" data-base-y2="260.0"/>
-<text x="20" y="265.0" class="string-label" data-base-y="265.0">String 7: G4</text>
-<line x1="120" y1="320.0" x2="11455" y2="320.0" class="string-line" data-base-x2="11455" data-base-y1="320.0" data-base-y2="320.0"/>
-<text x="20" y="325.0" class="string-label" data-base-y="325.0">String 8: A4</text>
-<line x1="120" y1="410.0" x2="11455" y2="410.0" class="string-line" data-base-x2="11455" data-base-y1="410.0" data-base-y2="410.0"/>
-<text x="20" y="415.0" class="string-label" data-base-y="415.0">String 9: C5</text>
-<line x1="120" y1="470.0" x2="11455" y2="470.0" class="string-line" data-base-x2="11455" data-base-y1="470.0" data-base-y2="470.0"/>
-<text x="20" y="475.0" class="string-label" data-base-y="475.0">String 10: D5</text>
-<line x1="120" y1="530.0" x2="11455" y2="530.0" class="string-line" data-base-x2="11455" data-base-y1="530.0" data-base-y2="530.0"/>
-<text x="20" y="535.0" class="string-label" data-base-y="535.0">String 11: E5</text>
-<line x1="120" y1="620.0" x2="11455" y2="620.0" class="string-line" data-base-x2="11455" data-base-y1="620.0" data-base-y2="620.0"/>
-<text x="20" y="625.0" class="string-label" data-base-y="625.0">String 12: G5</text>
+<!-- Dan Tranh Strings - Dynamically Generated Based on Song -->
+<!-- Placeholder strings that will be replaced by JavaScript -->
+<g id="dynamicStrings">
+    <!-- Strings will be dynamically added here based on the song's needs -->
+</g>
 <rect x="120" y="405.0" width="320" height="10" fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9" data-base-x="120" data-base-y="405.0"/>
 <circle cx="120" cy="410.0" r="12" class="note-circle" fill="#008080" stroke="crimson" stroke-width="2" data-note-index="0" data-is-grace="false" data-base-x="120" data-base-y="410.0" onclick="showNoteDetails(0)" id="note-0"/>
 <text x="120" y="419" text-anchor="middle" class="string-number" data-base-x="120" data-base-y="415.0">9</text>
@@ -2348,6 +2339,592 @@
     </div>
 
     <script>
+        // Dynamic String Configuration System with Chromatic and Microtone Support
+        // Supports pentatonic, hexachord, heptachord, and custom tunings
+        // Dan Tranh can have 12-30 strings with various tuning systems
+
+        // Complete note-to-frequency mapping including chromatic notes
+        const NOTE_MAPPINGS = {
+            // Octave 3
+            'C3': { midi: 48, frequency: 130.81 },
+            'C#3': { midi: 49, frequency: 138.59 }, 'Db3': { midi: 49, frequency: 138.59 },
+            'D3': { midi: 50, frequency: 146.83 },
+            'D#3': { midi: 51, frequency: 155.56 }, 'Eb3': { midi: 51, frequency: 155.56 },
+            'E3': { midi: 52, frequency: 164.81 },
+            'F3': { midi: 53, frequency: 174.61 },
+            'F#3': { midi: 54, frequency: 185.00 }, 'Gb3': { midi: 54, frequency: 185.00 },
+            'G3': { midi: 55, frequency: 196.00 },
+            'G#3': { midi: 56, frequency: 207.65 }, 'Ab3': { midi: 56, frequency: 207.65 },
+            'A3': { midi: 57, frequency: 220.00 },
+            'A#3': { midi: 58, frequency: 233.08 }, 'Bb3': { midi: 58, frequency: 233.08 },
+            'B3': { midi: 59, frequency: 246.94 },
+            // Octave 4
+            'C4': { midi: 60, frequency: 261.63 },
+            'C#4': { midi: 61, frequency: 277.18 }, 'Db4': { midi: 61, frequency: 277.18 },
+            'D4': { midi: 62, frequency: 293.66 },
+            'D#4': { midi: 63, frequency: 311.13 }, 'Eb4': { midi: 63, frequency: 311.13 },
+            'E4': { midi: 64, frequency: 329.63 },
+            'F4': { midi: 65, frequency: 349.23 },
+            'F#4': { midi: 66, frequency: 369.99 }, 'Gb4': { midi: 66, frequency: 369.99 },
+            'G4': { midi: 67, frequency: 392.00 },
+            'G#4': { midi: 68, frequency: 415.30 }, 'Ab4': { midi: 68, frequency: 415.30 },
+            'A4': { midi: 69, frequency: 440.00 },
+            'A#4': { midi: 70, frequency: 466.16 }, 'Bb4': { midi: 70, frequency: 466.16 },
+            'B4': { midi: 71, frequency: 493.88 },
+            // Octave 5
+            'C5': { midi: 72, frequency: 523.25 },
+            'C#5': { midi: 73, frequency: 554.37 }, 'Db5': { midi: 73, frequency: 554.37 },
+            'D5': { midi: 74, frequency: 587.33 },
+            'D#5': { midi: 75, frequency: 622.25 }, 'Eb5': { midi: 75, frequency: 622.25 },
+            'E5': { midi: 76, frequency: 659.25 },
+            'F5': { midi: 77, frequency: 698.46 },
+            'F#5': { midi: 78, frequency: 739.99 }, 'Gb5': { midi: 78, frequency: 739.99 },
+            'G5': { midi: 79, frequency: 783.99 },
+            'G#5': { midi: 80, frequency: 830.61 }, 'Ab5': { midi: 80, frequency: 830.61 },
+            'A5': { midi: 81, frequency: 880.00 },
+            'A#5': { midi: 82, frequency: 932.33 }, 'Bb5': { midi: 82, frequency: 932.33 },
+            'B5': { midi: 83, frequency: 987.77 },
+            // Octave 6
+            'C6': { midi: 84, frequency: 1046.50 },
+            'C#6': { midi: 85, frequency: 1108.73 }, 'Db6': { midi: 85, frequency: 1108.73 },
+            'D6': { midi: 86, frequency: 1174.66 },
+            'D#6': { midi: 87, frequency: 1244.51 }, 'Eb6': { midi: 87, frequency: 1244.51 },
+            'E6': { midi: 88, frequency: 1318.51 },
+            'F6': { midi: 89, frequency: 1396.91 },
+            'F#6': { midi: 90, frequency: 1479.98 }, 'Gb6': { midi: 90, frequency: 1479.98 },
+            'G6': { midi: 91, frequency: 1567.98 }
+        };
+
+        // Function to parse notes with microtones (e.g., "C4+15cents")
+        function parseNoteWithMicrotone(noteStr) {
+            if (!noteStr || noteStr === 'Unknown') return null;
+
+            // Handle microtone notation
+            const microtoneMatch = noteStr.match(/^([A-G][#b]?\d)([-+]\d+)cents?$/);
+            if (microtoneMatch) {
+                const baseNote = microtoneMatch[1];
+                const microtone = parseInt(microtoneMatch[2]);
+                const baseData = NOTE_MAPPINGS[baseNote];
+                if (!baseData) return null;
+
+                // Apply microtone adjustment
+                const factor = Math.pow(2, microtone / 1200); // 1200 cents = 1 octave
+                return {
+                    note: noteStr,
+                    midi: baseData.midi + (microtone / 100),
+                    frequency: baseData.frequency * factor,
+                    baseNote: baseNote,
+                    microtone: microtone
+                };
+            }
+
+            // Handle standard notes
+            const baseData = NOTE_MAPPINGS[noteStr];
+            if (!baseData) return null;
+
+            return {
+                note: noteStr,
+                midi: baseData.midi,
+                frequency: baseData.frequency,
+                baseNote: noteStr,
+                microtone: 0
+            };
+        }
+
+        // Analyze all notes used in the current piece
+        function analyzeUsedNotes() {
+            const usedNotes = new Set();
+
+            // Check analysisData for notes
+            if (typeof analysisData !== 'undefined' && analysisData.kpic_patterns) {
+                Object.values(analysisData.kpic_patterns).forEach(mode => {
+                    Object.values(mode).forEach(patterns => {
+                        patterns.forEach(pattern => {
+                            if (pattern.pattern && Array.isArray(pattern.pattern)) {
+                                pattern.pattern.forEach(note => {
+                                    if (note && note !== 'Unknown') {
+                                        usedNotes.add(note);
+                                    }
+                                });
+                            }
+                        });
+                    });
+                });
+            }
+
+            // Also analyze circles from tablature
+            const noteCircles = document.querySelectorAll('.note-circle');
+            const stringLabels = document.querySelectorAll('.string-label');
+            const yToNote = {};
+
+            // Build Y to note mapping from existing labels
+            stringLabels.forEach(label => {
+                const text = label.textContent;
+                const match = text.match(/String \d+: ([A-G][#b]?\d)/);
+                if (match) {
+                    const note = match[1];
+                    const y = parseFloat(label.getAttribute('data-base-y') || label.getAttribute('y'));
+                    yToNote[Math.round(y - 5)] = note; // Label Y is 5px below line
+                }
+            });
+
+            // Collect notes from circles
+            noteCircles.forEach(circle => {
+                const cy = parseFloat(circle.getAttribute('data-base-y') || circle.getAttribute('cy'));
+                const note = yToNote[Math.round(cy)];
+                if (note) usedNotes.add(note);
+            });
+
+            return Array.from(usedNotes).sort((a, b) => {
+                const aData = parseNoteWithMicrotone(a);
+                const bData = parseNoteWithMicrotone(b);
+                return (aData?.midi || 0) - (bData?.midi || 0);
+            });
+        }
+
+        // Generate dynamic string configuration based on used notes
+        function generateDynamicStringConfig() {
+            const usedNotes = analyzeUsedNotes();
+            const stringConfig = {};
+
+            // Map existing string positions if available
+            const existingStrings = document.querySelectorAll('.string-label');
+            const existingMappings = {};
+
+            existingStrings.forEach(label => {
+                const text = label.textContent;
+                const match = text.match(/String (\d+): ([A-G][#b]?\d)/);
+                if (match) {
+                    const stringNum = match[1];
+                    const note = match[2];
+                    const y = parseFloat(label.getAttribute('data-base-y') || label.getAttribute('y'));
+                    existingMappings[note] = {
+                        stringNum: parseInt(stringNum),
+                        yPos: y - 5 // Convert label Y to line Y
+                    };
+                }
+            });
+
+            // Build string configuration
+            Object.entries(existingMappings).forEach(([note, data]) => {
+                stringConfig[data.stringNum] = {
+                    note: note,
+                    yPos: data.yPos,
+                    frequency: NOTE_MAPPINGS[note]?.frequency || 440
+                };
+            });
+
+            // Add any missing notes that were found in analysis
+            let maxStringNum = Math.max(...Object.keys(stringConfig).map(Number), 0);
+            let maxY = Math.max(...Object.values(stringConfig).map(s => s.yPos), 640);
+
+            usedNotes.forEach(note => {
+                if (!Object.values(stringConfig).some(s => s.note === note)) {
+                    maxStringNum++;
+                    maxY += 40;
+                    stringConfig[maxStringNum] = {
+                        note: note,
+                        yPos: maxY,
+                        frequency: NOTE_MAPPINGS[note]?.frequency || 440
+                    };
+                }
+            });
+
+            return stringConfig;
+        }
+
+        // Global dynamic string configuration
+        window.dynamicStringConfig = null;
+
+        // Initialize dynamic string configuration
+        function initializeDynamicStrings() {
+            window.dynamicStringConfig = generateDynamicStringConfig();
+            console.log('🎵 Dynamic String Configuration:', window.dynamicStringConfig);
+            return window.dynamicStringConfig;
+        }
+
+        // Get string info for a specific note
+        function getStringForNote(note) {
+            if (!window.dynamicStringConfig) {
+                initializeDynamicStrings();
+            }
+
+            // Direct match - note is on an open string
+            for (const [stringNum, info] of Object.entries(window.dynamicStringConfig)) {
+                if (info.note === note) {
+                    return {
+                        stringNum: parseInt(stringNum),
+                        ...info,
+                        requiresBending: false
+                    };
+                }
+            }
+
+            // Note requires bending - find the closest lower string
+            const noteData = parseNoteWithMicrotone(note);
+            if (noteData) {
+                let lowerString = null;
+                let upperString = null;
+
+                // Find the closest lower and upper strings
+                const sortedStrings = Object.entries(window.dynamicStringConfig)
+                    .map(([num, info]) => ({
+                        stringNum: parseInt(num),
+                        ...info,
+                        midiValue: parseNoteWithMicrotone(info.note)?.midi || 0
+                    }))
+                    .sort((a, b) => a.midiValue - b.midiValue);
+
+                for (let i = 0; i < sortedStrings.length; i++) {
+                    if (sortedStrings[i].midiValue < noteData.midi) {
+                        lowerString = sortedStrings[i];
+                    }
+                    if (sortedStrings[i].midiValue > noteData.midi && !upperString) {
+                        upperString = sortedStrings[i];
+                        break;
+                    }
+                }
+
+                if (lowerString) {
+                    // Calculate proportional position between strings
+                    let bendingRatio = 0;
+                    let targetY = lowerString.yPos;
+
+                    if (upperString) {
+                        // Calculate position proportionally between two strings
+                        const totalInterval = upperString.midiValue - lowerString.midiValue;
+                        const noteInterval = noteData.midi - lowerString.midiValue;
+                        bendingRatio = noteInterval / totalInterval;
+
+                        // Calculate Y position between the two strings
+                        targetY = lowerString.yPos +
+                                  (upperString.yPos - lowerString.yPos) * bendingRatio;
+                    } else {
+                        // Note is above the highest string - extrapolate
+                        const semitones = noteData.midi - lowerString.midiValue;
+                        bendingRatio = Math.min(semitones / 12, 1); // Max 1 octave bend
+                        targetY = lowerString.yPos + (40 * bendingRatio); // 40px per semitone group
+                    }
+
+                    return {
+                        stringNum: lowerString.stringNum,
+                        baseString: lowerString.stringNum,
+                        note: note,
+                        yPos: targetY,
+                        baseYPos: lowerString.yPos,
+                        frequency: noteData.frequency,
+                        requiresBending: true,
+                        bendingRatio: bendingRatio,
+                        semitoneOffset: Math.round(noteData.midi - lowerString.midiValue)
+                    };
+                }
+            }
+
+            return null;
+        }
+
+        // Draw a bending symbol (curved line) from base string to target position
+        function drawBendingSymbol(svg, fromX, fromY, toX, toY, color = '#FF6B6B') {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+
+            // Create a quadratic bezier curve
+            const controlX = fromX - 20; // Control point to the left
+            const controlY = (fromY + toY) / 2;
+
+            const d = `M ${fromX} ${fromY} Q ${controlX} ${controlY} ${toX} ${toY}`;
+
+            path.setAttribute('d', d);
+            path.setAttribute('stroke', color);
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('opacity', '0.7');
+            path.setAttribute('class', 'bending-symbol');
+            path.setAttribute('stroke-dasharray', '4,2');
+
+            svg.appendChild(path);
+            return path;
+        }
+
+        // Update note placement to handle bending
+        function placeNoteWithBending(noteElement, stringInfo) {
+            if (stringInfo.requiresBending) {
+                // Place note at calculated position
+                const cy = stringInfo.yPos;
+                noteElement.setAttribute('cy', cy);
+                noteElement.setAttribute('data-base-y', cy);
+
+                // Add visual indicator for bent note
+                noteElement.setAttribute('data-bent-note', 'true');
+                noteElement.style.strokeDasharray = '4,2';
+
+                // Draw bending symbol
+                const svg = noteElement.parentElement;
+                const cx = parseFloat(noteElement.getAttribute('cx'));
+                drawBendingSymbol(svg, cx, stringInfo.baseYPos, cx, cy);
+            }
+        }
+
+        // Initialize on DOM load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Generate and display appropriate strings for the song
+            generateAndDisplayDynamicStrings();
+
+            // Update existing note positions if needed
+            updateNotePositionsWithBending();
+        });
+
+        // Generate and display only the strings needed for the current song
+        function generateAndDisplayDynamicStrings() {
+            console.log('🎵 Generating dynamic strings for current song...');
+
+            // Analyze which notes are actually used
+            const noteCircles = document.querySelectorAll('.note-circle');
+            const usedYPositions = new Map();
+            const notesAtPosition = new Map();
+
+            // Map current Y positions to expected notes
+            const legacyYToNote = {
+                110: 'D4',  260: 'G4',  320: 'A4',  410: 'C5',
+                470: 'D5',  530: 'E5',  620: 'G5'
+            };
+
+            // For songs with specific note requirements (can be expanded)
+            const songNoteOverrides = {
+                'Xỉa Cá Mè': { 85: 'C4', 145: 'F4', 265: 'G4', 415: 'C5' },
+                'Xia Ca Me': { 85: 'C4', 145: 'F4', 265: 'G4', 415: 'C5' }
+            };
+
+            // Check if this is Xỉa Cá Mè and handle specially
+            const songTitle = document.querySelector('.title')?.textContent || '';
+            const isXiaCaMe = songTitle.includes('Xỉa Cá Mè') || songTitle.includes('Xia Ca Me');
+
+            if (isXiaCaMe) {
+                // For Xỉa Cá Mè, we need exactly 4 strings: C4, F4, G4, C5
+                console.log('🎵 Detected Xỉa Cá Mè - Setting up 4 strings');
+
+                // Define the 4 strings with proper Y positions
+                const xiaCaMeStrings = [
+                    { y: 85, note: 'C4', stringNum: 5 },
+                    { y: 145, note: 'F4', stringNum: 6 },
+                    { y: 265, note: 'G4', stringNum: 7 },
+                    { y: 415, note: 'C5', stringNum: 9 }
+                ];
+
+                // Clear and set up the positions
+                usedYPositions.clear();
+                notesAtPosition.clear();
+
+                xiaCaMeStrings.forEach(({ y, note }) => {
+                    usedYPositions.set(y, note);
+                    notesAtPosition.set(y, []);
+                });
+
+                // Map existing notes to the correct strings
+                noteCircles.forEach(circle => {
+                    const cy = Math.round(parseFloat(circle.getAttribute('cy') || circle.getAttribute('data-base-y')));
+
+                    // Find the closest string position
+                    let closestY = 85;
+                    let minDistance = Math.abs(cy - 85);
+
+                    for (const { y } of xiaCaMeStrings) {
+                        const distance = Math.abs(cy - y);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestY = y;
+                        }
+                    }
+
+                    if (notesAtPosition.has(closestY)) {
+                        notesAtPosition.get(closestY).push(circle);
+                    }
+                });
+            } else {
+                // Original logic for other songs
+                noteCircles.forEach(circle => {
+                    const cy = Math.round(parseFloat(circle.getAttribute('cy') || circle.getAttribute('data-base-y')));
+                    if (!usedYPositions.has(cy)) {
+                        // Determine the note for this position
+                        let note = legacyYToNote[cy] || 'Unknown';
+
+                        // Check for song-specific overrides
+                        Object.keys(songNoteOverrides).forEach(songName => {
+                            if (songTitle.includes(songName)) {
+                                note = songNoteOverrides[songName][cy] || note;
+                            }
+                        });
+
+                        usedYPositions.set(cy, note);
+                        notesAtPosition.set(cy, []);
+                    }
+                    notesAtPosition.get(cy).push(circle);
+                });
+            }
+
+            // Clear existing static strings
+            const stringGroup = document.getElementById('dynamicStrings');
+            if (!stringGroup) {
+                console.error('Dynamic strings group not found');
+                return;
+            }
+            stringGroup.innerHTML = '';
+
+            // Sort positions and create only needed strings
+            const sortedPositions = Array.from(usedYPositions.keys()).sort((a, b) => a - b);
+
+            // Determine string numbering based on song
+            const newStringConfig = {};
+            let stringNumbers;
+
+            if (isXiaCaMe) {
+                // Use specific string numbers for Xỉa Cá Mè
+                stringNumbers = { 85: 5, 145: 6, 265: 7, 415: 9 };
+            } else {
+                // Use sequential numbering for other songs
+                stringNumbers = {};
+                let num = 1;
+                sortedPositions.forEach(y => {
+                    stringNumbers[y] = num++;
+                });
+            }
+
+            sortedPositions.forEach((oldY, index) => {
+                const note = usedYPositions.get(oldY);
+                const newY = oldY; // Use the defined Y positions directly for Xỉa Cá Mè
+
+                if (note && note !== 'Unknown') {
+                    const stringNum = stringNumbers[oldY] || (index + 1);
+
+                    // Create string line
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '120');
+                    line.setAttribute('x2', '11455');
+                    line.setAttribute('y1', newY.toString());
+                    line.setAttribute('y2', newY.toString());
+                    line.setAttribute('class', 'string-line');
+                    line.setAttribute('data-base-x2', '11455');
+                    line.setAttribute('data-base-y1', newY.toString());
+                    line.setAttribute('data-base-y2', newY.toString());
+                    line.setAttribute('data-string-note', note);
+                    stringGroup.appendChild(line);
+
+                    // Create string label
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', '20');
+                    label.setAttribute('y', (newY + 5).toString());
+                    label.setAttribute('class', 'string-label');
+                    label.setAttribute('data-base-y', (newY + 5).toString());
+                    label.textContent = `String ${stringNum}: ${note}`;
+                    stringGroup.appendChild(label);
+
+                    // Update note positions
+                    const notesOnString = notesAtPosition.get(oldY) || [];
+                    notesOnString.forEach(circle => {
+                        circle.setAttribute('cy', newY.toString());
+                        circle.setAttribute('data-base-y', newY.toString());
+                        circle.setAttribute('data-string', stringNum.toString());
+
+                        // Update string number text
+                        const noteIndex = circle.getAttribute('data-note-index');
+                        const stringNumTexts = document.querySelectorAll(`.string-number`);
+                        stringNumTexts.forEach(text => {
+                            const cx = parseFloat(text.getAttribute('data-base-x') || text.getAttribute('x'));
+                            const circleCx = parseFloat(circle.getAttribute('cx'));
+                            if (Math.abs(cx - circleCx) < 1) {
+                                text.textContent = stringNum.toString();
+                                text.setAttribute('y', (newY + 9).toString());
+                                text.setAttribute('data-base-y', (newY + 5).toString());
+                            }
+                        });
+
+                        // Update associated elements positions
+                        const cx = parseFloat(circle.getAttribute('cx'));
+                        // Update lyrics, resonance bands, etc.
+                        const associatedElements = document.querySelectorAll(`[data-base-x="${cx}"]`);
+                        associatedElements.forEach(elem => {
+                            if (elem !== circle && elem.hasAttribute('data-base-y')) {
+                                const oldElemY = parseFloat(elem.getAttribute('data-base-y'));
+                                const offset = oldElemY - oldY;
+                                const newElemY = newY + offset;
+                                elem.setAttribute('y', newElemY.toString());
+                                elem.setAttribute('data-base-y', newElemY.toString());
+                                if (elem.hasAttribute('cy')) {
+                                    elem.setAttribute('cy', newElemY.toString());
+                                }
+                                if (elem.hasAttribute('y1')) {
+                                    elem.setAttribute('y1', newElemY.toString());
+                                    elem.setAttribute('data-base-y1', newElemY.toString());
+                                }
+                                if (elem.hasAttribute('y2')) {
+                                    elem.setAttribute('y2', newElemY.toString());
+                                    elem.setAttribute('data-base-y2', newElemY.toString());
+                                }
+                            }
+                        });
+                    });
+
+                    // Store in config
+                    newStringConfig[stringNum] = {
+                        note: note,
+                        yPos: newY,
+                        frequency: NOTE_MAPPINGS[note]?.frequency || 440,
+                        stringNum: stringNum
+                    };
+                }
+            });
+
+            // Update global config
+            window.dynamicStringConfig = newStringConfig;
+            const totalStrings = Object.keys(newStringConfig).length;
+            console.log(`✅ Generated ${totalStrings} strings for this song:`, newStringConfig);
+
+            // Update song info display if this is Xỉa Cá Mè
+            if (isXiaCaMe) {
+                // Update any displayed string count
+                const stringCountElements = document.querySelectorAll('[data-metric="strings"], .string-count');
+                stringCountElements.forEach(elem => {
+                    elem.textContent = '4 (5, 6, 7, 9)';
+                });
+
+                // Update unique pitches display
+                const uniqueElements = document.querySelectorAll('[data-metric="unique"], .unique-count');
+                uniqueElements.forEach(elem => {
+                    elem.textContent = '4';
+                });
+
+                console.log('🎵 Xỉa Cá Mè fixed: Now showing 4 strings (C4, F4, G4, C5)');
+            }
+
+            // Adjust SVG height if needed
+            const svg = document.getElementById('tablatureSvg');
+            const maxY = newY + 100; // Add some padding
+            if (svg && maxY > 400) {
+                svg.setAttribute('height', maxY.toString());
+                svg.setAttribute('viewBox', `0 0 11475 ${maxY}`);
+            }
+        }
+
+        // Update all note positions to account for bending
+        function updateNotePositionsWithBending() {
+            const noteCircles = document.querySelectorAll('.note-circle');
+            const svg = document.getElementById('tablatureSvg');
+
+            noteCircles.forEach(circle => {
+                const noteIndex = circle.getAttribute('data-note-index');
+
+                // Get the note pitch from analysis data or other source
+                if (typeof analysisData !== 'undefined') {
+                    const pitch = getPitchFromAnalysisData(noteIndex);
+                    if (pitch && pitch !== 'Unknown') {
+                        const stringInfo = getStringForNote(pitch);
+                        if (stringInfo && stringInfo.requiresBending) {
+                            placeNoteWithBending(circle, stringInfo);
+                        }
+                    }
+                }
+            });
+        }
+
         // Section Analysis Functions
         function toggleSectionAnalysis() {
             const checkbox = document.getElementById('showSectionAnalysis');
@@ -12409,11 +12986,25 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
                 const duration = durationValue.toString();
                 const rhythmLabel = isGrace ? 'g' + duration : duration;
 
-                // Get pitch from string position
-                const stringInfo = {
-                    110: 'D4', 260: 'G4', 320: 'A4', 410: 'C5',
-                    470: 'D5', 530: 'E5', 620: 'G5'
-                };
+                // Get pitch from string position using dynamic config
+                let stringInfo = {};
+                if (window.dynamicStringConfig) {
+                    Object.values(window.dynamicStringConfig).forEach(info => {
+                        stringInfo[Math.round(info.yPos)] = info.note;
+                    });
+                } else {
+                    // Fallback mapping based on current strings
+                    const stringLabels = document.querySelectorAll('.string-label');
+                    stringLabels.forEach(label => {
+                        const text = label.textContent;
+                        const match = text.match(/String \d+: ([A-G][#b]?\d)/);
+                        if (match) {
+                            const note = match[1];
+                            const y = parseFloat(label.getAttribute('data-base-y') || label.getAttribute('y'));
+                            stringInfo[Math.round(y - 5)] = note;
+                        }
+                    });
+                }
                 const pitch = stringInfo[Math.round(cy/10)*10] || 'Unknown';
 
                 rhythmSequence.push({ rhythm: rhythmLabel, pitch: pitch, index: index });
@@ -13351,16 +13942,12 @@ contentArea.innerHTML += "<div style=\"display: grid; grid-template-columns: 1fr
             const yZoomValue = currentYZoom || 0.67;
             console.log('📏 KP/RIC-1 using Y-zoom:', yZoomValue);
 
-            // String configuration matching CLAUDE.md
-            const stringInfo = {
-                5: { note: 'D4', yPos: 110 },
-                7: { note: 'G4', yPos: 260 },
-                8: { note: 'A4', yPos: 320 },
-                9: { note: 'C5', yPos: 410 },
-                10: { note: 'D5', yPos: 470 },
-                11: { note: 'E5', yPos: 530 },
-                12: { note: 'G5', yPos: 620 }
-            };
+            // Use dynamic string configuration or generate from current strings
+            let stringInfo = window.dynamicStringConfig;
+            if (!stringInfo) {
+                stringInfo = generateDynamicStringConfig();
+                window.dynamicStringConfig = stringInfo;
+            }
 
             // Extract duration data for each string (reusing existing logic)
             const noteCircles = document.querySelectorAll('.note-circle');

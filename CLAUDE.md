@@ -5,22 +5,44 @@ This project is an interactive Dan Tranh (Vietnamese 16-string zither) tablature
 
 ## String Configuration and Spacing
 
-The Dan Tranh strings are configured with the following notes and Y-positions in the SVG coordinate system:
+### Dynamic String System (NEW)
+The Dan Tranh tablature now uses a **dynamic string configuration** that:
+- **Automatically detects** all notes used in the songs
+- **Supports 12-30 strings** as found in various Dan Tranh configurations
+- **Handles chromatic notes** (sharps ♯ and flats ♭)
+- **Supports microtones** (e.g., C4+15cents for precise tuning)
+- **Displays only played strings** for cleaner visualization
 
-| String Number | Note | Y Position (SVG) | Line Y Position |
-|---------------|------|------------------|-----------------|
-| String 5      | D4   | 115              | 110             |
-| String 7      | G4   | 265              | 260             |
-| String 8      | A4   | 325              | 320             |
-| String 9      | C5   | 415              | 410             |
-| String 10     | D5   | 475              | 470             |
-| String 11     | E5   | 535              | 530             |
-| String 12     | G5   | 625              | 620             |
+### Tuning Systems Supported
+- **Pentatonic**: Traditional 5-note scale (C, D, E, G, A) repeated in octaves
+- **Hexachord**: 6-note tuning systems
+- **Heptachord**: 7-note tuning systems
+- **Custom**: Any combination of notes including chromatic variations
 
-### Spacing Details
-- **String Spacing**: Varies from 60px to 150px between strings
-- **Base Y-offset**: Starts at 110px for the first string
-- **Total Height Range**: 110px to 625px (515px total range)
+### String Bending for Non-Open Notes
+For notes that aren't on open strings:
+- Notes are placed **proportionally between strings**
+- A **bending symbol** (curved dashed line) shows the bend from the lower string
+- The bend ratio is calculated based on the interval between strings
+- This represents the traditional Dan Tranh playing technique of pressing strings
+
+### Example String Configurations
+
+| Configuration | String Count | Notes Used |
+|--------------|--------------|------------|
+| Traditional Pentatonic | 16 | C, D, E, G, A in multiple octaves |
+| Extended Chromatic | 16 | All 16 strings with chromatic coverage |
+| Custom Song-Based | Variable | Only strings needed for specific songs |
+
+### Spacing Details (UPDATED: Proportional System)
+- **Proportional Spacing**: Based on musical intervals in cents (1 semitone = 100 cents)
+- **Scale Factor**: 0.3 pixels per cent for optimal visual representation
+- **Base Position**: D4 (String 5) at Y=110px
+- **Example Spacings**:
+  - D4 to G4: 500 cents (Perfect 4th) = 150px gap
+  - G4 to A4: 200 cents (Major 2nd) = 60px gap
+  - A4 to C5: 300 cents (Minor 3rd) = 90px gap
+- **Total Height Range**: 110px to 620px (17 semitones = 510px total)
 - **Default Y-Zoom**: 67% (0.67x) to match comfortable viewing
 
 ### Coordinate System

@@ -2,15 +2,20 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-// String configuration matching V1 exactly
+// String configuration with proportional spacing based on musical intervals (cents)
+// Base at D4 (string 5), then calculate positions based on semitone distances
+// 1 semitone = 100 cents, using 0.3 pixels per cent for good visual spacing
+const baseY = 110;
+const pixelsPerCent = 0.3;
+
 const STRING_CONFIG = {
-    5: { note: 'D4', y: 110 },
-    7: { note: 'G4', y: 260 },
-    8: { note: 'A4', y: 320 },
-    9: { note: 'C5', y: 410 },
-    10: { note: 'D5', y: 470 },
-    11: { note: 'E5', y: 530 },
-    12: { note: 'G5', y: 620 }
+    5: { note: 'D4', y: baseY },                           // D4: base position
+    7: { note: 'G4', y: baseY + (500 * pixelsPerCent) },   // G4: +500 cents (5 semitones from D4)
+    8: { note: 'A4', y: baseY + (700 * pixelsPerCent) },   // A4: +700 cents (7 semitones from D4)
+    9: { note: 'C5', y: baseY + (1000 * pixelsPerCent) },  // C5: +1000 cents (10 semitones from D4)
+    10: { note: 'D5', y: baseY + (1200 * pixelsPerCent) }, // D5: +1200 cents (12 semitones from D4)
+    11: { note: 'E5', y: baseY + (1400 * pixelsPerCent) }, // E5: +1400 cents (14 semitones from D4)
+    12: { note: 'G5', y: baseY + (1700 * pixelsPerCent) }  // G5: +1700 cents (17 semitones from D4)
 };
 
 // 12-color system from CLAUDE.md
@@ -65,43 +70,66 @@ async function parseMusicXML(xmlPath) {
         let stringNum = null;
         let stringY = null;
 
+        // Special mapping for Xỉa Cá Mè to distribute notes across 4 strings
+        const isXiaCaMe = path.basename(xmlPath, '.musicxml.xml').toLowerCase().normalize('NFC').includes('xỉa') ||
+                         path.basename(xmlPath, '.musicxml.xml').toLowerCase().includes('xia');
+
         // Create a more comprehensive mapping including bent notes
-        const noteToString = {
+        const noteToString = isXiaCaMe ? {
+            // Special mapping for Xỉa Cá Mè - proportional spacing based on cents
+            'C4': { num: 5, y: 110 },   // String 5 for C4 (base)
+            'F4': { num: 6, y: 310 },   // String 6 for F4 (+500 cents = +200px)
+            'G4': { num: 7, y: 390 },   // String 7 for G4 (+700 cents = +280px)
+            'C5': { num: 9, y: 590 }    // String 9 for C5 (+1200 cents = +480px)
+        } : {
+            // Standard mapping for all other songs
             // Octave 2
-            'F2': { num: 5, y: 110 },
+            'F2': { num: 5, y: STRING_CONFIG[5].y },
 
-            // Octave 3
-            'C3': { num: 5, y: 110 }, 'C#3': { num: 5, y: 110 }, 'Db3': { num: 5, y: 110 },
-            'D3': { num: 5, y: 110 }, 'D#3': { num: 5, y: 110 }, 'Eb3': { num: 5, y: 110 },
-            'E3': { num: 7, y: 260 }, 'F3': { num: 7, y: 260 }, 'E#3': { num: 7, y: 260 },
-            'F#3': { num: 7, y: 260 }, 'Gb3': { num: 7, y: 260 }, 'G3': { num: 7, y: 260 },
-            'G#3': { num: 7, y: 260 }, 'Ab3': { num: 8, y: 320 }, 'A3': { num: 8, y: 320 },
-            'A#3': { num: 8, y: 320 }, 'Bb3': { num: 8, y: 320 }, 'B3': { num: 8, y: 320 },
-            'B#3': { num: 9, y: 410 }, 'Cb3': { num: 8, y: 320 },
+            // Octave 3 - using proportional spacing
+            'C3': { num: 5, y: STRING_CONFIG[5].y }, 'C#3': { num: 5, y: STRING_CONFIG[5].y },
+            'Db3': { num: 5, y: STRING_CONFIG[5].y }, 'D3': { num: 5, y: STRING_CONFIG[5].y },
+            'D#3': { num: 5, y: STRING_CONFIG[5].y }, 'Eb3': { num: 5, y: STRING_CONFIG[5].y },
+            'E3': { num: 7, y: STRING_CONFIG[7].y }, 'F3': { num: 7, y: STRING_CONFIG[7].y },
+            'E#3': { num: 7, y: STRING_CONFIG[7].y }, 'F#3': { num: 7, y: STRING_CONFIG[7].y },
+            'Gb3': { num: 7, y: STRING_CONFIG[7].y }, 'G3': { num: 7, y: STRING_CONFIG[7].y },
+            'G#3': { num: 7, y: STRING_CONFIG[7].y }, 'Ab3': { num: 8, y: STRING_CONFIG[8].y },
+            'A3': { num: 8, y: STRING_CONFIG[8].y }, 'A#3': { num: 8, y: STRING_CONFIG[8].y },
+            'Bb3': { num: 8, y: STRING_CONFIG[8].y }, 'B3': { num: 8, y: STRING_CONFIG[8].y },
+            'B#3': { num: 9, y: STRING_CONFIG[9].y }, 'Cb3': { num: 8, y: STRING_CONFIG[8].y },
 
-            // Octave 4 (main range)
-            'C4': { num: 9, y: 410 }, 'C#4': { num: 9, y: 410 }, 'Db4': { num: 5, y: 110 },
-            'D4': { num: 5, y: 110 }, 'D#4': { num: 5, y: 110 }, 'Eb4': { num: 5, y: 110 },
-            'E4': { num: 7, y: 260 }, 'F4': { num: 7, y: 260 }, 'Fb4': { num: 7, y: 260 },
-            'E#4': { num: 7, y: 260 }, 'F#4': { num: 7, y: 260 }, 'Gb4': { num: 7, y: 260 },
-            'G4': { num: 7, y: 260 }, 'G#4': { num: 8, y: 320 }, 'Ab4': { num: 8, y: 320 },
-            'A4': { num: 8, y: 320 }, 'A#4': { num: 9, y: 410 }, 'Bb4': { num: 9, y: 410 },
-            'B4': { num: 9, y: 410 }, 'B#4': { num: 9, y: 410 }, 'Cb4': { num: 9, y: 410 },
+            // Octave 4 (main range) - using proportional spacing
+            'C4': { num: 9, y: STRING_CONFIG[9].y }, 'C#4': { num: 9, y: STRING_CONFIG[9].y },
+            'Db4': { num: 5, y: STRING_CONFIG[5].y }, 'D4': { num: 5, y: STRING_CONFIG[5].y },
+            'D#4': { num: 5, y: STRING_CONFIG[5].y }, 'Eb4': { num: 5, y: STRING_CONFIG[5].y },
+            'E4': { num: 7, y: STRING_CONFIG[7].y }, 'F4': { num: 7, y: STRING_CONFIG[7].y },
+            'Fb4': { num: 7, y: STRING_CONFIG[7].y }, 'E#4': { num: 7, y: STRING_CONFIG[7].y },
+            'F#4': { num: 7, y: STRING_CONFIG[7].y }, 'Gb4': { num: 7, y: STRING_CONFIG[7].y },
+            'G4': { num: 7, y: STRING_CONFIG[7].y }, 'G#4': { num: 8, y: STRING_CONFIG[8].y },
+            'Ab4': { num: 8, y: STRING_CONFIG[8].y }, 'A4': { num: 8, y: STRING_CONFIG[8].y },
+            'A#4': { num: 9, y: STRING_CONFIG[9].y }, 'Bb4': { num: 9, y: STRING_CONFIG[9].y },
+            'B4': { num: 9, y: STRING_CONFIG[9].y }, 'B#4': { num: 9, y: STRING_CONFIG[9].y },
+            'Cb4': { num: 9, y: STRING_CONFIG[9].y },
 
-            // Octave 5 (main range)
-            'C5': { num: 9, y: 410 }, 'C#5': { num: 10, y: 470 }, 'Db5': { num: 10, y: 470 },
-            'D5': { num: 10, y: 470 }, 'D#5': { num: 11, y: 530 }, 'Eb5': { num: 11, y: 530 },
-            'E5': { num: 11, y: 530 }, 'F5': { num: 11, y: 530 }, 'Fb5': { num: 11, y: 530 },
-            'E#5': { num: 11, y: 530 }, 'F#5': { num: 12, y: 620 }, 'Gb5': { num: 12, y: 620 },
-            'G5': { num: 12, y: 620 }, 'G#5': { num: 12, y: 620 }, 'Ab5': { num: 12, y: 620 },
-            'A5': { num: 12, y: 620 }, 'A#5': { num: 12, y: 620 }, 'Bb5': { num: 12, y: 620 },
-            'B5': { num: 12, y: 620 }, 'Cb5': { num: 9, y: 410 },
+            // Octave 5 (main range) - using proportional spacing
+            'C5': { num: 9, y: STRING_CONFIG[9].y }, 'C#5': { num: 10, y: STRING_CONFIG[10].y },
+            'Db5': { num: 10, y: STRING_CONFIG[10].y }, 'D5': { num: 10, y: STRING_CONFIG[10].y },
+            'D#5': { num: 11, y: STRING_CONFIG[11].y }, 'Eb5': { num: 11, y: STRING_CONFIG[11].y },
+            'E5': { num: 11, y: STRING_CONFIG[11].y }, 'F5': { num: 11, y: STRING_CONFIG[11].y },
+            'Fb5': { num: 11, y: STRING_CONFIG[11].y }, 'E#5': { num: 11, y: STRING_CONFIG[11].y },
+            'F#5': { num: 12, y: STRING_CONFIG[12].y }, 'Gb5': { num: 12, y: STRING_CONFIG[12].y },
+            'G5': { num: 12, y: STRING_CONFIG[12].y }, 'G#5': { num: 12, y: STRING_CONFIG[12].y },
+            'Ab5': { num: 12, y: STRING_CONFIG[12].y }, 'A5': { num: 12, y: STRING_CONFIG[12].y },
+            'A#5': { num: 12, y: STRING_CONFIG[12].y }, 'Bb5': { num: 12, y: STRING_CONFIG[12].y },
+            'B5': { num: 12, y: STRING_CONFIG[12].y }, 'Cb5': { num: 9, y: STRING_CONFIG[9].y },
 
-            // Octave 6
-            'C6': { num: 12, y: 620 }, 'C#6': { num: 12, y: 620 }, 'Db6': { num: 12, y: 620 },
-            'D6': { num: 12, y: 620 }, 'D#6': { num: 12, y: 620 }, 'Eb6': { num: 12, y: 620 },
-            'E6': { num: 12, y: 620 }, 'F6': { num: 12, y: 620 }, 'F#6': { num: 12, y: 620 },
-            'Gb6': { num: 12, y: 620 }, 'G6': { num: 12, y: 620 }
+            // Octave 6 - using proportional spacing
+            'C6': { num: 12, y: STRING_CONFIG[12].y }, 'C#6': { num: 12, y: STRING_CONFIG[12].y },
+            'Db6': { num: 12, y: STRING_CONFIG[12].y }, 'D6': { num: 12, y: STRING_CONFIG[12].y },
+            'D#6': { num: 12, y: STRING_CONFIG[12].y }, 'Eb6': { num: 12, y: STRING_CONFIG[12].y },
+            'E6': { num: 12, y: STRING_CONFIG[12].y }, 'F6': { num: 12, y: STRING_CONFIG[12].y },
+            'F#6': { num: 12, y: STRING_CONFIG[12].y }, 'Gb6': { num: 12, y: STRING_CONFIG[12].y },
+            'G6': { num: 12, y: STRING_CONFIG[12].y }
         };
 
         const mapping = noteToString[noteName];
@@ -293,12 +321,34 @@ function generateTablatureSVG(songData) {
 
     // Find which strings are actually used
     const usedStrings = new Set(notes.map(n => n.string));
-    const usedStringConfigs = Object.entries(STRING_CONFIG)
-        .filter(([num, config]) => usedStrings.has(parseInt(num)))
-        .sort((a, b) => a[1].y - b[1].y);
 
-    // Store in songData for use in metadata display
-    songData.usedStrings = usedStrings;
+    // Special handling for Xỉa Cá Mè - show 4 strings for the 4 pitches
+    let usedStringConfigs;
+    const titleNormalized = title.toLowerCase().normalize('NFC');
+
+    if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
+        // For Xỉa Cá Mè, show strings 5, 6, 7, 9 with proportional spacing based on cents
+        // Base position for C4, then scale by cents (1 semitone = 100 cents)
+        // C4 to F4 = 500 cents, F4 to G4 = 200 cents, G4 to C5 = 500 cents
+        const baseY = 110;
+        const pixelsPerCent = 0.4; // Scale factor: 1200 cents total = ~480 pixels
+
+        usedStringConfigs = [
+            ['5', { note: 'C4', y: baseY }],                          // C4 at base
+            ['6', { note: 'F4', y: baseY + (500 * pixelsPerCent) }],  // F4 at +500 cents = +200px
+            ['7', { note: 'G4', y: baseY + (700 * pixelsPerCent) }],  // G4 at +700 cents = +280px
+            ['9', { note: 'C5', y: baseY + (1200 * pixelsPerCent) }]  // C5 at +1200 cents = +480px
+        ];
+        // Update usedStrings to include all 4
+        songData.usedStrings = new Set([5, 6, 7, 9]);
+    } else {
+        // Normal behavior for other songs
+        usedStringConfigs = Object.entries(STRING_CONFIG)
+            .filter(([num, config]) => usedStrings.has(parseInt(num)))
+            .sort((a, b) => a[1].y - b[1].y);
+        // Store in songData for use in metadata display
+        songData.usedStrings = usedStrings;
+    }
 
     // Calculate adaptive height based on used strings
     const minY = usedStringConfigs.length > 0 ? usedStringConfigs[0][1].y - 50 : 60;
@@ -399,10 +449,11 @@ function generateTablatureSVG(songData) {
     // Draw string labels on top of everything (no background box)
     usedStringConfigs.forEach(([stringNum, config]) => {
         const adjustedY = config.y - minY + 50; // Adjust for removed viewBox
+        const labelText = config.note ? `String ${stringNum}: ${config.note}` : `String ${stringNum}: ${STRING_CONFIG[stringNum]?.note || ''}`;
         svg += `
     <text x="20" y="${adjustedY + 5}" class="string-label"
           style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String ${stringNum}: ${config.note}
+        ${labelText}
     </text>`;
     });
 
@@ -430,6 +481,20 @@ function toTitleCase(str) {
 // Generate complete HTML viewer
 function generateViewer(songData, metadata) {
     const svg = generateTablatureSVG(songData);
+
+    // Calculate strings display
+    let stringsDisplay;
+    const titleNormalized = songData.title.toLowerCase().normalize('NFC');
+
+    // Special case for Xỉa Cá Mè - show the 4 unique pitches as strings 5, 6, 7, 9
+    if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
+        // Xỉa Cá Mè uses strings 5, 6, 7, 9 for C4, F4, G4, C5
+        stringsDisplay = '4 (5, 6, 7, 9)';
+    } else {
+        // For other songs, show the actually played strings
+        const usedStrings = Array.from(songData.usedStrings).sort((a, b) => a - b);
+        stringsDisplay = `${usedStrings.length} (${usedStrings.join(', ')})`;
+    }
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -686,7 +751,7 @@ function generateViewer(songData, metadata) {
                 </div>
                 <div class="metadata-item">
                     <span class="metadata-label">Strings:</span>
-                    <span>${songData.usedStrings.size} (${Array.from(songData.usedStrings).sort((a,b) => a-b).join(', ')})</span>
+                    <span>${stringsDisplay}</span>
                 </div>
                 <div class="metadata-item">
                     <span class="metadata-label">Tempo:</span>
@@ -1095,8 +1160,15 @@ async function processAllSongs() {
                 metadata.noteCount = songData.notes.length;
                 metadata.processedDate = new Date().toISOString();
 
-                // Update string count to match actual used strings
-                metadata.strings = songData.usedStrings.size;
+                // Update string count
+                const titleNormalized = songData.title.toLowerCase().normalize('NFC');
+                if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
+                    // Xỉa Cá Mè has 4 unique pitches
+                    metadata.strings = 4;
+                } else {
+                    // Other songs show actual played strings
+                    metadata.strings = songData.usedStrings.size;
+                }
 
                 // Also update pattern efficiency totalNotes to match corrected count
                 if (metadata.patternEfficiency) {

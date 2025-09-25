@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Tablature v3 - Dynamic String System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .control-group label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 600;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        select:hover, button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .tablature-container {
+            padding: 20px;
+            background: white;
+            overflow-x: auto;
+        }
+
+        #tablatureSvg {
+            background: #fefefe;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .string-line {
+            stroke: #333;
+            stroke-width: 1;
+        }
+
+        .string-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: #666;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .note-circle:hover {
+            filter: brightness(1.2);
+            stroke-width: 3;
+        }
+
+        .bending-line {
+            stroke: #ff6b6b;
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 5,3;
+            opacity: 0.7;
+        }
+
+        .info-panel {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+        }
+
+        .info-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .info-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .string-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .string-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .zoom-controls input[type="range"] {
+            width: 150px;
+        }
+
+        .zoom-display {
+            min-width: 50px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Dan Tranh Tablature v3</h1>
+            <p>Dynamic String System with Full Chromatic Support</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Select Song</label>
+                <select id="songSelector">
+                    <option value="single_string">Single String Melody (1 string)</option>
+                    <option value="two_string_harmony">Two String Harmony (2 strings)</option>
+                    <option value="xia_ca_me">Xỉa Cá Mè (4 strings)</option>
+                    <option value="pentatonic_demo">Pentatonic Scale Demo (5 strings)</option>
+                    <option value="ba_rang_ba_ri">Bà Rằng Bà Rí (7 strings)</option>
+                    <option value="chromatic_demo">Chromatic Demo (12 strings)</option>
+                    <option value="full_range">Full Range Demo (16 strings)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Tuning System</label>
+                <select id="tuningSystem">
+                    <option value="auto">Auto-detect</option>
+                    <option value="pentatonic">Pentatonic</option>
+                    <option value="hexachord">Hexachord</option>
+                    <option value="heptachord">Heptachord</option>
+                    <option value="chromatic">Chromatic</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Display Mode</label>
+                <select id="displayMode">
+                    <option value="played">Only Played Strings</option>
+                    <option value="all">All Available Strings</option>
+                </select>
+            </div>
+
+            <div class="control-group zoom-controls">
+                <label>Zoom</label>
+                <input type="range" id="zoomSlider" min="50" max="200" value="100">
+                <span class="zoom-display" id="zoomDisplay">100%</span>
+            </div>
+
+            <button onclick="playCurrentSong()">▶ Play</button>
+            <button onclick="resetView()">↺ Reset</button>
+        </div>
+
+        <div class="tablature-container">
+            <div id="loadingMessage" class="loading">Loading tablature...</div>
+            <svg id="tablatureSvg" width="1400" height="600" style="display: none;">
+                <!-- Dynamic content will be inserted here -->
+            </svg>
+        </div>
+
+        <div class="info-panel">
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Current Song</h3>
+                    <p id="songInfo">No song loaded</p>
+                </div>
+                <div class="info-card">
+                    <h3>String Configuration</h3>
+                    <div id="stringInfo">No strings configured</div>
+                </div>
+                <div class="info-card">
+                    <h3>Statistics</h3>
+                    <p id="statsInfo">No data available</p>
+                </div>
+                <div class="info-card">
+                    <h3>Playing Techniques</h3>
+                    <p id="techniqueInfo">Standard tuning</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Complete note frequency mappings
+        const NOTE_FREQUENCIES = {
+            'C2': 65.41, 'C#2': 69.30, 'Db2': 69.30, 'D2': 73.42, 'D#2': 77.78, 'Eb2': 77.78, 'E2': 82.41, 'F2': 87.31, 'F#2': 92.50, 'Gb2': 92.50, 'G2': 98.00, 'G#2': 103.83, 'Ab2': 103.83, 'A2': 110.00, 'A#2': 116.54, 'Bb2': 116.54, 'B2': 123.47,
+            'C3': 130.81, 'C#3': 138.59, 'Db3': 138.59, 'D3': 146.83, 'D#3': 155.56, 'Eb3': 155.56, 'E3': 164.81, 'F3': 174.61, 'F#3': 185.00, 'Gb3': 185.00, 'G3': 196.00, 'G#3': 207.65, 'Ab3': 207.65, 'A3': 220.00, 'A#3': 233.08, 'Bb3': 233.08, 'B3': 246.94,
+            'C4': 261.63, 'C#4': 277.18, 'Db4': 277.18, 'D4': 293.66, 'D#4': 311.13, 'Eb4': 311.13, 'E4': 329.63, 'F4': 349.23, 'F#4': 369.99, 'Gb4': 369.99, 'G4': 392.00, 'G#4': 415.30, 'Ab4': 415.30, 'A4': 440.00, 'A#4': 466.16, 'Bb4': 466.16, 'B4': 493.88,
+            'C5': 523.25, 'C#5': 554.37, 'Db5': 554.37, 'D5': 587.33, 'D#5': 622.25, 'Eb5': 622.25, 'E5': 659.25, 'F5': 698.46, 'F#5': 739.99, 'Gb5': 739.99, 'G5': 783.99, 'G#5': 830.61, 'Ab5': 830.61, 'A5': 880.00, 'A#5': 932.33, 'Bb5': 932.33, 'B5': 987.77,
+            'C6': 1046.50, 'C#6': 1108.73, 'Db6': 1108.73, 'D6': 1174.66, 'D#6': 1244.51, 'Eb6': 1244.51, 'E6': 1318.51, 'F6': 1396.91, 'F#6': 1479.98, 'Gb6': 1479.98, 'G6': 1567.98
+        };
+
+        // Song database
+        const SONGS = {
+            'single_string': {
+                title: 'Single String Melody',
+                composer: 'Traditional Exercise',
+                notes: [
+                    { time: 0, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 2, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 3, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 4, pitch: 'C5', duration: 4, string: 1 },
+                    { time: 8, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 10, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 12, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 13, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 14, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 15, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 16, pitch: 'C5', duration: 8, string: 1 }
+                ],
+                openStrings: ['C5']
+            },
+            'two_string_harmony': {
+                title: 'Two String Harmony',
+                composer: 'Beginner Exercise',
+                notes: [
+                    { time: 0, pitch: 'C5', duration: 4, string: 1 },
+                    { time: 4, pitch: 'G5', duration: 4, string: 2 },
+                    { time: 8, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 10, pitch: 'G5', duration: 2, string: 2 },
+                    { time: 12, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 14, pitch: 'G5', duration: 2, string: 2 },
+                    { time: 16, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 17, pitch: 'G5', duration: 1, string: 2 },
+                    { time: 18, pitch: 'C5', duration: 1, string: 1 },
+                    { time: 19, pitch: 'G5', duration: 1, string: 2 },
+                    { time: 20, pitch: 'G5', duration: 2, string: 2 },
+                    { time: 22, pitch: 'C5', duration: 2, string: 1 },
+                    { time: 24, pitch: 'C5', duration: 4, string: 1 },
+                    { time: 28, pitch: 'G5', duration: 4, string: 2 },
+                    { time: 32, pitch: 'C5', duration: 8, string: 1 }
+                ],
+                openStrings: ['C5', 'G5']
+            },
+            'ba_rang_ba_ri': {
+                title: 'Bà Rằng Bà Rí',
+                composer: 'Traditional',
+                notes: [
+                    { time: 0, pitch: 'C5', duration: 2, string: 9 },
+                    { time: 2, pitch: 'C5', duration: 2, string: 9 },
+                    { time: 4, pitch: 'C5', duration: 2, string: 9 },
+                    { time: 6, pitch: 'D5', duration: 1, string: 10, grace: true },
+                    { time: 7, pitch: 'E5', duration: 8, string: 11 },
+                    { time: 15, pitch: 'E5', duration: 1, string: 11 },
+                    { time: 16, pitch: 'G5', duration: 1, string: 12 },
+                    { time: 17, pitch: 'A4', duration: 2, string: 8 },
+                    { time: 19, pitch: 'C5', duration: 2, string: 9 },
+                    { time: 21, pitch: 'D5', duration: 8, string: 10 },
+                    { time: 29, pitch: 'D5', duration: 1, string: 10, grace: true },
+                    { time: 30, pitch: 'E5', duration: 2, string: 11 },
+                    { time: 32, pitch: 'D5', duration: 1, string: 10 },
+                    { time: 33, pitch: 'C5', duration: 1, string: 9 },
+                    { time: 34, pitch: 'A4', duration: 2, string: 8 },
+                    { time: 36, pitch: 'C5', duration: 2, string: 9 },
+                    { time: 38, pitch: 'C5', duration: 3, string: 9 },
+                    { time: 41, pitch: 'D5', duration: 2, string: 10 },
+                    { time: 43, pitch: 'E5', duration: 1, string: 11 },
+                    { time: 44, pitch: 'D5', duration: 1, string: 10, grace: true },
+                    { time: 45, pitch: 'E5', duration: 2, string: 11 },
+                    { time: 47, pitch: 'D5', duration: 1, string: 10, grace: true },
+                    { time: 48, pitch: 'E5', duration: 3, string: 11 },
+                    { time: 51, pitch: 'D5', duration: 2, string: 10 },
+                    { time: 53, pitch: 'C5', duration: 1, string: 9 },
+                    { time: 54, pitch: 'A4', duration: 3, string: 8 },
+                    { time: 57, pitch: 'C5', duration: 1, string: 9 },
+                    { time: 58, pitch: 'A4', duration: 2, string: 8 },
+                    { time: 60, pitch: 'G4', duration: 2, string: 7 },
+                    { time: 62, pitch: 'D4', duration: 2, string: 5 },
+                    { time: 64, pitch: 'D4', duration: 2, string: 5 },
+                    { time: 66, pitch: 'G4', duration: 2, string: 7 }
+                ],
+                openStrings: ['D4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5']
+            },
+            'xia_ca_me': {
+                title: 'Xỉa Cá Mè',
+                composer: 'Folk Song',
+                notes: [
+                    { time: 0, pitch: 'C4', duration: 4, string: 4 },
+                    { time: 4, pitch: 'F4', duration: 4, string: 6 },
+                    { time: 8, pitch: 'G4', duration: 4, string: 7 },
+                    { time: 12, pitch: 'C5', duration: 4, string: 10 },
+                    { time: 16, pitch: 'C5', duration: 2, string: 10 },
+                    { time: 18, pitch: 'G4', duration: 2, string: 7 },
+                    { time: 20, pitch: 'F4', duration: 4, string: 6 },
+                    { time: 24, pitch: 'G4', duration: 2, string: 7 },
+                    { time: 26, pitch: 'F4', duration: 2, string: 6 },
+                    { time: 28, pitch: 'C4', duration: 4, string: 4 },
+                    { time: 32, pitch: 'C4', duration: 2, string: 4 },
+                    { time: 34, pitch: 'F4', duration: 2, string: 6 },
+                    { time: 36, pitch: 'G4', duration: 4, string: 7 },
+                    { time: 40, pitch: 'C5', duration: 8, string: 10 }
+                ],
+                openStrings: ['C4', 'F4', 'G4', 'C5']
+            },
+            'pentatonic_demo': {
+                title: 'Pentatonic Scale Demo',
+                composer: 'Demo',
+                notes: [
+                    { time: 0, pitch: 'C4', duration: 2, string: 1 },
+                    { time: 2, pitch: 'D4', duration: 2, string: 2 },
+                    { time: 4, pitch: 'E4', duration: 2, string: 3 },
+                    { time: 6, pitch: 'G4', duration: 2, string: 4 },
+                    { time: 8, pitch: 'A4', duration: 2, string: 5 },
+                    { time: 10, pitch: 'C5', duration: 2, string: 6 },
+                    { time: 12, pitch: 'A4', duration: 2, string: 5 },
+                    { time: 14, pitch: 'G4', duration: 2, string: 4 },
+                    { time: 16, pitch: 'E4', duration: 2, string: 3 },
+                    { time: 18, pitch: 'D4', duration: 2, string: 2 },
+                    { time: 20, pitch: 'C4', duration: 4, string: 1 }
+                ],
+                openStrings: ['C4', 'D4', 'E4', 'G4', 'A4']
+            },
+            'chromatic_demo': {
+                title: 'Chromatic Scale Demo',
+                composer: 'Demo',
+                notes: [
+                    { time: 0, pitch: 'C4', duration: 1, string: 1 },
+                    { time: 1, pitch: 'C#4', duration: 1, string: 1, bent: true },
+                    { time: 2, pitch: 'D4', duration: 1, string: 2 },
+                    { time: 3, pitch: 'Eb4', duration: 1, string: 2, bent: true },
+                    { time: 4, pitch: 'E4', duration: 1, string: 3 },
+                    { time: 5, pitch: 'F4', duration: 1, string: 4 },
+                    { time: 6, pitch: 'F#4', duration: 1, string: 4, bent: true },
+                    { time: 7, pitch: 'G4', duration: 1, string: 5 },
+                    { time: 8, pitch: 'Ab4', duration: 1, string: 5, bent: true },
+                    { time: 9, pitch: 'A4', duration: 1, string: 6 },
+                    { time: 10, pitch: 'Bb4', duration: 1, string: 6, bent: true },
+                    { time: 11, pitch: 'B4', duration: 1, string: 7 },
+                    { time: 12, pitch: 'C5', duration: 2, string: 8 }
+                ],
+                openStrings: ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5']
+            },
+            'full_range': {
+                title: 'Full Range Demonstration',
+                composer: 'Demo',
+                notes: Array.from({length: 16}, (_, i) => ({
+                    time: i * 2,
+                    pitch: ['G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5'][i],
+                    duration: 2,
+                    string: i + 1
+                })),
+                openStrings: ['G3', 'A3', 'B3', 'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5', 'G5', 'A5']
+            }
+        };
+
+        let currentSong = null;
+        let currentStrings = [];
+        let zoomLevel = 1;
+
+        // Initialize the application
+        function init() {
+            setupEventListeners();
+            loadSong('single_string'); // Start with simplest example
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('songSelector').addEventListener('change', (e) => {
+                loadSong(e.target.value);
+            });
+
+            document.getElementById('displayMode').addEventListener('change', () => {
+                renderTablature();
+            });
+
+            document.getElementById('zoomSlider').addEventListener('input', (e) => {
+                zoomLevel = e.target.value / 100;
+                document.getElementById('zoomDisplay').textContent = e.target.value + '%';
+                applyZoom();
+            });
+        }
+
+        // Load a song
+        function loadSong(songId) {
+            const song = SONGS[songId];
+            if (!song) {
+                console.error('Song not found:', songId);
+                return;
+            }
+
+            currentSong = song;
+            document.getElementById('songInfo').innerHTML = `
+                <strong>${song.title}</strong><br>
+                Composer: ${song.composer}<br>
+                Notes: ${song.notes.length}
+            `;
+
+            analyzeAndGenerateStrings();
+            renderTablature();
+            updateStats();
+
+            // Hide loading message and show SVG
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('tablatureSvg').style.display = 'block';
+        }
+
+        // Analyze song and generate dynamic strings
+        function analyzeAndGenerateStrings() {
+            const displayMode = document.getElementById('displayMode').value;
+            const tuningSystem = document.getElementById('tuningSystem').value;
+
+            if (displayMode === 'played') {
+                // Only show strings that are actually used
+                const usedNotes = new Set();
+                currentSong.notes.forEach(note => {
+                    if (!note.bent) {
+                        usedNotes.add(note.pitch);
+                    }
+                });
+                currentStrings = Array.from(usedNotes).sort((a, b) => {
+                    return noteToMidi(a) - noteToMidi(b);
+                });
+            } else {
+                // Show all available strings for this song
+                currentStrings = currentSong.openStrings || [];
+            }
+
+            updateStringInfo();
+        }
+
+        // Convert note to MIDI number for sorting
+        function noteToMidi(note) {
+            const noteMap = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+            const parts = note.match(/([A-G])([#b]?)(\d+)/);
+            if (!parts) return 0;
+
+            let midi = noteMap[parts[1]];
+            if (parts[2] === '#') midi++;
+            if (parts[2] === 'b') midi--;
+            midi += (parseInt(parts[3]) + 1) * 12;
+
+            return midi;
+        }
+
+        // Calculate proportional string positions based on semitone intervals
+        function calculateStringPositions() {
+            if (currentStrings.length === 0) return [];
+
+            const positions = [];
+            const baseSpacing = 20; // Base pixels per semitone
+            const minSpacing = 40; // Minimum spacing between strings (increased for 1-2 string songs)
+            const maxSpacing = 120; // Maximum spacing between strings
+            let currentY = 80; // Starting Y position
+
+            positions.push({ note: currentStrings[0], y: currentY });
+
+            for (let i = 1; i < currentStrings.length; i++) {
+                const prevMidi = noteToMidi(currentStrings[i - 1]);
+                const currMidi = noteToMidi(currentStrings[i]);
+                const semitones = currMidi - prevMidi;
+
+                // Calculate spacing based on interval
+                let spacing = semitones * baseSpacing;
+
+                // Apply min/max constraints
+                spacing = Math.max(minSpacing, Math.min(maxSpacing, spacing));
+
+                currentY += spacing;
+                positions.push({ note: currentStrings[i], y: currentY });
+            }
+
+            return positions;
+        }
+
+        // Render the tablature
+        function renderTablature() {
+            const svg = document.getElementById('tablatureSvg');
+            svg.innerHTML = '';
+
+            const stringPositions = calculateStringPositions();
+            if (stringPositions.length === 0) return;
+
+            const width = Math.max(1400, currentSong.notes[currentSong.notes.length - 1].time * 30 + 200);
+            const maxY = stringPositions[stringPositions.length - 1].y;
+            // Ensure minimum height for 1-2 string songs
+            const minHeight = 300;
+            const height = Math.max(minHeight, maxY + 150);
+
+            svg.setAttribute('width', width);
+            svg.setAttribute('height', height);
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+            // Draw strings with proportional spacing
+            stringPositions.forEach((stringPos, index) => {
+                const y = stringPos.y;
+
+                // String line
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', '100');
+                line.setAttribute('x2', width - 50);
+                line.setAttribute('y1', y);
+                line.setAttribute('y2', y);
+                line.setAttribute('class', 'string-line');
+                svg.appendChild(line);
+
+                // String label with interval indicator
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', '20');
+                label.setAttribute('y', y + 5);
+                label.setAttribute('class', 'string-label');
+
+                // Calculate interval from previous string
+                let intervalText = '';
+                if (index > 0) {
+                    const prevMidi = noteToMidi(stringPositions[index - 1].note);
+                    const currMidi = noteToMidi(stringPos.note);
+                    const semitones = currMidi - prevMidi;
+                    const intervalNames = {
+                        1: 'm2', 2: 'M2', 3: 'm3', 4: 'M3', 5: 'P4',
+                        6: 'TT', 7: 'P5', 8: 'm6', 9: 'M6', 10: 'm7',
+                        11: 'M7', 12: 'Oct'
+                    };
+                    intervalText = ` (+${semitones} ${intervalNames[semitones] || 'st'})`;
+                }
+
+                label.textContent = `${index + 1}: ${stringPos.note}${intervalText}`;
+                svg.appendChild(label);
+            });
+
+            // Draw notes with proportional positioning
+            currentSong.notes.forEach(note => {
+                const stringIndex = currentStrings.indexOf(note.pitch);
+                let y = stringIndex >= 0 ? stringPositions[stringIndex].y : 0;
+
+                // Handle bent notes (notes not on open strings)
+                if (stringIndex === -1 || note.bent) {
+                    // Find the closest lower string
+                    let lowerStringIndex = -1;
+                    let upperStringIndex = -1;
+                    let lowerStringNote = null;
+                    let upperStringNote = null;
+
+                    for (let i = 0; i < currentStrings.length; i++) {
+                        const midi = noteToMidi(currentStrings[i]);
+                        const noteMidi = noteToMidi(note.pitch);
+
+                        if (midi < noteMidi) {
+                            lowerStringIndex = i;
+                            lowerStringNote = currentStrings[i];
+                        }
+                        if (midi > noteMidi && upperStringIndex === -1) {
+                            upperStringIndex = i;
+                            upperStringNote = currentStrings[i];
+                        }
+                    }
+
+                    if (lowerStringIndex >= 0) {
+                        const baseY = stringPositions[lowerStringIndex].y;
+
+                        if (upperStringIndex >= 0) {
+                            // Interpolate position between two strings
+                            const upperY = stringPositions[upperStringIndex].y;
+                            const lowerMidi = noteToMidi(lowerStringNote);
+                            const upperMidi = noteToMidi(upperStringNote);
+                            const noteMidi = noteToMidi(note.pitch);
+
+                            const ratio = (noteMidi - lowerMidi) / (upperMidi - lowerMidi);
+                            y = baseY + (upperY - baseY) * ratio;
+                        } else {
+                            // Note is above the highest string
+                            const semitones = noteToMidi(note.pitch) - noteToMidi(lowerStringNote);
+                            y = baseY + semitones * 20; // 20px per semitone for notes above
+                        }
+
+                        // Draw bending curve from base string to note position
+                        const bendPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const x = 120 + note.time * 30;
+                        const controlX = x - 20;
+                        const controlY = (baseY + y) / 2;
+                        const d = `M ${x - 5} ${baseY} Q ${controlX} ${controlY} ${x} ${y}`;
+                        bendPath.setAttribute('d', d);
+                        bendPath.setAttribute('class', 'bending-line');
+                        svg.appendChild(bendPath);
+
+                        // Add bend amount text
+                        const bendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        bendText.setAttribute('x', x - 25);
+                        bendText.setAttribute('y', (baseY + y) / 2);
+                        bendText.setAttribute('font-size', '10');
+                        bendText.setAttribute('fill', '#ff6b6b');
+                        bendText.setAttribute('text-anchor', 'middle');
+                        const semitones = noteToMidi(note.pitch) - noteToMidi(lowerStringNote);
+                        bendText.textContent = `+${semitones}`;
+                        svg.appendChild(bendText);
+                    }
+                }
+
+                if (stringIndex >= 0 || (note.bent && y > 0)) {
+                    const x = 120 + note.time * 30;
+
+                    // Note circle
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x);
+                    circle.setAttribute('cy', y);
+                    circle.setAttribute('r', note.grace ? '6' : '10');
+                    circle.setAttribute('fill', note.grace ? '#FFD700' : '#667eea');
+                    circle.setAttribute('stroke', note.bent ? '#ff6b6b' : '#333');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('class', 'note-circle');
+                    circle.setAttribute('data-pitch', note.pitch);
+                    circle.setAttribute('data-time', note.time);
+                    svg.appendChild(circle);
+
+                    // Duration bar
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x);
+                    rect.setAttribute('y', y - 2);
+                    rect.setAttribute('width', note.duration * 25);
+                    rect.setAttribute('height', '4');
+                    rect.setAttribute('fill', '#667eea');
+                    rect.setAttribute('opacity', '0.3');
+                    svg.appendChild(rect);
+                }
+            });
+        }
+
+        // Update string info display with intervals
+        function updateStringInfo() {
+            const container = document.getElementById('stringInfo');
+            container.innerHTML = '';
+
+            currentStrings.forEach((note, index) => {
+                const stringDiv = document.createElement('div');
+                stringDiv.className = 'string-info';
+
+                // Calculate cumulative interval from first string
+                let intervalInfo = '';
+                if (index > 0) {
+                    const firstMidi = noteToMidi(currentStrings[0]);
+                    const currMidi = noteToMidi(note);
+                    const totalSemitones = currMidi - firstMidi;
+
+                    // Also show interval from previous string
+                    const prevMidi = noteToMidi(currentStrings[index - 1]);
+                    const stepSemitones = currMidi - prevMidi;
+
+                    intervalInfo = ` <small style="color: #999;">(+${stepSemitones} from prev, +${totalSemitones} total)</small>`;
+                }
+
+                stringDiv.innerHTML = `
+                    <div class="string-indicator">${index + 1}</div>
+                    <span>${note} (${NOTE_FREQUENCIES[note]?.toFixed(1) || '?'} Hz)${intervalInfo}</span>
+                `;
+                container.appendChild(stringDiv);
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            const totalDuration = currentSong.notes.reduce((sum, note) => sum + note.duration, 0);
+            const noteRange = new Set(currentSong.notes.map(n => n.pitch));
+            const graceNotes = currentSong.notes.filter(n => n.grace).length;
+            const bentNotes = currentSong.notes.filter(n => n.bent).length;
+
+            document.getElementById('statsInfo').innerHTML = `
+                Total Duration: ${totalDuration} beats<br>
+                Unique Pitches: ${noteRange.size}<br>
+                Grace Notes: ${graceNotes}<br>
+                Bent Notes: ${bentNotes}
+            `;
+
+            document.getElementById('techniqueInfo').innerHTML = bentNotes > 0 ?
+                `Uses string bending (${bentNotes} notes)<br>Grace notes: ${graceNotes}` :
+                'Standard open string playing';
+        }
+
+        // Apply zoom
+        function applyZoom() {
+            const svg = document.getElementById('tablatureSvg');
+            svg.style.transform = `scale(${zoomLevel})`;
+            svg.style.transformOrigin = 'top left';
+        }
+
+        // Play current song (placeholder)
+        function playCurrentSong() {
+            alert('Playback functionality coming soon!');
+        }
+
+        // Reset view
+        function resetView() {
+            document.getElementById('zoomSlider').value = 100;
+            document.getElementById('zoomDisplay').textContent = '100%';
+            zoomLevel = 1;
+            applyZoom();
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

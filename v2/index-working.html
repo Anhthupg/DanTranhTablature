@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Tablature V2 - Working Playback</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.stop {
+            background: #dc3545;
+        }
+
+        button.stop:hover {
+            background: #c82333;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .status {
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .tablature-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        svg {
+            background: white;
+            border: 1px solid #dee2e6;
+        }
+
+        .string-line {
+            stroke: #999;
+            stroke-width: 1;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .note-circle.playing {
+            animation: pulse 0.5s ease-in-out;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); opacity: 0.8; }
+            100% { transform: scale(1); }
+        }
+
+        .lyrics-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .lyrics-line {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .lyrics-line.active {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .syllable {
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .syllable.active {
+            background: #ffeb3b;
+            font-weight: bold;
+            transform: scale(1.1);
+        }
+
+        .debug-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Dan Tranh Tablature V2 - Working Version</h1>
+            <p>Visual Playback Test</p>
+        </header>
+
+        <div class="controls">
+            <div class="playback-controls">
+                <button id="playBtn">▶ Play</button>
+                <button id="stopBtn" class="stop">⏹ Stop</button>
+                <button id="resetBtn">⏮ Reset</button>
+                <div class="speed-control">
+                    <label>Speed:</label>
+                    <input type="range" id="speedSlider" min="50" max="200" value="100">
+                    <span id="speedValue">100%</span>
+                </div>
+                <label>
+                    <input type="checkbox" id="loopCheck"> Loop
+                </label>
+                <div class="speed-control">
+                    <label>Volume:</label>
+                    <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                    <span id="volumeValue">50%</span>
+                </div>
+            </div>
+            <div class="status" id="status">
+                Status: <span id="statusText">Ready</span> |
+                Note: <span id="currentNote">-</span> |
+                Progress: <span id="progress">0/0</span>
+            </div>
+            <div class="debug-panel" id="debug">
+                Debug info will appear here...
+            </div>
+        </div>
+
+        <div class="tablature-container">
+            <svg id="tablature" viewBox="0 0 11400 700" width="100%" height="400">
+                <!-- Tablature content will be added here -->
+            </svg>
+        </div>
+
+        <div class="lyrics-container">
+            <h3>Lyrics</h3>
+            <div id="lyricsDisplay">
+                <!-- Lyrics will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple working playback system
+        class SimpleDanTranh {
+            constructor() {
+                this.data = null;
+                this.isPlaying = false;
+                this.currentIndex = 0;
+                this.speed = 100;
+                this.loopEnabled = false;
+                this.playbackTimer = null;
+
+                // Initialize Web Audio API
+                this.audioContext = null;
+                this.masterVolume = null;
+                this.setupAudio();
+
+                this.debugLog('SimpleDanTranh initialized with audio');
+            }
+
+            setupAudio() {
+                try {
+                    // Create audio context
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                    // Create master volume control
+                    this.masterVolume = this.audioContext.createGain();
+                    this.masterVolume.gain.value = 0.5;
+                    this.masterVolume.connect(this.audioContext.destination);
+
+                    this.debugLog('Audio system initialized');
+                } catch (error) {
+                    this.debugLog('Audio initialization failed: ' + error.message);
+                }
+            }
+
+            playNote(frequency, isGrace = false) {
+                if (!this.audioContext) return;
+
+                // Resume audio context if suspended (browser requirement)
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+
+                const now = this.audioContext.currentTime;
+
+                // Create oscillators for Dan Tranh-like sound (fundamental + harmonics)
+                const fundamental = this.audioContext.createOscillator();
+                const harmonic1 = this.audioContext.createOscillator();
+                const harmonic2 = this.audioContext.createOscillator();
+
+                // Set frequencies (Dan Tranh has rich harmonics)
+                fundamental.frequency.value = frequency;
+                harmonic1.frequency.value = frequency * 2; // Octave
+                harmonic2.frequency.value = frequency * 3; // Fifth above octave
+
+                // Use triangle wave for softer, string-like sound
+                fundamental.type = 'triangle';
+                harmonic1.type = 'sine';
+                harmonic2.type = 'sine';
+
+                // Create gain envelopes for each oscillator
+                const fundamentalGain = this.audioContext.createGain();
+                const harmonic1Gain = this.audioContext.createGain();
+                const harmonic2Gain = this.audioContext.createGain();
+
+                // Set relative volumes (fundamental strongest, harmonics quieter)
+                fundamentalGain.gain.value = isGrace ? 0.3 : 0.5;
+                harmonic1Gain.gain.value = isGrace ? 0.1 : 0.2;
+                harmonic2Gain.gain.value = isGrace ? 0.05 : 0.1;
+
+                // Connect oscillators through gains to master
+                fundamental.connect(fundamentalGain);
+                harmonic1.connect(harmonic1Gain);
+                harmonic2.connect(harmonic2Gain);
+
+                fundamentalGain.connect(this.masterVolume);
+                harmonic1Gain.connect(this.masterVolume);
+                harmonic2Gain.connect(this.masterVolume);
+
+                // Create pluck envelope (fast attack, slow decay like a plucked string)
+                const attackTime = isGrace ? 0.01 : 0.02;
+                const decayTime = isGrace ? 0.3 : 0.8;
+
+                // Apply envelope to all gains
+                [fundamentalGain, harmonic1Gain, harmonic2Gain].forEach(gain => {
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(gain.gain.value, now + attackTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + decayTime);
+                });
+
+                // Start oscillators
+                fundamental.start(now);
+                harmonic1.start(now);
+                harmonic2.start(now);
+
+                // Stop oscillators after decay
+                fundamental.stop(now + decayTime + 0.1);
+                harmonic1.stop(now + decayTime + 0.1);
+                harmonic2.stop(now + decayTime + 0.1);
+            }
+
+            getNoteFrequency(note) {
+                // Dan Tranh string frequencies (from strings.json data)
+                const stringFrequencies = {
+                    'D4': 293.66,
+                    'G4': 392.00,
+                    'A4': 440.00,
+                    'C5': 523.25,
+                    'D5': 587.33,
+                    'E5': 659.25,
+                    'G5': 783.99
+                };
+
+                // Map string number to frequency
+                const stringToNote = {
+                    5: 'D4',
+                    7: 'G4',
+                    8: 'A4',
+                    9: 'C5',
+                    10: 'D5',
+                    11: 'E5',
+                    12: 'G5'
+                };
+
+                const noteName = stringToNote[note.string] || note.pitch;
+                return stringFrequencies[noteName] || 440; // Default to A4 if not found
+            }
+
+            debugLog(message) {
+                console.log(`[DanTranh] ${message}`);
+                const debugEl = document.getElementById('debug');
+                if (debugEl) {
+                    const time = new Date().toLocaleTimeString();
+                    debugEl.innerHTML = `[${time}] ${message}<br>` + debugEl.innerHTML;
+                    // Keep only last 5 messages
+                    const lines = debugEl.innerHTML.split('<br>');
+                    if (lines.length > 5) {
+                        debugEl.innerHTML = lines.slice(0, 5).join('<br>');
+                    }
+                }
+            }
+
+            async init() {
+                this.debugLog('Starting initialization...');
+
+                try {
+                    // Load all data
+                    const [notes, lyrics, strings] = await Promise.all([
+                        fetch('/data/song-001/notes.json').then(r => r.json()),
+                        fetch('/data/song-001/lyrics.json').then(r => r.json()),
+                        fetch('/data/song-001/strings.json').then(r => r.json())
+                    ]);
+
+                    this.data = { notes, lyrics, strings };
+                    this.debugLog(`Loaded ${notes.length} notes, ${lyrics.syllables.length} syllables`);
+
+                    // Draw tablature
+                    this.drawTablature();
+
+                    // Display lyrics
+                    this.displayLyrics();
+
+                    // Setup controls
+                    this.setupControls();
+
+                    // Update status
+                    this.updateStatus('Ready');
+
+                    this.debugLog('Initialization complete!');
+                } catch (error) {
+                    this.debugLog('Error during init: ' + error.message);
+                    console.error(error);
+                }
+            }
+
+            drawTablature() {
+                const svg = document.getElementById('tablature');
+                svg.innerHTML = '';
+
+                // Draw string lines
+                this.data.strings.forEach(string => {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '0');
+                    line.setAttribute('y1', string.y);
+                    line.setAttribute('x2', '11400');
+                    line.setAttribute('y2', string.y);
+                    line.setAttribute('class', 'string-line');
+                    svg.appendChild(line);
+
+                    // String label
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', '10');
+                    text.setAttribute('y', string.y - 5);
+                    text.setAttribute('font-size', '12');
+                    text.setAttribute('fill', '#666');
+                    text.textContent = string.note;
+                    svg.appendChild(text);
+                });
+
+                // Draw notes
+                this.data.notes.forEach(note => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', note.x);
+                    circle.setAttribute('cy', note.y);
+                    circle.setAttribute('r', note.isGrace ? 6 : 12);
+                    circle.setAttribute('fill', note.isGrace ? '#FFD700' : '#008080');
+                    circle.setAttribute('stroke', note.isGrace ? '#0066FF' : 'crimson');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('class', 'note-circle');
+                    circle.setAttribute('id', `note-${note.id}`);
+                    svg.appendChild(circle);
+                });
+
+                this.debugLog(`Drew ${this.data.notes.length} notes on tablature`);
+            }
+
+            displayLyrics() {
+                const container = document.getElementById('lyricsDisplay');
+                container.innerHTML = '';
+
+                this.data.lyrics.lines.forEach((line, idx) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'lyrics-line';
+                    lineDiv.id = `line-${idx}`;
+
+                    const textSpan = document.createElement('span');
+                    line.syllables.forEach(syl => {
+                        const sylSpan = document.createElement('span');
+                        sylSpan.className = 'syllable';
+                        sylSpan.id = `syl-${syl.position}`;
+                        sylSpan.textContent = syl.text;
+                        textSpan.appendChild(sylSpan);
+                        textSpan.appendChild(document.createTextNode(' '));
+                    });
+
+                    lineDiv.appendChild(textSpan);
+                    container.appendChild(lineDiv);
+                });
+
+                this.debugLog(`Displayed ${this.data.lyrics.lines.length} lyrics lines`);
+            }
+
+            setupControls() {
+                // Play button
+                document.getElementById('playBtn').onclick = () => this.start();
+
+                // Stop button
+                document.getElementById('stopBtn').onclick = () => this.stop();
+
+                // Reset button
+                document.getElementById('resetBtn').onclick = () => this.reset();
+
+                // Speed slider
+                const speedSlider = document.getElementById('speedSlider');
+                speedSlider.oninput = (e) => {
+                    this.speed = parseInt(e.target.value);
+                    document.getElementById('speedValue').textContent = `${this.speed}%`;
+                };
+
+                // Loop checkbox
+                document.getElementById('loopCheck').onchange = (e) => {
+                    this.loopEnabled = e.target.checked;
+                    this.debugLog(`Loop ${this.loopEnabled ? 'enabled' : 'disabled'}`);
+                };
+
+                // Volume slider
+                const volumeSlider = document.getElementById('volumeSlider');
+                volumeSlider.oninput = (e) => {
+                    const volume = parseInt(e.target.value) / 100;
+                    if (this.masterVolume) {
+                        this.masterVolume.gain.value = volume;
+                    }
+                    document.getElementById('volumeValue').textContent = `${e.target.value}%`;
+                    this.debugLog(`Volume set to ${e.target.value}%`);
+                };
+
+                this.debugLog('Controls setup complete');
+            }
+
+            start() {
+                if (this.isPlaying) return;
+
+                this.debugLog('Starting playback...');
+                this.isPlaying = true;
+                this.updateStatus('Playing');
+                this.playNext();
+            }
+
+            stop() {
+                this.debugLog('Stopping playback');
+                this.isPlaying = false;
+
+                if (this.playbackTimer) {
+                    clearTimeout(this.playbackTimer);
+                    this.playbackTimer = null;
+                }
+
+                this.updateStatus('Stopped');
+                this.clearHighlights();
+            }
+
+            reset() {
+                this.stop();
+                this.currentIndex = 0;
+                this.updateStatus('Ready');
+                this.updateProgress();
+                this.debugLog('Reset to beginning');
+            }
+
+            playNext() {
+                if (!this.isPlaying) return;
+
+                if (this.currentIndex >= this.data.notes.length) {
+                    if (this.loopEnabled) {
+                        this.currentIndex = 0;
+                        this.debugLog('Looping back to start');
+                    } else {
+                        this.stop();
+                        this.debugLog('Playback finished');
+                        return;
+                    }
+                }
+
+                // Clear previous highlights
+                this.clearHighlights();
+
+                // Get current note
+                const note = this.data.notes[this.currentIndex];
+
+                // Play the sound!
+                const frequency = this.getNoteFrequency(note);
+                this.playNote(frequency, note.isGrace);
+                this.debugLog(`Playing note ${note.id} at ${frequency.toFixed(2)}Hz`);
+
+                // Highlight note
+                const noteEl = document.getElementById(`note-${note.id}`);
+                if (noteEl) {
+                    noteEl.classList.add('playing');
+                }
+
+                // Highlight syllable
+                const sylEl = document.getElementById(`syl-${this.currentIndex}`);
+                if (sylEl) {
+                    sylEl.classList.add('active');
+                }
+
+                // Update display
+                document.getElementById('currentNote').textContent =
+                    `${note.id} (${note.pitch || 'N/A'}) ${frequency.toFixed(0)}Hz`;
+                this.updateProgress();
+
+                // Move to next
+                this.currentIndex++;
+
+                // Calculate delay (milliseconds between notes)
+                const baseDelay = 300; // Base delay in ms
+                const adjustedDelay = baseDelay * (100 / this.speed);
+
+                // Schedule next note
+                this.playbackTimer = setTimeout(() => this.playNext(), adjustedDelay);
+            }
+
+            clearHighlights() {
+                document.querySelectorAll('.note-circle.playing').forEach(el => {
+                    el.classList.remove('playing');
+                });
+                document.querySelectorAll('.syllable.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+            }
+
+            updateStatus(status) {
+                document.getElementById('statusText').textContent = status;
+            }
+
+            updateProgress() {
+                document.getElementById('progress').textContent =
+                    `${this.currentIndex}/${this.data.notes.length}`;
+            }
+        }
+
+        // Initialize when page loads
+        const app = new SimpleDanTranh();
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>

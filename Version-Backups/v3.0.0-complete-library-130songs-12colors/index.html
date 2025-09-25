@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đàn Tranh V3 Library - 130 Vietnamese Songs</title>
+    <style>
+        :root {
+            /* Main Color Palette from V1 */
+            --main-note: #008080;
+            --main-note-dark: #005959;
+            --grace-note: #FFD700;
+            --grace-note-dark: #CC9900;
+            --tone-mark: #9B59B6;
+            --tone-mark-dark: #7D3C98;
+            --melisma: #E74C3C;
+            --melisma-dark: #C0392B;
+
+            /* KPIC Blues */
+            --kpic-1: #0066CC;
+            --kpic-2: #3498DB;
+            --kpic-3: #5DADE2;
+            --kpic-4: #85C1E9;
+
+            /* KRIC Greens */
+            --kric-1: #27AE60;
+            --kric-2: #52BE80;
+            --kric-3: #76D7A4;
+            --kric-4: #A9DFBF;
+
+            /* Glow Levels */
+            --glow-1: 0 0 10px rgba(0, 128, 128, 0.4);
+            --glow-2: 0 0 20px rgba(0, 128, 128, 0.6);
+            --glow-3: 0 0 30px rgba(0, 128, 128, 0.8);
+            --glow-4: 0 0 40px rgba(0, 128, 128, 1.0);
+        }
+
+        /* Theme System */
+        body {
+            --bg-primary: var(--main-note-dark);
+            --bg-secondary: var(--tone-mark-dark);
+            --text-primary: white;
+            --text-secondary: var(--kpic-4);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-text: var(--main-note-dark);
+        }
+
+        body.theme-white {
+            --bg-primary: white;
+            --bg-secondary: var(--kpic-4);
+            --text-primary: var(--main-note-dark);
+            --text-secondary: var(--tone-mark-dark);
+            --card-bg: white;
+            --card-text: var(--main-note-dark);
+        }
+
+        body.theme-black {
+            --bg-primary: black;
+            --bg-secondary: var(--main-note-dark);
+            --text-primary: white;
+            --text-secondary: var(--kpic-3);
+            --card-bg: #1A1A1A;
+            --card-text: white;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--main-note) 0%, var(--tone-mark) 100%);
+            min-height: 100vh;
+            transition: background 0.5s ease;
+        }
+
+        .header {
+            background: var(--card-bg);
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: var(--card-text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--kpic-1);
+            text-shadow: var(--glow-1);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .controls {
+            background: var(--card-bg);
+            padding: 20px;
+            border-bottom: 1px solid var(--bg-secondary);
+            backdrop-filter: blur(10px);
+        }
+
+        .controls-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 2px solid var(--kpic-4);
+            border-radius: 25px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--kpic-2);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .range-filters {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .range-filter {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-filter label {
+            font-size: 14px;
+            color: var(--card-text);
+            min-width: 80px;
+        }
+
+        .range-slider {
+            width: 150px;
+            accent-color: var(--main-note);
+        }
+
+        .range-value {
+            font-size: 12px;
+            color: var(--kpic-1);
+            font-weight: bold;
+            min-width: 50px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid rgba(0,128,128,0.3);
+            background: transparent;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--card-text);
+        }
+
+        .filter-btn:hover {
+            border-color: var(--main-note);
+            box-shadow: var(--glow-1);
+        }
+
+        .filter-btn.active {
+            background: var(--main-note);
+            color: white;
+            border-color: var(--main-note);
+            box-shadow: var(--glow-2);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 5px;
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 3px;
+        }
+
+        .view-btn {
+            padding: 5px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 17px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .view-btn.active {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .song-grid {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .song-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 1px solid rgba(0,128,128,0.1);
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--glow-2), 0 8px 25px rgba(0,0,0,0.3);
+            border-color: var(--main-note);
+        }
+
+        .song-thumbnail {
+            width: 100%;
+            height: 120px;
+            /* Use solid colors or approved gradients only */
+            background: var(--main-note); /* Solid teal */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            opacity: 0.9;
+        }
+
+        /* Different thumbnail colors based on region - all from 12-color system */
+        .song-card[data-region="northern"] .song-thumbnail {
+            background: linear-gradient(135deg, var(--kpic-1) 0%, var(--kpic-2) 100%); /* Blue gradient */
+        }
+        .song-card[data-region="southern"] .song-thumbnail {
+            background: linear-gradient(135deg, var(--melisma) 0%, var(--melisma-dark) 100%); /* Red gradient */
+        }
+        .song-card[data-region="central"] .song-thumbnail {
+            background: linear-gradient(135deg, var(--kric-1) 0%, var(--kric-2) 100%); /* Green gradient */
+        }
+        .song-card[data-region="lullaby"] .song-thumbnail {
+            background: linear-gradient(135deg, var(--grace-note) 0%, var(--grace-note-dark) 100%); /* Gold gradient */
+        }
+        .song-card[data-region="traditional"] .song-thumbnail {
+            background: linear-gradient(135deg, var(--main-note) 0%, var(--main-note-dark) 100%); /* Teal gradient */
+        }
+
+        .song-number {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .region-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .region-badge.northern { background: var(--kpic-2); }
+        .region-badge.southern { background: var(--melisma); }
+        .region-badge.central { background: var(--kric-1); }
+        .region-badge.traditional { background: var(--tone-mark); }
+        .region-badge.lullaby { background: var(--grace-note); color: var(--grace-note-dark); }
+        .region-badge.work { background: var(--kric-2); }
+        .region-badge.folk { background: var(--kpic-3); }
+
+        .song-pattern {
+            width: 100%;
+            height: 100%;
+            opacity: 0.3;
+        }
+
+        .song-info {
+            padding: 15px;
+        }
+
+        .song-title {
+            font-weight: bold;
+            color: var(--card-text);
+            margin-bottom: 8px;
+            font-size: 16px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .song-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .song-tag {
+            padding: 2px 8px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .query-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100%;
+            background: white;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+            transition: right 0.3s;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .query-panel.open {
+            right: 0;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .theme-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid var(--kpic-3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+            box-shadow: var(--glow-2);
+        }
+
+        .theme-btn.white { background: white; }
+        .theme-btn.dark { background: var(--main-note-dark); }
+        .theme-btn.black { background: black; }
+
+        .query-btn {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            background: var(--main-note);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 30px;
+            box-shadow: var(--glow-2);
+            cursor: pointer;
+            z-index: 999;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .query-btn:hover {
+            box-shadow: var(--glow-3);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Selector -->
+    <div class="theme-selector">
+        <div class="theme-btn white" onclick="setTheme('white')" title="Light Theme"></div>
+        <div class="theme-btn dark" onclick="setTheme('dark')" title="Dark Theme"></div>
+        <div class="theme-btn black" onclick="setTheme('black')" title="Black Theme"></div>
+    </div>
+
+    <div class="header">
+        <div class="header-content">
+            <h1>
+                Đàn Tranh V3 Library
+                <span style="background: var(--kpic-2); color: white; padding: 3px 10px; border-radius: 15px; font-size: 14px;">130 Songs</span>
+            </h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-number" id="totalSongs">130</div>
+                    <div class="stat-label">Total Songs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="regionCount">4</div>
+                    <div class="stat-label">Regions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="processedCount">0</div>
+                    <div class="stat-label">Processed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="controls-content">
+            <div class="search-box">
+                <input type="text" placeholder="Search songs..." id="searchInput">
+            </div>
+
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="northern">Northern</button>
+                <button class="filter-btn" data-filter="southern">Southern</button>
+                <button class="filter-btn" data-filter="central">Central</button>
+                <button class="filter-btn" data-filter="traditional">Traditional</button>
+            </div>
+
+            <!-- Difficulty filters removed for now - will be refined later -->
+        </div>
+
+        <div class="controls-content" style="margin-top: 15px;">
+            <div class="range-filters">
+                <div class="range-filter">
+                    <label>Strings:</label>
+                    <input type="range" id="stringsRange" class="range-slider" min="4" max="7" value="4,7" step="1">
+                    <span class="range-value" id="stringsValue">4-7</span>
+                </div>
+                <div class="range-filter">
+                    <label>Notes:</label>
+                    <input type="range" id="notesRange" class="range-slider" min="0" max="500" value="0,500" step="10">
+                    <span class="range-value" id="notesValue">0-500</span>
+                </div>
+                <div class="range-filter">
+                    <label>Unique:</label>
+                    <input type="range" id="uniqueRange" class="range-slider" min="0" max="50" value="0,50" step="1">
+                    <span class="range-value" id="uniqueValue">0-50</span>
+                </div>
+            </div>
+
+            <div class="view-toggle" style="margin-left: auto;">
+                <button class="view-btn active" data-view="grid">Grid</button>
+                <button class="view-btn" data-view="list">List</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="song-grid" id="songGrid">
+        <div class="loading">
+            <div class="loading-spinner"></div>
+            <p>Loading 130 Vietnamese songs...</p>
+        </div>
+    </div>
+
+    <div class="query-btn" onclick="toggleQueryPanel()">
+        📊 Query & Analysis
+    </div>
+
+    <div class="query-panel" id="queryPanel">
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Collection Analysis</h2>
+                <button onclick="toggleQueryPanel()" style="background: var(--melisma); color: white; border: none; padding: 5px 15px; border-radius: 15px; cursor: pointer;">✕ Close</button>
+            </div>
+            <p style="color: var(--text-secondary); line-height: 1.5;">
+                Advanced collection queries and cross-song analysis will be available here.
+                Select groups of songs to analyze patterns, compare regions, and discover insights.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Load all 130 songs
+        let songList = [];
+        let songMetadata = {};
+
+        // Fetch the song list
+        fetch('/data/song-list.json')
+            .then(response => response.json())
+            .then(data => {
+                songList = data;
+                // Try to load metadata for each song
+                loadSongsWithMetadata();
+                document.getElementById('processedCount').textContent = songList.length;
+                document.getElementById('totalSongs').textContent = songList.length;
+            })
+            .catch(() => {
+                // Fallback if file not loaded
+                songList = [
+                    'Bà rằng bà rí', 'Bài chòi', 'bài giải 1', 'bài giải 2',
+                    'Bát bồng, nhất trò, xuân nữ', 'Bengu Adai', 'Bỏ bộ'
+                ];
+                loadSongs();
+            });
+
+        let currentFilter = 'all';
+        let currentView = 'grid';
+
+        async function loadSongsWithMetadata() {
+            const grid = document.getElementById('songGrid');
+            grid.innerHTML = '';
+
+            // Try to load metadata for processed songs
+            for (const songName of songList) {
+                const safeName = songName.replace(/[^a-zA-Z0-9À-ỹ\s]/g, '_').replace(/\s+/g, '_');
+                try {
+                    const response = await fetch(`/data/processed/${safeName}/metadata.json`);
+                    if (response.ok) {
+                        songMetadata[songName] = await response.json();
+                    }
+                } catch (e) {
+                    // No metadata available yet
+                }
+            }
+
+            songList.forEach((songName, index) => {
+                const card = createSongCard(songName, index + 1, songMetadata[songName]);
+                grid.appendChild(card);
+            });
+
+            document.getElementById('processedCount').textContent = Object.keys(songMetadata).length;
+        }
+
+        function loadSongs() {
+            const grid = document.getElementById('songGrid');
+            grid.innerHTML = '';
+
+            songList.forEach((songName, index) => {
+                const card = createSongCard(songName, index + 1);
+                grid.appendChild(card);
+            });
+
+            document.getElementById('processedCount').textContent = songList.length;
+        }
+
+        function toTitleCase(str) {
+            // Vietnamese-aware title case
+            const lowercaseWords = ['và', 'của', 'cho', 'với', 'từ', 'trong', 'trên', 'dưới', 'về', 'đến', 'tại', 'bên', 'theo', 'cùng', 'như', 'hay', 'hoặc', 'nhưng', 'mà', 'để', 'khi', 'nếu', 'vì', 'do', 'bởi', 'qua', 'ra', 'vào', 'lên', 'xuống', 'em', 'con', 'là', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười'];
+
+            // Split by spaces and process each word
+            const words = str.split(/\s+/);
+
+            return words.map(function(word, index) {
+                // Always capitalize first word
+                if (index === 0) {
+                    return word.charAt(0).toUpperCase() + word.substr(1).toLowerCase();
+                }
+
+                // Keep certain words lowercase unless they start the string
+                if (lowercaseWords.includes(word.toLowerCase())) {
+                    return word.toLowerCase();
+                }
+
+                // Capitalize other words
+                return word.charAt(0).toUpperCase() + word.substr(1).toLowerCase();
+            }).join(' ');
+        }
+
+        function createSongCard(songName, number, metadata) {
+            const card = document.createElement('div');
+            card.className = 'song-card';
+
+            // Use metadata if available, otherwise use defaults
+            let region = 'Traditional';
+            let difficulty = 'Intermediate';
+            let noteCount = '?';
+            let uniqueNotes = '?';
+            let tempo = 120;
+            let strings = 4;
+            let timeSignature = '4/4';
+            let hasLyrics = false;
+            let tuning = null;
+            let patternEfficiency = null;
+
+            if (metadata) {
+                region = metadata.region || 'Traditional';
+                difficulty = metadata.difficulty || 'Intermediate';
+                noteCount = metadata.noteCount || '?';
+                uniqueNotes = metadata.uniqueNotes || '?';
+                tempo = metadata.tempo || 120;
+                strings = metadata.strings || 4;
+                timeSignature = metadata.timeSignature || '4/4';
+                hasLyrics = metadata.hasLyrics || false;
+                tuning = metadata.tuning || null;
+                patternEfficiency = metadata.patternEfficiency || null;
+            } else {
+                // Fallback region detection
+                if (songName.includes('quan họ') || songName.includes('chèo')) region = 'Northern';
+                else if (songName.includes('Nam')) region = 'Southern';
+                else if (songName.includes('Huế')) region = 'Central';
+                else if (songName.includes('ru')) region = 'Lullaby';
+                else if (songName.includes('hò')) region = 'Work';
+                else if (songName.includes('lý')) region = 'Folk';
+            }
+
+            // Store metadata for filtering
+            card.dataset.strings = strings;
+            card.dataset.notes = noteCount;
+            card.dataset.unique = uniqueNotes;
+            card.dataset.region = region.toLowerCase();
+            // card.dataset.difficulty = difficulty.toLowerCase(); // Saved for future refinement
+
+            card.innerHTML = `
+                <div class="song-thumbnail">
+                    <div class="song-number">#${number}</div>
+                    <div class="region-badge ${region.toLowerCase()}">${region.toUpperCase()}</div>
+                    <svg class="song-pattern" viewBox="0 0 200 100">
+                        ${generatePatternSVG()}
+                    </svg>
+                </div>
+                <div class="song-info">
+                    <div class="song-title" title="${songName}">${toTitleCase(songName)}</div>
+                    <div class="song-details">
+                        <span>${patternEfficiency ? 'Learn ' + patternEfficiency.learnOnly + ' / ' : ''}${noteCount} notes</span>
+                        <span>${patternEfficiency && patternEfficiency.efficiency > 0 ? patternEfficiency.efficiency + '% gain' : strings + ' strings'}</span>
+                    </div>
+                    <div class="song-tags">
+                        <span class="song-tag">${strings} strings</span>
+                        <span class="song-tag">${tempo} BPM</span>
+                        ${timeSignature !== '4/4' ? `<span class="song-tag">${timeSignature}</span>` : ''}
+                        ${hasLyrics ? '<span class="song-tag">With lyrics</span>' : ''}
+                    </div>
+                </div>
+            `;
+
+            card.onclick = () => openSongViewer(songName);
+
+            return card;
+        }
+
+        function generatePatternSVG() {
+            // Generate random pattern for thumbnail
+            let svg = '';
+            for (let i = 0; i < 30; i++) {
+                const x = i * 7;
+                const y = Math.random() * 80 + 10;
+                const color = 'var(--grace-note)'; // Use gold from 12-color system
+                svg += `<circle cx="${x}" cy="${y}" r="2" fill="${color}"/>`;
+            }
+            return svg;
+        }
+
+        function openSongViewer(songName) {
+            // Would open the individual song viewer
+            console.log(`Opening viewer for: ${songName}`);
+            // window.location.href = `/v3/data/processed/${sanitizeName(songName)}/viewer.html`;
+        }
+
+        function toggleQueryPanel() {
+            const panel = document.getElementById('queryPanel');
+            panel.classList.toggle('open');
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.dataset.filter) {
+                    document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.dataset.filter;
+                }
+                // Would apply filter to grid
+            });
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            // Would filter songs based on search
+        });
+
+        // Range slider functionality
+        function initRangeSliders() {
+            // String range slider
+            const stringsRange = document.getElementById('stringsRange');
+            const stringsValue = document.getElementById('stringsValue');
+            let stringsMin = 4, stringsMax = 7;
+
+            // Notes range slider
+            const notesRange = document.getElementById('notesRange');
+            const notesValue = document.getElementById('notesValue');
+            let notesMin = 0, notesMax = 500;
+
+            // Unique notes range slider
+            const uniqueRange = document.getElementById('uniqueRange');
+            const uniqueValue = document.getElementById('uniqueValue');
+            let uniqueMin = 0, uniqueMax = 50;
+
+            // Update filter values
+            function updateFilters() {
+                const cards = document.querySelectorAll('.song-card');
+                cards.forEach(card => {
+                    const strings = parseInt(card.dataset.strings) || 4;
+                    const notes = parseInt(card.dataset.notes) || 0;
+                    const unique = parseInt(card.dataset.unique) || 0;
+
+                    const matchesStrings = strings >= stringsMin && strings <= stringsMax;
+                    const matchesNotes = notes >= notesMin && notes <= notesMax;
+                    const matchesUnique = unique >= uniqueMin && unique <= uniqueMax;
+
+                    if (matchesStrings && matchesNotes && matchesUnique) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+
+            // Initialize sliders with dual-handle simulation
+            // For simplicity, using single sliders with manual min/max for now
+        }
+
+        // Theme Management
+        function setTheme(theme) {
+            document.body.className = '';
+            if (theme === 'white') {
+                document.body.classList.add('theme-white');
+            } else if (theme === 'black') {
+                document.body.classList.add('theme-black');
+            }
+            // Default is dark theme (no class needed)
+            localStorage.setItem('theme', theme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        setTheme(savedTheme);
+
+        // Initialize function is now called after data loads
+        setTimeout(initRangeSliders, 1000);
+    </script>
+</body>
+</html>

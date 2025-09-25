@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Tablature V2 - Modular Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #555;
+            min-width: 100px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .tablature-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        #tablatureSVG {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .data-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            max-width: 300px;
+        }
+
+        .status-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 14px;
+        }
+
+        .status-value {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .error-message {
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .string-line {
+            stroke: #888;
+            stroke-width: 1;
+            opacity: 0.3;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .note-circle:hover {
+            transform: scale(1.2);
+            filter: brightness(1.2);
+        }
+
+        .note-circle.selected {
+            stroke-width: 4;
+            filter: drop-shadow(0 0 10px rgba(102, 126, 234, 0.8));
+        }
+
+        .section-label {
+            fill: #666;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .analysis-panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .analysis-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .pattern-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pattern-badge {
+            background: #f0f0f0;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pattern-badge:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .pattern-badge.active {
+            background: #764ba2;
+            color: white;
+        }
+
+        /* Slur and Tie styles */
+        .slur-path {
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .tie-path {
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .slur-tie-connections {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Loading Dan Tranh Tablature V2</h2>
+            <p>Initializing modular architecture...</p>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <header>
+            <h1>
+                Analytical Đàn Tranh Tablature
+                <span class="version-badge">V2.0 BETA</span>
+            </h1>
+            <h2>Scalable Architecture for 1300+ Songs</h2>
+        </header>
+
+        <div class="controls">
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Song Selection:</label>
+                    <select id="songSelector" onchange="loadSongData()">
+                        <option value="song-001">Song 001 - Traditional Piece (136 notes)</option>
+                        <option value="test-song">Test Song (Demo)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Zoom:</label>
+                    <input type="range" id="zoomSlider" min="50" max="200" value="100">
+                    <span id="zoomValue">100%</span>
+                </div>
+                <button onclick="loadSongData()">🔄 Reload Data</button>
+                <button onclick="toggleAnalysis()">📊 Analysis</button>
+            </div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="tablature-container">
+            <svg id="tablatureSVG" viewBox="0 0 11400 700" preserveAspectRatio="xMidYMid meet">
+                <!-- Content will be dynamically loaded -->
+            </svg>
+        </div>
+
+        <div class="analysis-panel" id="analysisPanel" style="display: none;">
+            <div class="analysis-title">Pattern Analysis</div>
+            <div id="patternContent">
+                <p>Loading pattern data...</p>
+            </div>
+        </div>
+
+        <div class="data-status">
+            <div class="status-title">📊 Data Status</div>
+            <div class="status-item">
+                <span>Notes Loaded:</span>
+                <span class="status-value" id="noteCount">0</span>
+            </div>
+            <div class="status-item">
+                <span>Sections:</span>
+                <span class="status-value" id="sectionCount">0</span>
+            </div>
+            <div class="status-item">
+                <span>Memory Usage:</span>
+                <span class="status-value" id="memoryUsage">0 KB</span>
+            </div>
+            <div class="status-item">
+                <span>Load Time:</span>
+                <span class="status-value" id="loadTime">0 ms</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import SlurTieSystem
+        import { SlurTieSystem } from './src/components/SlurTieSystem.js';
+
+        // V2 Modular Architecture
+        class DanTranhApp {
+            constructor() {
+                this.data = {
+                    notes: [],
+                    sections: [],
+                    patterns: null,
+                    strings: [],
+                    connections: null
+                };
+                this.selectedNotes = new Set();
+                this.loadStartTime = Date.now();
+                this.slurTieSystem = new SlurTieSystem();
+            }
+
+            async init() {
+                console.log('🚀 Initializing V2 Architecture...');
+                await this.loadSongData();
+                this.setupEventListeners();
+                this.hideLoadingScreen();
+            }
+
+            async loadSongData() {
+                const startTime = Date.now();
+
+                try {
+                    // Load real data from extracted files
+                    const songId = document.getElementById('songSelector').value;
+                    this.data = await this.loadRealData(songId);
+
+                    // Process slur/tie connections
+                    this.data.connections = this.slurTieSystem.processNotes(this.data.notes);
+                    console.log('📊 Connections processed:', this.data.connections);
+
+                    // Render the tablature
+                    this.renderTablature();
+
+                    // Update status
+                    this.updateStatus(Date.now() - startTime);
+
+                    console.log('✅ Data loaded successfully', this.data);
+                } catch (error) {
+                    this.showError(`Failed to load data: ${error.message}`);
+                }
+            }
+
+            async loadRealData(songId) {
+                // Load data from extracted JSON files
+                const baseUrl = `/data/${songId}`;
+
+                try {
+                    // Load all data files in parallel
+                    const [notes, strings, sections, patterns, metadata] = await Promise.all([
+                        fetch(`${baseUrl}/notes.json`).then(r => r.json()),
+                        fetch(`${baseUrl}/strings.json`).then(r => r.json()),
+                        fetch(`${baseUrl}/sections.json`).then(r => r.json()),
+                        fetch(`${baseUrl}/patterns.json`).then(r => r.json()).catch(() => ({})),
+                        fetch(`${baseUrl}/metadata.json`).then(r => r.json()).catch(() => ({}))
+                    ]);
+
+                    console.log('📊 Loaded data:', {
+                        notes: notes.length,
+                        sections: sections.length,
+                        patterns: Object.keys(patterns).length
+                    });
+
+                    return { notes, strings, sections, patterns, metadata };
+                } catch (error) {
+                    console.warn('Failed to load real data, using test data:', error);
+                    // Fallback to minimal test data
+                    return {
+                        notes: [
+                            { id: 0, x: 120, y: 410, string: 9, pitch: 'C5', isGrace: false },
+                            { id: 1, x: 205, y: 410, string: 9, pitch: 'C5', isGrace: false },
+                            { id: 2, x: 290, y: 410, string: 9, pitch: 'C5', isGrace: false }
+                        ],
+                        strings: [
+                            { number: 9, note: 'C5', y: 410 },
+                            { number: 10, note: 'D5', y: 470 },
+                            { number: 11, note: 'E5', y: 530 }
+                        ],
+                        sections: [{ id: 'test', name: 'Test', noteRange: [0, 2] }],
+                        patterns: {}
+                    };
+                }
+            }
+
+            renderTablature() {
+                const svg = document.getElementById('tablatureSVG');
+                svg.innerHTML = '';
+
+                // Draw string lines
+                this.data.strings.forEach(string => {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '0');
+                    line.setAttribute('y1', string.y);
+                    line.setAttribute('x2', '11400');
+                    line.setAttribute('y2', string.y);
+                    line.setAttribute('class', 'string-line');
+                    svg.appendChild(line);
+
+                    // Add string labels
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', '20');
+                    label.setAttribute('y', string.y - 5);
+                    label.setAttribute('class', 'section-label');
+                    label.textContent = `String ${string.number} (${string.note})`;
+                    svg.appendChild(label);
+                });
+
+                // Render slur/tie connections first (behind notes)
+                if (this.data.connections) {
+                    this.slurTieSystem.renderToSVG(svg);
+                }
+
+                // Draw notes
+                this.data.notes.forEach(note => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', note.x);
+                    circle.setAttribute('cy', note.y);
+                    circle.setAttribute('r', note.isGrace ? 6 : 12);
+                    circle.setAttribute('class', 'note-circle');
+                    circle.setAttribute('fill', note.isGrace ? '#FFD700' : '#008080');
+                    circle.setAttribute('stroke', note.isGrace ? '#0066FF' : 'crimson');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('data-note-id', note.id);
+                    circle.onclick = () => this.selectNote(note.id);
+                    svg.appendChild(circle);
+                });
+            }
+
+            selectNote(noteId) {
+                const circle = document.querySelector(`[data-note-id="${noteId}"]`);
+
+                if (this.selectedNotes.has(noteId)) {
+                    this.selectedNotes.delete(noteId);
+                    circle.classList.remove('selected');
+                } else {
+                    this.selectedNotes.add(noteId);
+                    circle.classList.add('selected');
+                }
+
+                // Highlight any connections for this note
+                this.slurTieSystem.highlightConnections(noteId);
+
+                console.log('Selected notes:', Array.from(this.selectedNotes));
+            }
+
+            setupEventListeners() {
+                // Zoom control
+                const zoomSlider = document.getElementById('zoomSlider');
+                zoomSlider.addEventListener('input', (e) => {
+                    const zoom = e.target.value;
+                    document.getElementById('zoomValue').textContent = `${zoom}%`;
+                    const svg = document.getElementById('tablatureSVG');
+                    svg.style.transform = `scale(${zoom / 100})`;
+                    svg.style.transformOrigin = 'top left';
+                });
+
+                // Song selector
+                document.getElementById('songSelector').addEventListener('change', (e) => {
+                    console.log('Song selected:', e.target.value);
+                    this.loadSongData();
+                });
+            }
+
+            updateStatus(loadTime) {
+                document.getElementById('noteCount').textContent = this.data.notes.length;
+                document.getElementById('sectionCount').textContent = this.data.sections.length;
+                document.getElementById('loadTime').textContent = `${loadTime} ms`;
+
+                // Estimate memory usage
+                const dataSize = JSON.stringify(this.data).length;
+                const memorKB = Math.round(dataSize / 1024);
+                document.getElementById('memoryUsage').textContent = `${memorKB} KB`;
+            }
+
+            showError(message) {
+                const errorEl = document.getElementById('errorMessage');
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                console.error('❌', message);
+            }
+
+            hideLoadingScreen() {
+                const loadingScreen = document.getElementById('loadingScreen');
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        // Global functions for button onclick
+        window.loadSongData = async () => {
+            window.app.loadSongData();
+        };
+
+        window.toggleAnalysis = () => {
+            const panel = document.getElementById('analysisPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        };
+
+        // Initialize app
+        window.addEventListener('DOMContentLoaded', () => {
+            window.app = new DanTranhApp();
+            window.app.init();
+        });
+
+        // Listen for sync messages from parent frame
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'sync-action') {
+                console.log('📨 Received sync action:', event.data);
+            }
+        });
+    </script>
+</body>
+</html>

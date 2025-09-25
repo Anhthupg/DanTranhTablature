@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytical Đàn Tranh Tablature V2 - Complete</title>
+    <style>
+        /* Core Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        header h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 1.1em;
+        }
+
+        /* Controls Section */
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+
+        .controls-grid {
+            display: flex;
+            gap: 20px;
+        }
+
+        .left-column {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .right-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control-section {
+            margin-bottom: 0;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .section-title {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-icon {
+            font-size: 12px;
+            transition: transform 0.2s;
+        }
+
+        .section-content {
+            display: block;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        /* Playback Controls */
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .playback-btn {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .playback-btn:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+
+        .playback-btn.stop {
+            background: #f44336;
+        }
+
+        .playback-btn.stop:hover {
+            background: #da190b;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .speed-control label {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .speed-control input[type="range"] {
+            width: 100px;
+        }
+
+        .speed-value {
+            font-size: 12px;
+            color: #4CAF50;
+            font-weight: bold;
+            min-width: 30px;
+        }
+
+        /* Main Display Area */
+        .main-display {
+            display: flex;
+            gap: 20px;
+        }
+
+        .tablature-section {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            position: relative;
+        }
+
+        #tablatureSVG {
+            width: 100%;
+            height: 700px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+        }
+
+        /* Analysis Area */
+        .analysis-area {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .analysis-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+
+        .analysis-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        /* Pattern Display */
+        .pattern-list {
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+
+        .pattern-item {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f5f5f5;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pattern-item:hover {
+            background: #e8e8e8;
+            transform: translateX(2px);
+        }
+
+        .pattern-item.selected {
+            background: #d4edda;
+            border-left: 3px solid #28a745;
+        }
+
+        .pattern-count {
+            float: right;
+            color: #666;
+            font-weight: bold;
+        }
+
+        /* Lyrics Display */
+        .lyrics-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-top: 20px;
+            min-height: 100px;
+        }
+
+        .lyrics-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .lyrics-line {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            align-items: center;
+        }
+
+        .syllable {
+            padding: 5px 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .syllable:hover {
+            background: #e0e0e0;
+            transform: scale(1.05);
+        }
+
+        .syllable.active {
+            background: #ffeb3b;
+            font-weight: bold;
+        }
+
+        .lyrics-playback-btn {
+            padding: 4px 8px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+
+        /* Sankey Diagrams */
+        .sankey-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 400px;
+        }
+
+        .sankey-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        #sankeyDiagram {
+            width: 100%;
+            height: 350px;
+        }
+
+        /* SVG Elements */
+        .string-line {
+            stroke: #ccc;
+            stroke-width: 1;
+            opacity: 0.5;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .note-circle:hover {
+            transform: scale(1.2);
+            filter: brightness(1.2);
+        }
+
+        .note-circle.selected {
+            stroke-width: 4;
+            stroke: #ff6b6b !important;
+            filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5));
+        }
+
+        .note-circle.playing {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        .section-marker {
+            fill: #666;
+            font-size: 12px;
+            font-weight: bold;
+            opacity: 0.7;
+        }
+
+        .measure-line {
+            stroke: #999;
+            stroke-width: 1;
+            stroke-dasharray: 3,3;
+            opacity: 0.3;
+        }
+
+        /* Section Highlighting */
+        .section-highlight {
+            fill: none;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .section-highlight.intro {
+            stroke: #4CAF50;
+        }
+
+        .section-highlight.signature {
+            stroke: #2196F3;
+        }
+
+        .section-highlight.development {
+            stroke: #FF9800;
+        }
+
+        .section-highlight.closing {
+            stroke: #9C27B0;
+        }
+
+        .section-highlight.active {
+            opacity: 0.6;
+        }
+
+        /* Buttons */
+        button {
+            padding: 8px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Select and Input */
+        select, input[type="number"], input[type="range"] {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        select {
+            min-width: 120px;
+        }
+
+        input[type="number"] {
+            width: 60px;
+        }
+
+        /* Checkbox */
+        input[type="checkbox"] {
+            margin-right: 5px;
+        }
+
+        label {
+            font-size: 12px;
+            color: #555;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .status-item {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        /* Right Bar Chart Container */
+        #rightBarChartContainer {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 340px;
+            height: 600px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px 0 0 10px;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.1);
+            padding: 20px;
+            z-index: 100;
+            transition: right 0.3s ease;
+        }
+
+        #rightBarChartContainer.hidden {
+            right: -340px;
+        }
+
+        .toggle-chart-btn {
+            position: absolute;
+            left: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 60px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Analytical Đàn Tranh Tablature</h1>
+            <h2>V2 Complete - All Features from Original</h2>
+        </header>
+
+        <!-- Main Controls -->
+        <div class="controls">
+            <div class="controls-grid">
+                <div class="left-column">
+                    <!-- Zoom Controls -->
+                    <div class="control-section">
+                        <div class="section-title">
+                            🔍 Zoom Controls
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div style="margin-bottom: 10px;">
+                                <label>X Zoom:</label>
+                                <select id="xZoomSelect">
+                                    <option value="50">50%</option>
+                                    <option value="67">67%</option>
+                                    <option value="75">75%</option>
+                                    <option value="100" selected>100%</option>
+                                    <option value="125">125%</option>
+                                    <option value="150">150%</option>
+                                    <option value="200">200%</option>
+                                    <option value="fit">Fit Width</option>
+                                </select>
+                                <input type="range" id="xZoomSlider" min="50" max="200" value="100" style="width: 100px;">
+                                <span id="xZoomValue">100%</span>
+                            </div>
+                            <div>
+                                <label>Y Zoom:</label>
+                                <select id="yZoomSelect">
+                                    <option value="50">50%</option>
+                                    <option value="67" selected>67%</option>
+                                    <option value="75">75%</option>
+                                    <option value="100">100%</option>
+                                    <option value="150">150%</option>
+                                    <option value="fit">Fit Height</option>
+                                </select>
+                                <input type="range" id="yZoomSlider" min="50" max="200" value="67" style="width: 100px;">
+                                <span id="yZoomValue">67%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Analysis -->
+                    <div class="control-section">
+                        <div class="section-title">
+                            📑 Section Analysis
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <label><input type="checkbox" id="showIntro" checked> Introduction</label><br>
+                            <label><input type="checkbox" id="showSignature" checked> Signature</label><br>
+                            <label><input type="checkbox" id="showDevelopment" checked> Development</label><br>
+                            <label><input type="checkbox" id="showClosing" checked> Closing</label><br>
+                            <button onclick="playFullSequence()" style="margin-top: 10px; width: 100%;">▶ Play All Sections</button>
+                        </div>
+                    </div>
+
+                    <!-- Pattern Controls -->
+                    <div class="control-section">
+                        <div class="section-title">
+                            🎵 Pattern Analysis
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div style="margin-bottom: 10px;">
+                                <label>KPIC Level:</label>
+                                <select id="kpicLevel">
+                                    <option value="2" selected>KPIC-2</option>
+                                    <option value="3">KPIC-3</option>
+                                    <option value="4">KPIC-4</option>
+                                    <option value="5">KPIC-5</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label>KRIC Level:</label>
+                                <select id="kricLevel">
+                                    <option value="2" selected>KRIC-2</option>
+                                    <option value="3">KRIC-3</option>
+                                    <option value="4">KRIC-4</option>
+                                </select>
+                            </div>
+                            <button onclick="showSankeyDiagrams()" style="margin-top: 10px;">📊 Show Sankey</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-column">
+                    <!-- Playback Controls -->
+                    <div class="playback-controls">
+                        <button class="playback-btn" onclick="startPlayback()">▶ Play</button>
+                        <button class="playback-btn stop" onclick="stopPlayback()">⏹ Stop</button>
+                        <div class="speed-control">
+                            <label>Speed:</label>
+                            <input type="range" id="playbackSpeed" min="50" max="200" value="100">
+                            <span class="speed-value" id="speedValue">100%</span>
+                        </div>
+                        <button onclick="toggleLoop()">🔁 Loop</button>
+                        <label><input type="checkbox" id="showMeasures"> Show Measures</label>
+                        <label><input type="checkbox" id="autoScroll" checked> Auto Scroll</label>
+                        <div class="speed-control" style="margin-top: 10px;">
+                            <label>Volume:</label>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="50">
+                            <span id="volumeValue">50%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Display -->
+        <div class="main-display">
+            <!-- Tablature Section -->
+            <div class="tablature-section">
+                <svg id="tablatureSVG" viewBox="0 0 11400 700" preserveAspectRatio="xMidYMid meet">
+                    <!-- Content dynamically generated -->
+                </svg>
+            </div>
+
+            <!-- Analysis Area -->
+            <div class="analysis-area">
+                <!-- Pattern List -->
+                <div class="analysis-card">
+                    <div class="analysis-title">📊 Active Patterns</div>
+                    <div class="pattern-list" id="patternList">
+                        <!-- Patterns will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Section Info -->
+                <div class="analysis-card">
+                    <div class="analysis-title">📑 Section Info</div>
+                    <div id="sectionInfo">
+                        <div style="font-size: 12px; color: #666;">
+                            Current: <span id="currentSection" style="font-weight: bold;">Introduction</span><br>
+                            Notes: <span id="sectionNotes">0-6</span><br>
+                            Type: <span id="sectionType">Identical</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note Details -->
+                <div class="analysis-card">
+                    <div class="analysis-title">🎵 Note Details</div>
+                    <div id="noteDetails" style="font-size: 12px; color: #666;">
+                        Click a note to see details
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lyrics Container -->
+        <div class="lyrics-container">
+            <div class="lyrics-title">🎤 Lyrics</div>
+            <div id="lyricsDisplay">
+                <div class="lyrics-line">
+                    <button class="lyrics-playback-btn" onclick="playLyricsLine(0)">▶</button>
+                    <span class="syllable" data-notes="0,1">Rí</span>
+                    <span class="syllable" data-notes="2,3">ới</span>
+                    <span class="syllable" data-notes="4,5,6">khắp</span>
+                    <span class="syllable" data-notes="7,8">chốn</span>
+                    <span class="syllable" data-notes="9,10,11">nơi</span>
+                    <span class="syllable" data-notes="12,13">cái</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sankey Diagram Container -->
+        <div class="sankey-container" id="sankeyContainer" style="display: none;">
+            <div class="sankey-title">KPIC-2 & KRIC-2 Sankey Diagrams</div>
+            <svg id="sankeyDiagram"></svg>
+        </div>
+    </div>
+
+    <!-- Right Bar Chart -->
+    <div id="rightBarChartContainer" class="hidden">
+        <button class="toggle-chart-btn" onclick="toggleRightChart()">KP/RIC</button>
+        <div id="rightBarChartContent">
+            <!-- Bar chart content -->
+        </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+        <div class="status-item">
+            <span>Notes:</span>
+            <span class="status-value" id="totalNotes">136</span>
+        </div>
+        <div class="status-item">
+            <span>Selected:</span>
+            <span class="status-value" id="selectedCount">0</span>
+        </div>
+        <div class="status-item">
+            <span>Playback:</span>
+            <span class="status-value" id="playbackStatus">Stopped</span>
+        </div>
+        <div class="status-item">
+            <span>Pattern:</span>
+            <span class="status-value" id="activePattern">None</span>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import modules
+        import { SlurTieSystem } from './src/components/SlurTieSystem.js';
+        import { songCache } from './src/data/CacheManager.js';
+
+        // Complete V2 Application with ALL Original Features
+        class DanTranhComplete {
+            constructor() {
+                this.data = null;
+                this.selectedNotes = new Set();
+                this.playbackTimer = null;
+                this.playbackIndex = 0;
+                this.isPlaying = false;
+                this.playbackSpeed = 100;
+                this.loopEnabled = false;
+                this.currentSection = null;
+                this.slurTieSystem = new SlurTieSystem();
+                this.xZoom = 1;
+                this.yZoom = 0.67;
+
+                // Pattern tracking
+                this.activeKPIC = 2;
+                this.activeKRIC = 2;
+                this.selectedPatterns = new Set();
+
+                // Section visibility
+                this.sectionVisibility = {
+                    intro: true,
+                    signature: true,
+                    development: true,
+                    closing: true
+                };
+
+                // Initialize Web Audio API for sound
+                this.audioContext = null;
+                this.masterVolume = null;
+                this.initAudio();
+            }
+
+            initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.masterVolume = this.audioContext.createGain();
+                    this.masterVolume.gain.value = 0.5;
+                    this.masterVolume.connect(this.audioContext.destination);
+                    console.log('🔊 Audio system initialized');
+                } catch (error) {
+                    console.error('Audio init failed:', error);
+                }
+            }
+
+            playNoteSound(note) {
+                if (!this.audioContext) return;
+
+                // Resume context if needed
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+
+                const frequency = this.getNoteFrequency(note);
+                const now = this.audioContext.currentTime;
+
+                // Create oscillators
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+
+                osc.frequency.value = frequency;
+                osc.type = 'triangle';
+
+                osc.connect(gain);
+                gain.connect(this.masterVolume);
+
+                // Envelope
+                const attackTime = note.isGrace ? 0.01 : 0.02;
+                const decayTime = note.isGrace ? 0.3 : 0.8;
+                const volume = note.isGrace ? 0.3 : 0.5;
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume, now + attackTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + decayTime);
+
+                osc.start(now);
+                osc.stop(now + decayTime + 0.1);
+            }
+
+            getNoteFrequency(note) {
+                const frequencies = {
+                    5: 293.66,  // D4
+                    7: 392.00,  // G4
+                    8: 440.00,  // A4
+                    9: 523.25,  // C5
+                    10: 587.33, // D5
+                    11: 659.25, // E5
+                    12: 783.99  // G5
+                };
+                return frequencies[note.string] || 440;
+            }
+
+            async init() {
+                console.log('🚀 Initializing Complete V2 with all features...');
+                await this.loadData();
+                this.setupEventListeners();
+                this.renderEverything();
+                this.loadPatterns();
+                this.updateStatus();
+            }
+
+            async loadData() {
+                try {
+                    // Load the extracted data
+                    const response = await fetch('/data/song-001/notes.json');
+                    const notes = await response.json();
+
+                    const [strings, sections, patterns, lyrics] = await Promise.all([
+                        fetch('/data/song-001/strings.json').then(r => r.json()),
+                        fetch('/data/song-001/sections.json').then(r => r.json()),
+                        fetch('/data/song-001/patterns.json').then(r => r.json()),
+                        fetch('/data/song-001/lyrics.json').then(r => r.json())
+                    ]);
+
+                    this.data = { notes, strings, sections, patterns, lyrics };
+
+                    // Process connections
+                    this.data.connections = this.slurTieSystem.processNotes(notes);
+
+                    console.log('✅ Data loaded successfully!');
+                    console.log('📊 Statistics:', {
+                        notes: notes.length,
+                        sections: sections.length,
+                        patterns: Object.keys(patterns).length,
+                        syllables: lyrics?.syllables?.length || 0,
+                        lines: lyrics?.lines?.length || 0
+                    });
+                    console.log('🎼 First few notes:', notes.slice(0, 3));
+
+                    // Display lyrics
+                    this.displayLyrics();
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                }
+            }
+
+            displayLyrics() {
+                if (!this.data?.lyrics) return;
+
+                const lyricsDisplay = document.getElementById('lyricsDisplay');
+                if (!lyricsDisplay) return;
+
+                lyricsDisplay.innerHTML = '';
+
+                this.data.lyrics.lines.forEach((line, lineIndex) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'lyrics-line';
+                    lineDiv.setAttribute('data-line', lineIndex);
+
+                    // Add play button for each line
+                    const playBtn = document.createElement('button');
+                    playBtn.className = 'lyrics-playback-btn';
+                    playBtn.textContent = '▶';
+                    playBtn.onclick = () => this.playLyricsLine(lineIndex);
+                    lineDiv.appendChild(playBtn);
+
+                    // Add syllables
+                    const lineSpan = document.createElement('span');
+                    lineSpan.className = 'line-text';
+
+                    line.syllables.forEach((syllable, syllableIndex) => {
+                        const syllableSpan = document.createElement('span');
+                        syllableSpan.className = 'syllable';
+                        syllableSpan.setAttribute('data-position', syllable.position);
+                        syllableSpan.setAttribute('data-syllable-index', syllable.syllableIndex);
+                        syllableSpan.textContent = syllable.text;
+
+                        if (syllable.isMelismatic) {
+                            syllableSpan.classList.add('melismatic');
+                        }
+
+                        lineSpan.appendChild(syllableSpan);
+                        if (syllableIndex < line.syllables.length - 1) {
+                            lineSpan.appendChild(document.createTextNode(' '));
+                        }
+                    });
+
+                    lineDiv.appendChild(lineSpan);
+                    lyricsDisplay.appendChild(lineDiv);
+                });
+            }
+
+            playLyricsLine(lineIndex) {
+                if (!this.data?.lyrics?.lines[lineIndex]) return;
+
+                const line = this.data.lyrics.lines[lineIndex];
+                if (line.syllables.length === 0) return;
+
+                // Find the first note position for this line
+                const firstSyllable = line.syllables[0];
+                const startNoteIndex = firstSyllable.position;
+
+                // Start playback from that position
+                this.playbackIndex = startNoteIndex;
+                this.startPlayback();
+            }
+
+            highlightSyllable(noteIndex) {
+                if (!this.data?.lyrics) return;
+
+                // Remove previous highlights
+                document.querySelectorAll('.syllable.active').forEach(s => {
+                    s.classList.remove('active');
+                });
+
+                // Find syllable for this note position
+                const syllable = this.data.lyrics.syllables.find(s => s.position === noteIndex);
+                if (syllable) {
+                    const syllableElement = document.querySelector(`.syllable[data-position="${noteIndex}"]`);
+                    if (syllableElement) {
+                        syllableElement.classList.add('active');
+                    }
+                }
+            }
+
+            renderEverything() {
+                const svg = document.getElementById('tablatureSVG');
+                svg.innerHTML = '';
+
+                if (!this.data) return;
+
+                // Apply zoom
+                svg.style.transform = `scale(${this.xZoom}, ${this.yZoom})`;
+                svg.style.transformOrigin = 'top left';
+
+                // Draw string lines
+                this.drawStringLines(svg);
+
+                // Draw measure lines
+                this.drawMeasureLines(svg);
+
+                // Draw section markers and highlights
+                this.drawSections(svg);
+
+                // Draw connections (slurs/ties)
+                if (this.data.connections) {
+                    this.slurTieSystem.renderToSVG(svg);
+                }
+
+                // Draw notes
+                this.drawNotes(svg);
+
+                // Draw section labels
+                this.drawSectionLabels(svg);
+            }
+
+            drawStringLines(svg) {
+                this.data.strings.forEach(string => {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '0');
+                    line.setAttribute('y1', string.y);
+                    line.setAttribute('x2', '11400');
+                    line.setAttribute('y2', string.y);
+                    line.setAttribute('class', 'string-line');
+                    svg.appendChild(line);
+
+                    // String labels
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', '30');
+                    label.setAttribute('y', string.y - 5);
+                    label.setAttribute('fill', '#666');
+                    label.setAttribute('font-size', '11');
+                    label.textContent = `${string.number}: ${string.note}`;
+                    svg.appendChild(label);
+                });
+            }
+
+            drawMeasureLines(svg) {
+                // Draw measure lines every 4 beats
+                for (let x = 400; x < 11400; x += 400) {
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x);
+                    line.setAttribute('y1', '100');
+                    line.setAttribute('x2', x);
+                    line.setAttribute('y2', '630');
+                    line.setAttribute('class', 'measure-line');
+                    svg.appendChild(line);
+                }
+            }
+
+            drawSections(svg) {
+                if (!this.data.sections) return;
+
+                this.data.sections.forEach(section => {
+                    const sectionId = section.id.toLowerCase();
+                    if (!this.sectionVisibility[sectionId]) return;
+
+                    // Get note range
+                    const startNote = this.data.notes[section.noteRange[0]];
+                    const endNote = this.data.notes[section.noteRange[1]];
+
+                    if (startNote && endNote) {
+                        // Draw section highlight rectangle
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', startNote.x - 10);
+                        rect.setAttribute('y', '95');
+                        rect.setAttribute('width', endNote.x - startNote.x + 20);
+                        rect.setAttribute('height', '540');
+                        rect.setAttribute('class', `section-highlight ${sectionId}`);
+                        rect.setAttribute('id', `section-${sectionId}`);
+                        svg.appendChild(rect);
+                    }
+                });
+            }
+
+            drawNotes(svg) {
+                this.data.notes.forEach(note => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', note.x);
+                    circle.setAttribute('cy', note.y);
+                    circle.setAttribute('r', note.isGrace ? 6 : 12);
+                    circle.setAttribute('class', 'note-circle');
+                    circle.setAttribute('fill', note.isGrace ? '#FFD700' : '#008080');
+                    circle.setAttribute('stroke', note.isGrace ? '#0066FF' : 'crimson');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('data-note-id', note.id);
+                    circle.setAttribute('id', `note-${note.id}`);
+
+                    // Click handler
+                    circle.onclick = () => this.selectNote(note.id);
+
+                    svg.appendChild(circle);
+                });
+            }
+
+            drawSectionLabels(svg) {
+                if (!this.data.sections) return;
+
+                this.data.sections.forEach(section => {
+                    const startNote = this.data.notes[section.noteRange[0]];
+                    if (startNote) {
+                        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        text.setAttribute('x', startNote.x);
+                        text.setAttribute('y', '80');
+                        text.setAttribute('class', 'section-marker');
+                        text.textContent = section.name;
+                        svg.appendChild(text);
+                    }
+                });
+            }
+
+            selectNote(noteId) {
+                const circle = document.getElementById(`note-${noteId}`);
+
+                if (this.selectedNotes.has(noteId)) {
+                    this.selectedNotes.delete(noteId);
+                    circle.classList.remove('selected');
+                } else {
+                    this.selectedNotes.add(noteId);
+                    circle.classList.add('selected');
+                }
+
+                // Update note details
+                this.showNoteDetails(noteId);
+
+                // Highlight connections
+                this.slurTieSystem.highlightConnections(noteId);
+
+                // Update status
+                document.getElementById('selectedCount').textContent = this.selectedNotes.size;
+            }
+
+            showNoteDetails(noteId) {
+                const note = this.data.notes[noteId];
+                if (!note) return;
+
+                const details = document.getElementById('noteDetails');
+                details.innerHTML = `
+                    <strong>Note ${noteId}</strong><br>
+                    Pitch: ${note.pitch}<br>
+                    String: ${note.string}<br>
+                    Position: (${note.x}, ${note.y})<br>
+                    Type: ${note.isGrace ? 'Grace' : 'Regular'}<br>
+                    ${note.measure ? `Measure: ${note.measure}` : ''}
+                `;
+            }
+
+            loadPatterns() {
+                if (!this.data.patterns) return;
+
+                const kpicPatterns = this.data.patterns.kpic_patterns?.full?.['kpic-' + this.activeKPIC] || [];
+                const patternList = document.getElementById('patternList');
+                patternList.innerHTML = '';
+
+                kpicPatterns.slice(0, 10).forEach(pattern => {
+                    const item = document.createElement('div');
+                    item.className = 'pattern-item';
+                    item.innerHTML = `
+                        ${pattern.pattern.join(' → ')}
+                        <span class="pattern-count">${pattern.count}</span>
+                    `;
+                    item.onclick = () => this.selectPattern(pattern);
+                    patternList.appendChild(item);
+                });
+            }
+
+            selectPattern(pattern) {
+                // Highlight notes in pattern
+                this.clearSelection();
+
+                pattern.positions.forEach(pos => {
+                    for (let i = 0; i < pattern.pattern.length; i++) {
+                        const noteId = pos + i;
+                        if (noteId < this.data.notes.length) {
+                            this.selectedNotes.add(noteId);
+                            const circle = document.getElementById(`note-${noteId}`);
+                            if (circle) circle.classList.add('selected');
+                        }
+                    }
+                });
+
+                document.getElementById('activePattern').textContent = pattern.pattern.join('-');
+                document.getElementById('selectedCount').textContent = this.selectedNotes.size;
+            }
+
+            clearSelection() {
+                this.selectedNotes.forEach(noteId => {
+                    const circle = document.getElementById(`note-${noteId}`);
+                    if (circle) circle.classList.remove('selected');
+                });
+                this.selectedNotes.clear();
+            }
+
+            // PLAYBACK FUNCTIONS
+            startPlayback() {
+                console.log('🎵 Starting playback...');
+                if (this.isPlaying) {
+                    console.log('Already playing');
+                    return;
+                }
+
+                if (!this.data || !this.data.notes || this.data.notes.length === 0) {
+                    console.error('No notes to play!');
+                    return;
+                }
+
+                this.isPlaying = true;
+                this.playbackIndex = 0;
+
+                // Get current speed from slider
+                const speedSlider = document.getElementById('playbackSpeed');
+                if (speedSlider) {
+                    this.playbackSpeed = parseInt(speedSlider.value);
+                }
+
+                document.getElementById('playbackStatus').textContent = 'Playing';
+                console.log(`Starting playback of ${this.data.notes.length} notes at speed ${this.playbackSpeed}%`);
+
+                this.playNextNote();
+            }
+
+            playNextNote() {
+                if (!this.isPlaying || this.playbackIndex >= this.data.notes.length) {
+                    if (this.loopEnabled && this.playbackIndex >= this.data.notes.length) {
+                        this.playbackIndex = 0;
+                        this.playNextNote();
+                    } else {
+                        this.stopPlayback();
+                    }
+                    return;
+                }
+
+                const note = this.data.notes[this.playbackIndex];
+                const circle = document.getElementById(`note-${note.id}`);
+
+                // Play the sound!
+                this.playNoteSound(note);
+
+                // Animate note
+                if (circle) {
+                    circle.classList.add('playing');
+                    setTimeout(() => circle.classList.remove('playing'), 200);
+                }
+
+                // Highlight syllable
+                this.highlightSyllable(this.playbackIndex);
+
+                // Auto-scroll
+                if (document.getElementById('autoScroll').checked) {
+                    this.scrollToNote(note);
+                }
+
+                this.playbackIndex++;
+
+                // Schedule next note
+                const delay = (60000 / this.playbackSpeed) / 4; // Adjust based on tempo
+                this.playbackTimer = setTimeout(() => this.playNextNote(), delay);
+            }
+
+            stopPlayback() {
+                this.isPlaying = false;
+                if (this.playbackTimer) {
+                    clearTimeout(this.playbackTimer);
+                    this.playbackTimer = null;
+                }
+                document.getElementById('playbackStatus').textContent = 'Stopped';
+            }
+
+            highlightSyllable(noteId) {
+                // Find syllable containing this note
+                document.querySelectorAll('.syllable').forEach(syllable => {
+                    syllable.classList.remove('active');
+                    const notes = syllable.getAttribute('data-notes');
+                    if (notes && notes.split(',').includes(String(noteId))) {
+                        syllable.classList.add('active');
+                    }
+                });
+            }
+
+            scrollToNote(note) {
+                const svg = document.getElementById('tablatureSVG');
+                const container = svg.parentElement;
+                const noteX = note.x * this.xZoom;
+                const containerWidth = container.clientWidth;
+
+                if (noteX > container.scrollLeft + containerWidth - 100) {
+                    container.scrollLeft = noteX - 100;
+                }
+            }
+
+            // SECTION PLAYBACK
+            playFullSequence() {
+                // Play all sections in sequence
+                this.playbackIndex = 0;
+                this.startPlayback();
+            }
+
+            // LYRICS PLAYBACK
+            playLyricsLine(lineIndex) {
+                // Play notes for specific lyrics line
+                const syllables = document.querySelectorAll('.lyrics-line')[lineIndex]?.querySelectorAll('.syllable');
+                if (!syllables) return;
+
+                let noteSequence = [];
+                syllables.forEach(syllable => {
+                    const notes = syllable.getAttribute('data-notes');
+                    if (notes) {
+                        noteSequence.push(...notes.split(',').map(Number));
+                    }
+                });
+
+                this.playNoteSequence(noteSequence);
+            }
+
+            playNoteSequence(sequence) {
+                let index = 0;
+
+                const playNext = () => {
+                    if (index >= sequence.length) return;
+
+                    const noteId = sequence[index];
+                    const circle = document.getElementById(`note-${noteId}`);
+
+                    if (circle) {
+                        circle.classList.add('playing');
+                        setTimeout(() => circle.classList.remove('playing'), 200);
+                    }
+
+                    index++;
+                    setTimeout(playNext, 200);
+                };
+
+                playNext();
+            }
+
+            // SANKEY DIAGRAMS
+            showSankeyDiagrams() {
+                const container = document.getElementById('sankeyContainer');
+                container.style.display = 'block';
+
+                // Generate Sankey visualization
+                this.generateSankeyDiagram();
+
+                // Scroll into view
+                container.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            generateSankeyDiagram() {
+                // Simplified Sankey generation
+                const svg = document.getElementById('sankeyDiagram');
+                svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#666">KPIC-2 Sankey Diagram</text>';
+                // Full implementation would create actual Sankey visualization
+            }
+
+            // EVENT LISTENERS
+            setupEventListeners() {
+                // Zoom controls
+                document.getElementById('xZoomSlider').addEventListener('input', (e) => {
+                    this.xZoom = e.target.value / 100;
+                    document.getElementById('xZoomValue').textContent = `${e.target.value}%`;
+                    this.renderEverything();
+                });
+
+                document.getElementById('yZoomSlider').addEventListener('input', (e) => {
+                    this.yZoom = e.target.value / 100;
+                    document.getElementById('yZoomValue').textContent = `${e.target.value}%`;
+                    this.renderEverything();
+                });
+
+                // Playback speed
+                document.getElementById('playbackSpeed').addEventListener('input', (e) => {
+                    this.playbackSpeed = e.target.value;
+                    document.getElementById('speedValue').textContent = `${e.target.value}%`;
+                });
+
+                // Volume control
+                document.getElementById('volumeSlider').addEventListener('input', (e) => {
+                    const volume = parseInt(e.target.value) / 100;
+                    if (this.masterVolume) {
+                        this.masterVolume.gain.value = volume;
+                    }
+                    document.getElementById('volumeValue').textContent = `${e.target.value}%`;
+                });
+
+                // Section visibility
+                ['showIntro', 'showSignature', 'showDevelopment', 'showClosing'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', (e) => {
+                        const section = id.replace('show', '').toLowerCase();
+                        this.sectionVisibility[section] = e.target.checked;
+
+                        // Toggle section highlight
+                        const rect = document.getElementById(`section-${section}`);
+                        if (rect) {
+                            rect.classList.toggle('active', e.target.checked);
+                        }
+
+                        this.renderEverything();
+                    });
+                });
+
+                // Pattern level changes
+                document.getElementById('kpicLevel').addEventListener('change', (e) => {
+                    this.activeKPIC = parseInt(e.target.value);
+                    this.loadPatterns();
+                });
+
+                document.getElementById('kricLevel').addEventListener('change', (e) => {
+                    this.activeKRIC = parseInt(e.target.value);
+                    // Load KRIC patterns
+                });
+
+                // Collapsible sections
+                document.querySelectorAll('.section-title').forEach(title => {
+                    title.addEventListener('click', () => {
+                        const content = title.nextElementSibling;
+                        const icon = title.querySelector('.toggle-icon');
+                        content.classList.toggle('collapsed');
+                        icon.style.transform = content.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+                    });
+                });
+            }
+
+            updateStatus() {
+                document.getElementById('totalNotes').textContent = this.data.notes.length;
+            }
+        }
+
+        // Global functions for button onclick handlers
+        window.startPlayback = () => window.app.startPlayback();
+        window.stopPlayback = () => window.app.stopPlayback();
+        window.toggleLoop = () => {
+            window.app.loopEnabled = !window.app.loopEnabled;
+            event.target.style.background = window.app.loopEnabled ? '#4CAF50' : '#007bff';
+        };
+        window.playFullSequence = () => window.app.playFullSequence();
+        window.playLyricsLine = (index) => window.app.playLyricsLine(index);
+        window.showSankeyDiagrams = () => window.app.showSankeyDiagrams();
+        window.toggleRightChart = () => {
+            document.getElementById('rightBarChartContainer').classList.toggle('hidden');
+        };
+
+        // Initialize application
+        window.app = new DanTranhComplete();
+
+        // Check if DOM is already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded, initializing app...');
+                window.app.init();
+            });
+        } else {
+            // DOM is already loaded
+            console.log('DOM already loaded, initializing app immediately...');
+            window.app.init();
+        }
+    </script>
+</body>
+</html>

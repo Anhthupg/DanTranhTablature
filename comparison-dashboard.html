@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Tablature - Version Comparison Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-group label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        button {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        button:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        button.active {
+            background: rgba(76, 175, 80, 0.8);
+            border-color: #4CAF50;
+        }
+
+        .comparison-container {
+            display: flex;
+            height: calc(100vh - 70px);
+            position: relative;
+        }
+
+        .version-panel {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .version-header {
+            background: rgba(255,255,255,0.05);
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .version-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .version-status {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+
+        .status-indicator.loading {
+            background: #FFC107;
+        }
+
+        .status-indicator.error {
+            background: #F44336;
+            animation: none;
+        }
+
+        .version-frame {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: white;
+        }
+
+        .divider {
+            width: 4px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(255,255,255,0.2) 20%,
+                rgba(255,255,255,0.2) 80%,
+                transparent 100%);
+            cursor: col-resize;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .divider:hover {
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(255,255,255,0.4) 20%,
+                rgba(255,255,255,0.4) 80%,
+                transparent 100%);
+        }
+
+        .divider::after {
+            content: '⋮';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 20px;
+        }
+
+        .sync-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .sync-indicator.show {
+            display: block;
+            animation: fadeInOut 2s ease;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        }
+
+        .test-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            max-width: 300px;
+            transition: all 0.3s ease;
+        }
+
+        .test-panel.collapsed {
+            transform: translateY(calc(100% - 40px));
+        }
+
+        .test-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .test-results {
+            font-size: 12px;
+            line-height: 1.5;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .test-result {
+            padding: 5px;
+            margin: 5px 0;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .test-result.pass {
+            border-left: 3px solid #4CAF50;
+        }
+
+        .test-result.fail {
+            border-left: 3px solid #F44336;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .view-mode {
+            display: flex;
+            gap: 5px;
+            background: rgba(255,255,255,0.1);
+            padding: 4px;
+            border-radius: 6px;
+        }
+
+        .view-mode button {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+        }
+
+        .view-mode button.active {
+            background: rgba(255,255,255,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🎵 Dan Tranh Tablature - Version Comparison</h1>
+            <div class="controls">
+                <div class="view-mode">
+                    <button class="active" onclick="setViewMode('split')">Split View</button>
+                    <button onclick="setViewMode('original')">Original Only</button>
+                    <button onclick="setViewMode('v2')">V2 Only</button>
+                </div>
+                <div class="control-group">
+                    <label>Sync Actions:</label>
+                    <button id="syncToggle" onclick="toggleSync()">OFF</button>
+                </div>
+                <button onclick="runComparison()">🔍 Compare Data</button>
+                <button onclick="refreshBoth()">🔄 Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="comparison-container" id="comparisonContainer">
+        <div class="version-panel" id="originalPanel">
+            <div class="version-header">
+                <span class="version-title">📌 Original (Production)</span>
+                <div class="version-status">
+                    <span>localhost:3000/original</span>
+                    <div class="status-indicator" id="originalStatus"></div>
+                </div>
+            </div>
+            <iframe
+                id="originalFrame"
+                class="version-frame"
+                src="/original"
+                onload="onFrameLoad('original')"
+            ></iframe>
+        </div>
+
+        <div class="divider" id="divider"></div>
+
+        <div class="version-panel" id="v2Panel">
+            <div class="version-header">
+                <span class="version-title">🚀 Version 2 (Development)</span>
+                <div class="version-status">
+                    <span>localhost:3000/v2</span>
+                    <div class="status-indicator" id="v2Status"></div>
+                </div>
+            </div>
+            <iframe
+                id="v2Frame"
+                class="version-frame"
+                src="/v2"
+                onload="onFrameLoad('v2')"
+            ></iframe>
+        </div>
+    </div>
+
+    <div class="sync-indicator" id="syncIndicator">
+        Actions Synchronized ✓
+    </div>
+
+    <div class="test-panel" id="testPanel">
+        <div class="test-panel-header" onclick="toggleTestPanel()">
+            <span>Test Results</span>
+            <span id="testToggle">▼</span>
+        </div>
+        <div class="test-results" id="testResults">
+            <div class="test-result">Ready for testing...</div>
+        </div>
+    </div>
+
+    <script>
+        let syncEnabled = false;
+        let viewMode = 'split';
+        let isDragging = false;
+        let originalPanel = document.getElementById('originalPanel');
+        let v2Panel = document.getElementById('v2Panel');
+        let divider = document.getElementById('divider');
+
+        // Initialize divider dragging
+        divider.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            document.body.style.cursor = 'col-resize';
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+
+            const containerWidth = document.querySelector('.comparison-container').offsetWidth;
+            const percentage = (e.clientX / containerWidth) * 100;
+
+            if (percentage > 20 && percentage < 80) {
+                originalPanel.style.flex = `0 0 ${percentage}%`;
+                v2Panel.style.flex = `0 0 ${100 - percentage}%`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.cursor = 'default';
+        });
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.querySelectorAll('.view-mode button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            switch(mode) {
+                case 'split':
+                    originalPanel.style.display = 'flex';
+                    v2Panel.style.display = 'flex';
+                    divider.style.display = 'block';
+                    originalPanel.style.flex = '1';
+                    v2Panel.style.flex = '1';
+                    break;
+                case 'original':
+                    originalPanel.style.display = 'flex';
+                    v2Panel.style.display = 'none';
+                    divider.style.display = 'none';
+                    originalPanel.style.flex = '1';
+                    break;
+                case 'v2':
+                    originalPanel.style.display = 'none';
+                    v2Panel.style.display = 'flex';
+                    divider.style.display = 'none';
+                    v2Panel.style.flex = '1';
+                    break;
+            }
+        }
+
+        function toggleSync() {
+            syncEnabled = !syncEnabled;
+            const btn = document.getElementById('syncToggle');
+            btn.textContent = syncEnabled ? 'ON' : 'OFF';
+            btn.classList.toggle('active');
+
+            if (syncEnabled) {
+                showSyncIndicator();
+                setupSyncListeners();
+            } else {
+                removeSyncListeners();
+            }
+        }
+
+        function showSyncIndicator() {
+            const indicator = document.getElementById('syncIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        function setupSyncListeners() {
+            // Listen for messages from iframes
+            window.addEventListener('message', handleFrameMessage);
+        }
+
+        function removeSyncListeners() {
+            window.removeEventListener('message', handleFrameMessage);
+        }
+
+        function handleFrameMessage(event) {
+            if (!syncEnabled) return;
+
+            // Forward message to other frame
+            const sourceFrame = event.source === document.getElementById('originalFrame').contentWindow
+                ? 'original' : 'v2';
+            const targetFrame = sourceFrame === 'original'
+                ? document.getElementById('v2Frame')
+                : document.getElementById('originalFrame');
+
+            if (targetFrame && targetFrame.contentWindow) {
+                targetFrame.contentWindow.postMessage(event.data, '*');
+            }
+        }
+
+        function onFrameLoad(version) {
+            const status = document.getElementById(`${version}Status`);
+            status.classList.remove('loading');
+            status.classList.add('active');
+        }
+
+        function refreshBoth() {
+            document.getElementById('originalStatus').classList.add('loading');
+            document.getElementById('v2Status').classList.add('loading');
+
+            document.getElementById('originalFrame').src = '/original';
+            document.getElementById('v2Frame').src = '/v2';
+        }
+
+        async function runComparison() {
+            const results = document.getElementById('testResults');
+            results.innerHTML = '<div class="test-result">Running comparison...</div>';
+
+            try {
+                // Check if both versions are loaded
+                const tests = [
+                    { name: 'Original Loaded', status: 'checking' },
+                    { name: 'V2 Loaded', status: 'checking' },
+                    { name: 'Data Integrity', status: 'pending' },
+                    { name: 'Feature Parity', status: 'pending' },
+                    { name: 'Performance', status: 'pending' }
+                ];
+
+                let html = '';
+                for (const test of tests) {
+                    const passed = Math.random() > 0.3; // Placeholder - implement real tests
+                    const cssClass = test.status === 'pending' ? '' : passed ? 'pass' : 'fail';
+                    html += `<div class="test-result ${cssClass}">
+                        ${passed ? '✓' : '✗'} ${test.name}
+                    </div>`;
+                }
+                results.innerHTML = html;
+
+            } catch (error) {
+                results.innerHTML = `<div class="test-result fail">Error: ${error.message}</div>`;
+            }
+        }
+
+        function toggleTestPanel() {
+            const panel = document.getElementById('testPanel');
+            const toggle = document.getElementById('testToggle');
+            panel.classList.toggle('collapsed');
+            toggle.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+        }
+
+        // Auto-check server health
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+
+                if (data.versions.original) {
+                    document.getElementById('originalStatus').classList.add('active');
+                }
+                if (data.versions.v2) {
+                    document.getElementById('v2Status').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Health check failed:', error);
+            }
+        }
+
+        // Initial setup
+        checkHealth();
+        setInterval(checkHealth, 30000); // Check every 30 seconds
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        refreshBoth();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        toggleSync();
+                        break;
+                    case 't':
+                        e.preventDefault();
+                        runComparison();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

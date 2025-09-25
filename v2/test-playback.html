@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Playback</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        #status {
+            padding: 10px;
+            background: #f0f0f0;
+            margin: 10px 0;
+        }
+        .note {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #008080;
+            margin: 5px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            font-size: 12px;
+        }
+        .note.playing {
+            background: #ff0000;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Dan Tranh Playback Test</h1>
+    <div>
+        <button onclick="startTest()">Start Playback</button>
+        <button onclick="stopTest()">Stop</button>
+    </div>
+    <div id="status">Ready</div>
+    <div id="notes"></div>
+
+    <script>
+        let isPlaying = false;
+        let currentIndex = 0;
+        let playbackTimer = null;
+        let notes = [];
+
+        // Load notes
+        async function loadNotes() {
+            try {
+                const response = await fetch('/data/song-001/notes.json');
+                notes = await response.json();
+                document.getElementById('status').textContent = `Loaded ${notes.length} notes`;
+
+                // Display notes
+                const notesDiv = document.getElementById('notes');
+                notes.slice(0, 20).forEach((note, i) => {
+                    const noteDiv = document.createElement('div');
+                    noteDiv.className = 'note';
+                    noteDiv.id = `note-${i}`;
+                    noteDiv.textContent = i;
+                    notesDiv.appendChild(noteDiv);
+                });
+            } catch (error) {
+                document.getElementById('status').textContent = 'Error loading notes: ' + error;
+            }
+        }
+
+        function startTest() {
+            if (isPlaying) return;
+            if (notes.length === 0) {
+                alert('No notes loaded!');
+                return;
+            }
+
+            isPlaying = true;
+            currentIndex = 0;
+            document.getElementById('status').textContent = 'Playing...';
+            playNext();
+        }
+
+        function playNext() {
+            if (!isPlaying || currentIndex >= Math.min(20, notes.length)) {
+                stopTest();
+                return;
+            }
+
+            // Clear previous
+            document.querySelectorAll('.note').forEach(n => n.classList.remove('playing'));
+
+            // Highlight current
+            const noteEl = document.getElementById(`note-${currentIndex}`);
+            if (noteEl) {
+                noteEl.classList.add('playing');
+            }
+
+            document.getElementById('status').textContent = `Playing note ${currentIndex + 1} of ${Math.min(20, notes.length)}`;
+            currentIndex++;
+
+            // Schedule next
+            playbackTimer = setTimeout(playNext, 300);
+        }
+
+        function stopTest() {
+            isPlaying = false;
+            if (playbackTimer) {
+                clearTimeout(playbackTimer);
+                playbackTimer = null;
+            }
+            document.querySelectorAll('.note').forEach(n => n.classList.remove('playing'));
+            document.getElementById('status').textContent = 'Stopped';
+        }
+
+        // Load on start
+        loadNotes();
+    </script>
+</body>
+</html>

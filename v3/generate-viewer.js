@@ -63,7 +63,7 @@ async function parseMusicXML(xmlPath) {
             slurType = 'stop';
         }
 
-        // Calculate note name
+        // Calculate note name (keeping original notation)
         const noteName = step + (alter === '1' ? '#' : alter === '-1' ? 'b' : '') + octave;
 
         // Find matching string with comprehensive mapping
@@ -336,8 +336,8 @@ function generateTablatureSVG(songData) {
         // Octave 3
         'C3': 0, 'C#3': 1, 'Db3': 1, 'D3': 2, 'D#3': 3, 'Eb3': 3, 'E3': 4, 'F3': 5, 'F#3': 6, 'Gb3': 6, 'G3': 7, 'G#3': 8, 'Ab3': 8, 'A3': 9, 'A#3': 10, 'Bb3': 10, 'B3': 11,
 
-        // Octave 4 (main reference)
-        'C4': 12, 'C#4': 13, 'Db4': 13, 'D4': 14, 'D#4': 15, 'Eb4': 15, 'E4': 16, 'F4': 17, 'F#4': 18, 'Gb4': 18, 'G4': 19, 'G#4': 20, 'Ab4': 20, 'A4': 21, 'A#4': 22, 'Bb4': 22, 'B4': 23,
+        // Octave 4 (main reference) - including enharmonic equivalents in correct positions
+        'C4': 12, 'C#4': 13, 'Db4': 13, 'D4': 14, 'D#4': 15, 'Eb4': 15, 'E4': 16, 'F4': 17, 'F#4': 18, 'Gb4': 18, 'G4': 19, 'G#4': 20, 'Ab4': 20, 'A4': 21, 'A#4': 22, 'Bb4': 22, 'B4': 23, 'Cb5': 23,
 
         // Octave 5
         'C5': 24, 'C#5': 25, 'Db5': 25, 'D5': 26, 'D#5': 27, 'Eb5': 27, 'E5': 28, 'F5': 29, 'F#5': 30, 'Gb5': 30, 'G5': 31, 'G#5': 32, 'Ab5': 32, 'A5': 33, 'A#5': 34, 'Bb5': 34, 'B5': 35,
@@ -346,21 +346,13 @@ function generateTablatureSVG(songData) {
         'C6': 36, 'C#6': 37, 'Db6': 37, 'D6': 38, 'D#6': 39, 'Eb6': 39, 'E6': 40, 'F6': 41, 'F#6': 42, 'Gb6': 42, 'G6': 43
     };
 
-    // Sort unique pitches by musical order with proper octave grouping
+    // Sort unique pitches by musical order - HIGHEST to LOWEST (for tablature display)
     const sortedPitches = Array.from(uniquePitches).sort((a, b) => {
         const orderA = pitchOrder[a] || 999;
         const orderB = pitchOrder[b] || 999;
 
-        // First sort by octave (C4 comes before any other note in octave 4)
-        const octaveA = Math.floor(orderA / 12);
-        const octaveB = Math.floor(orderB / 12);
-
-        if (octaveA !== octaveB) {
-            return octaveA - octaveB;
-        }
-
-        // Within same octave, sort chromatically from C
-        return orderA - orderB;
+        // Sort highest to lowest (reverse order for tablature where top = high pitch)
+        return orderB - orderA;
     });
 
     // Assign each unique pitch to its own string position
@@ -409,9 +401,9 @@ function generateTablatureSVG(songData) {
     const minStringY = Math.min(...stringYPositions);
     const maxStringY = Math.max(...stringYPositions);
 
-    // Ensure minimum padding above and below strings
-    const topPadding = 80;
-    const bottomPadding = 80;
+    // Ensure minimum padding above and below strings (extra padding for lyrics)
+    const topPadding = 120; // Extra padding for lyrics above top string
+    const bottomPadding = 100; // Extra padding for lyrics below bottom string
     const minY = minStringY - topPadding;
     const maxY = maxStringY + bottomPadding;
     const svgHeight = maxY - minY;
@@ -447,6 +439,16 @@ function generateTablatureSVG(songData) {
         const bandHeight = isGrace ? 8 : 12;
         const gradientId = `grad-${note.index}`;
 
+        // Find the corresponding string line Y position for this note
+        const stringConfig = usedStringConfigs.find(([num, config]) =>
+            Math.abs(config.y - note.y) < 1); // Find string with matching Y position
+
+        let stringLineY = adjustedY; // Default fallback
+        if (stringConfig) {
+            // Use the exact string line Y position
+            stringLineY = stringConfig[1].y - minY + 50;
+        }
+
         // Add gradient definition for this note
         svg += `
     <defs>
@@ -457,11 +459,14 @@ function generateTablatureSVG(songData) {
         </linearGradient>
     </defs>`;
 
+        // Position band exactly centered on the note (which is on the string line)
         svg += `
-    <rect x="${note.x - 10}" y="${adjustedY - bandHeight/2 - 2}"
+    <rect x="${note.x - 10}" y="${adjustedY - bandHeight/2}"
           width="${bandWidth}" height="${bandHeight}"
           fill="url(#${gradientId})"
-          rx="4" class="resonance-band"/>`;
+          rx="4" class="resonance-band"
+          data-note-index="${note.index}"
+          data-string-y="${adjustedY}"/>`;
 
         // Note circle with shadow
         svg += `
@@ -539,6 +544,114 @@ function toTitleCase(str) {
     }).join(' ');
 }
 
+// Pattern Analysis System - KPIC (Kinetic Pitch Contour)
+function analyzeKPIC(notes, windowSize = 2) {
+    const patterns = new Map();
+
+    for (let i = 0; i <= notes.length - windowSize; i++) {
+        const pattern = notes.slice(i, i + windowSize)
+            .map(note => note.noteName)
+            .join('→');
+
+        if (!patterns.has(pattern)) {
+            patterns.set(pattern, []);
+        }
+        patterns.get(pattern).push(i);
+    }
+
+    return patterns;
+}
+
+// Pattern Analysis System - KRIC (Kinetic Rhythm Contour)
+function analyzeKRIC(notes, windowSize = 2) {
+    const patterns = new Map();
+
+    for (let i = 0; i <= notes.length - windowSize; i++) {
+        const pattern = notes.slice(i, i + windowSize)
+            .map(note => note.duration)
+            .join('→');
+
+        if (!patterns.has(pattern)) {
+            patterns.set(pattern, []);
+        }
+        patterns.get(pattern).push(i);
+    }
+
+    return patterns;
+}
+
+// Calculate pattern efficiency (Learn Only calculation)
+function calculatePatternEfficiency(notes) {
+    // Analyze different pattern sizes
+    const kpic2 = analyzeKPIC(notes, 2);
+    const kpic3 = analyzeKPIC(notes, 3);
+    const kric2 = analyzeKRIC(notes, 2);
+    const kric3 = analyzeKRIC(notes, 3);
+
+    // Find the most efficient pattern size (highest repetition savings)
+    let maxSavings = 0;
+    let bestPatternType = 'none';
+    let learnOnly = notes.length; // Default: learn all notes
+
+    // Test KPIC-2 patterns
+    let kpic2Savings = 0;
+    kpic2.forEach((occurrences, pattern) => {
+        if (occurrences.length > 1) {
+            kpic2Savings += (occurrences.length - 1); // Save 1 note per repeat
+        }
+    });
+
+    if (kpic2Savings > maxSavings) {
+        maxSavings = kpic2Savings;
+        bestPatternType = 'KPIC-2';
+        learnOnly = notes.length - kpic2Savings;
+    }
+
+    // Test KPIC-3 patterns
+    let kpic3Savings = 0;
+    kpic3.forEach((occurrences, pattern) => {
+        if (occurrences.length > 1) {
+            kpic3Savings += (occurrences.length - 1) * 2; // Save 2 notes per repeat
+        }
+    });
+
+    if (kpic3Savings > maxSavings) {
+        maxSavings = kpic3Savings;
+        bestPatternType = 'KPIC-3';
+        learnOnly = notes.length - kpic3Savings;
+    }
+
+    // Test KRIC patterns (similar logic)
+    let kric2Savings = 0;
+    kric2.forEach((occurrences, pattern) => {
+        if (occurrences.length > 1) {
+            kric2Savings += (occurrences.length - 1);
+        }
+    });
+
+    if (kric2Savings > maxSavings) {
+        maxSavings = kric2Savings;
+        bestPatternType = 'KRIC-2';
+        learnOnly = notes.length - kric2Savings;
+    }
+
+    const efficiency = maxSavings > 0 ? Math.round((maxSavings / notes.length) * 100) : 0;
+
+    return {
+        learnOnly: Math.max(1, learnOnly), // At least 1 note to learn
+        totalNotes: notes.length,
+        savings: maxSavings,
+        efficiency: efficiency,
+        bestPattern: bestPatternType,
+        patterns: {
+            kpic2: kpic2.size,
+            kpic3: kpic3.size,
+            kric2: kric2.size,
+            kric3: kric3.size
+        }
+    };
+}
+
 // Generate complete HTML viewer
 function generateViewer(songData, metadata) {
     const svg = generateTablatureSVG(songData);
@@ -579,21 +692,13 @@ function generateViewer(songData, metadata) {
         }
     });
 
-    // Sort pitches musically using the same order as the tablature generation
+    // Sort pitches musically using the same order as the tablature generation (highest to lowest)
     pitchList.sort((a, b) => {
         const orderA = pitchOrder[a] || 999;
         const orderB = pitchOrder[b] || 999;
 
-        // First sort by octave (C4 comes before any other note in octave 4)
-        const octaveA = Math.floor(orderA / 12);
-        const octaveB = Math.floor(orderB / 12);
-
-        if (octaveA !== octaveB) {
-            return octaveA - octaveB;
-        }
-
-        // Within same octave, sort chromatically from C
-        return orderA - orderB;
+        // Sort highest to lowest (same as tablature)
+        return orderB - orderA;
     });
 
     // Clean up pitch names for display (handle accidentals consistently)
@@ -855,16 +960,12 @@ function generateViewer(songData, metadata) {
                     <span>${metadata?.noteCount || songData.notes.length}</span>
                 </div>
                 <div class="metadata-item">
-                    <span class="metadata-label">Unique:</span>
-                    <span>${metadata?.uniqueNotes || '?'}</span>
+                    <span class="metadata-label">Learn Only:</span>
+                    <span>${metadata?.patternEfficiency?.learnOnly || '?'}</span>
                 </div>
                 <div class="metadata-item">
                     <span class="metadata-label">Strings:</span>
                     <span>${stringsDisplay}</span>
-                </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Tempo:</span>
-                    <span>${metadata?.tempo || '120'} BPM</span>
                 </div>
                 ${metadata?.patternEfficiency ? `
                 <div class="metadata-item">
@@ -1013,7 +1114,7 @@ function generateViewer(songData, metadata) {
                 note.setAttribute('cy', scaledY);
             });
 
-            // Update resonance bands - position and width only
+            // Update resonance bands - use same scaling as string lines
             const bands = svg.querySelectorAll('.resonance-band');
             bands.forEach(band => {
                 const baseX = parseFloat(band.getAttribute('data-base-x'));
@@ -1021,7 +1122,7 @@ function generateViewer(songData, metadata) {
                 const baseWidth = parseFloat(band.getAttribute('data-base-width'));
 
                 const scaledX = 120 + (baseX - 120) * currentZoomX;
-                const scaledY = baseY * currentZoomY; // Center on string
+                const scaledY = baseY * currentZoomY; // Use identical scaling to string lines
                 const scaledWidth = baseWidth * currentZoomX;
 
                 band.setAttribute('x', scaledX - 10);
@@ -1151,8 +1252,8 @@ function generateViewer(songData, metadata) {
             const svg = document.getElementById('tablature');
             const baseWidth = parseFloat(svg.getAttribute('data-base-width'));
 
-            // Account for resonance band extension (170px) to show complete tablature
-            const fullTablatureWidth = baseWidth + 170;
+            // Account for resonance band extension (340px) to show complete tablature
+            const fullTablatureWidth = baseWidth + 340;
 
             containerWidth = container.clientWidth - 40; // Account for padding
             currentZoomX = containerWidth / fullTablatureWidth;
@@ -1257,6 +1358,10 @@ async function processAllSongs() {
             // Apply slur-to-tie conversion (CRITICAL for V1-compatible note counts)
             songData.notes = convertSlursToTies(songData.notes);
 
+            // Calculate pattern efficiency (KPIC/KRIC analysis)
+            const patternEfficiency = calculatePatternEfficiency(songData.notes);
+            console.log(`Pattern analysis: Learn ${patternEfficiency.learnOnly}/${patternEfficiency.totalNotes} (${patternEfficiency.efficiency}% efficiency, best: ${patternEfficiency.bestPattern})`);
+
             // Calculate used strings (before generating HTML)
             const usedStrings = new Set(songData.notes.map(n => n.string));
             songData.usedStrings = usedStrings;
@@ -1264,7 +1369,7 @@ async function processAllSongs() {
             // Generate viewer HTML
             const viewerHTML = generateViewer(songData, metadata);
 
-            // Update metadata with corrected data (post slur-to-tie conversion + usedStrings calculated)
+            // Update metadata with corrected data (post slur-to-tie conversion + pattern analysis)
             if (metadata) {
                 metadata.noteCount = songData.notes.length;
                 metadata.processedDate = new Date().toISOString();
@@ -1278,10 +1383,8 @@ async function processAllSongs() {
                 });
                 metadata.strings = uniquePitches.size;
 
-                // Also update pattern efficiency totalNotes to match corrected count
-                if (metadata.patternEfficiency) {
-                    metadata.patternEfficiency.totalNotes = songData.notes.length;
-                }
+                // Update with calculated pattern efficiency
+                metadata.patternEfficiency = patternEfficiency;
 
                 // Write updated metadata
                 fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));

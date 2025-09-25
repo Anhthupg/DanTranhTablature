@@ -6,6 +6,9 @@ const { JSDOM } = require('jsdom');
 const danTranhConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/dan-tranh-config.json'), 'utf8'));
 const DEFAULT_STRING_COUNT = danTranhConfig.stringConfiguration.default;
 
+// Load comprehensive tuning systems database
+const tuningSystems = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/tuning-systems.json'), 'utf8'));
+
 // Pentatonic Tuning System - Based on collection analysis
 // Top 5 pitch classes: D, A, G, C, E (covers 81.6% of all notes)
 // Remaining notes require string bending
@@ -134,11 +137,50 @@ function calculateSongTuning(noteElements) {
         }
     });
 
-    // Sort by frequency and take top 5
+    // Sort by frequency and take most frequent notes
     const sortedPitches = Object.entries(pitchClassCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
         .map(([pitch, _]) => pitch);
+
+    // If we have fewer than 5 notes, intelligently fill in missing ones
+    let tuning = sortedPitches.slice(0, 5);
+
+    if (tuning.length < 5) {
+        // Use the comprehensive tuning database
+        const tuningKey = tuning.sort().join(',');
+        let fullTuning = null;
+
+        // Check pattern completions based on note count
+        if (tuning.length === 3 && tuningSystems.patternCompletions['3-note'][tuningKey]) {
+            fullTuning = tuningSystems.patternCompletions['3-note'][tuningKey];
+        } else if (tuning.length === 4 && tuningSystems.patternCompletions['4-note'][tuningKey]) {
+            fullTuning = tuningSystems.patternCompletions['4-note'][tuningKey];
+        } else {
+            // Fill with logical notes based on what we have
+            const hasC = tuning.includes('C');
+            const hasD = tuning.includes('D');
+            const hasE = tuning.includes('E');
+            const hasF = tuning.includes('F');
+            const hasG = tuning.includes('G');
+            const hasA = tuning.includes('A');
+            const hasBb = tuning.includes('Bb');
+            const hasB = tuning.includes('B');
+
+            // Add missing notes in order of preference
+            if (!hasD && tuning.length < 5) tuning.push('D');
+            if (!hasA && tuning.length < 5) tuning.push('A');
+            if (!hasE && tuning.length < 5) tuning.push('E');
+            if (!hasG && tuning.length < 5) tuning.push('G');
+            if (!hasC && tuning.length < 5) tuning.push('C');
+            if (!hasF && tuning.length < 5) tuning.push('F');
+            if (!hasBb && tuning.length < 5) tuning.push('Bb');
+            if (!hasB && tuning.length < 5) tuning.push('B');
+        }
+
+        if (fullTuning) {
+            tuning = fullTuning;
+        }
+    }
 
     // Sort by chromatic position (C=0, C#/Db=1, D=2, etc.)
     const chromaticOrder = {
@@ -146,7 +188,7 @@ function calculateSongTuning(noteElements) {
         'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8,
         'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
     };
-    const tuning = sortedPitches.sort((a, b) => chromaticOrder[a] - chromaticOrder[b]);
+    tuning = tuning.slice(0, 5).sort((a, b) => chromaticOrder[a] - chromaticOrder[b]);
 
     return tuning;
 }

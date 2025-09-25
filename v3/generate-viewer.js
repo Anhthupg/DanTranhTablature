@@ -756,7 +756,10 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         const stringConfig = allStringConfigs.find(([num, _]) => parseInt(num) === note.string);
         if (!stringConfig) return;
 
-        const adjustedY = stringConfig[1].y - minY + 50 + yOffset;
+        // For bent notes, use the calculated proportional Y position
+        // For open notes, use the string's Y position
+        const noteY = note.isBent && note.y ? note.y : stringConfig[1].y;
+        const adjustedY = noteY - minY + 50 + yOffset;
         const bandHeight = 30;
         const circleRadius = 12;
 
@@ -768,29 +771,53 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
           fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
           data-note-index="${index}" class="resonance-band"/>`;
 
-        // Bending symbol
+        // Bending symbol - draw from the open string to bent position
         if (note.isBent && note.bendFromString) {
-            const stringY = adjustedY;
-            const bendHeight = adjustedY - stringY;
+            // Get the actual open string Y position
+            const openStringY = stringConfig[1].y - minY + 50 + yOffset;
+            const bendHeight = Math.abs(adjustedY - openStringY);
+            const bendDirection = adjustedY > openStringY ? 1 : -1;
+
+            // Draw curved line from open string to bent position
+            const startX = note.x - 35;
+            const endX = note.x - 8;
+            const controlX = note.x - 20;
+            const controlY = openStringY + (bendHeight * 0.5 * bendDirection);
+
             svg += `
-    <path d="M ${note.x - 20},${stringY} Q ${note.x - 15},${stringY + bendHeight/2} ${note.x - 10},${adjustedY}"
-          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
-          fill="none" opacity="0.7"
-          data-note-index="${index}"
-          class="bend-symbol"/>
-    <text x="${note.x - 25}" y="${stringY + bendHeight/2}"
-          text-anchor="end"
-          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
-          data-note-index="${index}">
-        ↗
-    </text>`;
+    <!-- Bent note indicator -->
+    <g class="bent-note-group" data-note-index="${index}">
+        <!-- Curved bend line from open string to bent position -->
+        <path d="M ${startX},${openStringY} Q ${controlX},${controlY} ${endX},${adjustedY}"
+              stroke="#FF6B6B" stroke-width="2.5" stroke-dasharray="4,2"
+              fill="none" opacity="0.7"
+              class="bend-symbol"/>
+
+        <!-- Start point on open string -->
+        <circle cx="${startX}" cy="${openStringY}" r="2.5"
+                fill="#FF6B6B" stroke="none" opacity="0.8"/>
+
+        <!-- Bend amount text -->
+        <text x="${controlX}" y="${openStringY - 8}"
+              text-anchor="middle" class="bend-amount"
+              style="font-size: 9px; fill: #FF6B6B; font-weight: bold;">
+            ${note.bendRatio ? Math.round(note.bendRatio * 100) + '%' : ''}
+        </text>
+
+        <!-- Arrow indicator -->
+        <text x="${startX - 5}" y="${openStringY + 3}"
+              text-anchor="end" class="bend-arrow"
+              style="font-size: 12px; fill: #FF6B6B;">
+            ${bendDirection > 0 ? '↗' : '↘'}
+        </text>
+    </g>`;
         }
 
         // Determine if this is a grace note for sizing
         const isGrace = note.grace || note.isGrace || false;
         const noteRadius = isGrace ? 6 : circleRadius;
         const noteFontSize = isGrace ? 10 : 16;
-        const noteYOffset = isGrace ? 5 : 10;  // Moved down 2px (was 3 and 8)
+        const noteYOffset = isGrace ? 8 : 13;  // Moved down 3px more
 
         // Note circle (neutral grey, theme-adaptive)
         svg += `
@@ -998,21 +1025,42 @@ function generateTablatureSVG_ORIGINAL(songData) {
             const stringConfig = usedStringConfigs.find(([num, _]) => parseInt(num) === note.string);
             if (stringConfig) {
                 const stringY = stringConfig[1].y - minY + 50;
-                const bendHeight = adjustedY - stringY;
+                const bendHeight = Math.abs(adjustedY - stringY);
+                const bendDirection = adjustedY > stringY ? 1 : -1; // 1 for up, -1 for down
 
-                // Draw curved dashed line showing the bend from base string to bent position
+                // Draw a more prominent curved line showing the bend
+                const startX = note.x - 35;
+                const endX = note.x - 8;
+                const controlX = note.x - 20;
+                const controlY = stringY + (bendHeight * 0.5 * bendDirection);
+
                 svg += `
-    <path d="M ${note.x - 20},${stringY} Q ${note.x - 15},${stringY + bendHeight/2} ${note.x - 10},${adjustedY}"
-          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
-          fill="none" opacity="0.7"
-          data-note-index="${note.index}"
-          class="bend-symbol"/>
-    <text x="${note.x - 25}" y="${stringY + bendHeight/2}"
-          text-anchor="end" class="bend-label"
-          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
-          data-note-index="${note.index}">
-        ↗
-    </text>`;
+    <!-- Bent note indicator -->
+    <g class="bent-note-group" data-note-index="${note.index}">
+        <!-- Curved bend line -->
+        <path d="M ${startX},${stringY} Q ${controlX},${controlY} ${endX},${adjustedY}"
+              stroke="#FF6B6B" stroke-width="3" stroke-dasharray="5,3"
+              fill="none" opacity="0.8"
+              class="bend-symbol"/>
+
+        <!-- Start point on string -->
+        <circle cx="${startX}" cy="${stringY}" r="3"
+                fill="#FF6B6B" stroke="none" opacity="0.8"/>
+
+        <!-- Bend amount indicator -->
+        <text x="${controlX}" y="${stringY - 5}"
+              text-anchor="middle" class="bend-amount"
+              style="font-size: 10px; fill: #FF6B6B; font-weight: bold;">
+            ${note.bendRatio ? Math.round(note.bendRatio * 100) + '%' : ''}
+        </text>
+
+        <!-- Arrow indicator -->
+        <text x="${startX - 8}" y="${stringY + 3}"
+              text-anchor="end" class="bend-arrow"
+              style="font-size: 14px; fill: #FF6B6B; font-weight: bold;">
+            ${bendDirection > 0 ? '↗' : '↘'}
+        </text>
+    </g>`;
             }
         }
     });

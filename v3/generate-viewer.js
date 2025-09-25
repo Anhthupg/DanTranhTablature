@@ -2,6 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
+// Load Dan Tranh configuration
+const danTranhConfig = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/dan-tranh-config.json'), 'utf8'));
+const DEFAULT_STRING_COUNT = danTranhConfig.stringConfiguration.default;
+
 // Pentatonic Tuning System - Based on collection analysis
 // Top 5 pitch classes: D, A, G, C, E (covers 81.6% of all notes)
 // Remaining notes require string bending
@@ -18,23 +22,40 @@ const SEMITONE_OFFSETS = {
 };
 
 // Generate string configuration for multiple octaves
-function generatePentatonicStrings(startOctave, endOctave) {
+// Standard Dan Tranh has 17 strings starting at E3, but supports 1-30 strings
+function generatePentatonicStrings(startNote = 'E', startOctave = 3, maxStrings = 17) {
     const strings = {};
     let stringNum = 1;
 
-    for (let octave = startOctave; octave <= endOctave; octave++) {
-        for (const pitch of PENTATONIC_SCALE) {
-            const noteName = `${pitch}${octave}`;
-            const semitones = (octave - 3) * 12 + SEMITONE_OFFSETS[pitch];
-            const yPos = baseY + (semitones * 100 * pixelsPerCent);
-            strings[stringNum] = { note: noteName, y: yPos, pitchClass: pitch };
-            stringNum++;
+    // Find starting position in pentatonic scale
+    let startIndex = PENTATONIC_SCALE.indexOf(startNote);
+    if (startIndex === -1) startIndex = 0;
+
+    let octave = startOctave;
+    let noteIndex = startIndex;
+
+    while (stringNum <= maxStrings && octave <= 7) {
+        const pitch = PENTATONIC_SCALE[noteIndex];
+        const noteName = `${pitch}${octave}`;
+        const semitones = (octave - 3) * 12 + SEMITONE_OFFSETS[pitch];
+        const yPos = baseY + (semitones * 100 * pixelsPerCent);
+        strings[stringNum] = { note: noteName, y: yPos, pitchClass: pitch };
+        stringNum++;
+
+        // Move to next note in scale
+        noteIndex++;
+        if (noteIndex >= PENTATONIC_SCALE.length) {
+            noteIndex = 0;
+            octave++;
         }
     }
+
     return strings;
 }
 
-const STRING_CONFIG = generatePentatonicStrings(3, 5); // Octaves 3-5
+// Standard 17-string configuration starting at E3
+// E3,G3,A3,C4,D4,E4,G4,A4,C5,D5,E5,G5,A5,C6,D6,E6,G6
+const STRING_CONFIG = generatePentatonicStrings('E', 3, 17); // Standard 17 strings starting at E3
 
 // 12-color system from CLAUDE.md
 const COLORS = {
@@ -171,7 +192,8 @@ function parseMultiPartScore(doc, xmlPath, parts) {
         const minOctave = Math.min(...octaves);
         const maxOctave = Math.max(...octaves);
 
-        const SONG_SPECIFIC_STRINGS = generateSongSpecificStrings(songTuning, minOctave, maxOctave);
+        // Use standard 17-string configuration instead of song-specific
+        const SONG_SPECIFIC_STRINGS = STRING_CONFIG;
 
         let currentX = 120;
 
@@ -292,9 +314,10 @@ async function parseMusicXML(xmlPath) {
     // Extract notes
     const noteElements = doc.querySelectorAll('note');
 
-    // Calculate song-specific tuning FIRST
+    // Calculate song-specific tuning for analysis
     const songTuning = calculateSongTuning(noteElements);
-    const SONG_SPECIFIC_STRINGS = generateSongSpecificStrings(songTuning, 3, 5);
+    // But use standard 17-string configuration for string mapping
+    const SONG_SPECIFIC_STRINGS = STRING_CONFIG;
 
     let currentX = 120; // Starting X position
 
@@ -599,12 +622,22 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
     const lastNoteX = Math.max(...notes.map(n => n.x));
     const maxX = lastNoteX + 320 + 100;
 
-    // Show ALL strings in the tuning (full instrument view)
+    // Always show all 17 strings consistently
     // Color: grey for non-played, black for played
     const playedStringNums = new Set(notes.map(n => n.string));
-    const allStringConfigs = Object.entries(stringConfig)
-        .filter(([stringNum, config]) => tuning.includes(config.pitchClass))
-        .sort((a, b) => a[1].y - b[1].y);
+
+    // Use the standard 17-string configuration
+    const standardStringConfig = STRING_CONFIG;
+
+    // Always show all 17 strings
+    let stringsToShow = [];
+    for (let i = 1; i <= 17; i++) {
+        if (standardStringConfig[i]) {
+            stringsToShow.push([String(i), standardStringConfig[i]]);
+        }
+    }
+
+    const allStringConfigs = stringsToShow;
 
     const stringYPositions = allStringConfigs.map(([num, config]) => config.y);
     const minStringY = Math.min(...stringYPositions);
@@ -682,7 +715,7 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         const isGrace = note.grace || note.isGrace || false;
         const noteRadius = isGrace ? 6 : circleRadius;
         const noteFontSize = isGrace ? 10 : 16;
-        const noteYOffset = isGrace ? 3 : 8;
+        const noteYOffset = isGrace ? 5 : 10;  // Moved down 2px (was 3 and 8)
 
         // Note circle (neutral grey, theme-adaptive)
         svg += `

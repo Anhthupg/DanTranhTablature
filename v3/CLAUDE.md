@@ -126,19 +126,52 @@ const texturePatterns = {
 }
 ```
 
-## String Configuration (Dan Tranh Physical Layout)
+## String Configuration (Standard 17-String Dan Tranh)
 
-| String | Note | Y Position | Purpose |
-|--------|------|------------|---------|
-| 5      | D4   | 115        | Base |
-| 7      | G4   | 265        | 4th |
-| 8      | A4   | 325        | 5th |
-| 9      | C5   | 415        | 7th |
-| 10     | D5   | 475        | Octave |
-| 11     | E5   | 535        | 2nd above |
-| 12     | G5   | 625        | 4th above |
+### Global Configuration
+The Dan Tranh uses a **standard 17-string configuration** starting at E3, following the traditional Vietnamese pentatonic tuning system. This configuration is used globally across all visualizations.
 
-- **Spacing**: 60-150px between strings
+### Standard 17-String Layout
+| String | Note | Y Position | Interval from Previous |
+|--------|------|------------|------------------------|
+| 1      | E3   | 50         | - |
+| 2      | G3   | 110        | Minor 3rd (300 cents) |
+| 3      | A3   | 140        | Major 2nd (200 cents) |
+| 4      | C4   | 200        | Minor 3rd (300 cents) |
+| 5      | D4   | 230        | Major 2nd (200 cents) |
+| 6      | E4   | 260        | Major 2nd (200 cents) |
+| 7      | G4   | 320        | Minor 3rd (300 cents) |
+| 8      | A4   | 350        | Major 2nd (200 cents) |
+| 9      | C5   | 410        | Minor 3rd (300 cents) |
+| 10     | D5   | 440        | Major 2nd (200 cents) |
+| 11     | E5   | 470        | Major 2nd (200 cents) |
+| 12     | G5   | 530        | Minor 3rd (300 cents) |
+| 13     | A5   | 560        | Major 2nd (200 cents) |
+| 14     | C6   | 620        | Minor 3rd (300 cents) |
+| 15     | D6   | 650        | Major 2nd (200 cents) |
+| 16     | E6   | 680        | Major 2nd (200 cents) |
+| 17     | G6   | 740        | Minor 3rd (300 cents) |
+
+### Configuration Details
+- **Tuning System**: Pentatonic (5-note scale: C, D, E, G, A)
+- **Starting Note**: E3 (lowest string)
+- **Octave Range**: E3 to G6 (3.5 octaves)
+- **Total Strings**: 17 (standard), configurable 1-30
+- **Spacing Calculation**: Proportional based on musical intervals (0.3 pixels per cent)
+- **Display Logic**:
+  - Always show all 17 strings in tablature
+  - Used strings shown in black
+  - Unused strings shown in grey (#999)
+  - Minimum 5 strings displayed even if fewer are used
+
+### Technical Implementation
+```javascript
+// Standard 17-string generation starting at E3
+const STRING_CONFIG = generatePentatonicStrings('E', 3, 17);
+
+// Generates: E3, G3, A3, C4, D4, E4, G4, A4, C5, D5, E5, G5, A5, C6, D6, E6, G6
+```
+
 - **Default zoom**: 67% for comfortable viewing
 - **Coordinate system**: SVG (top=0, increases downward)
 

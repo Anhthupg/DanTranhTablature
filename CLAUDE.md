@@ -13,18 +13,27 @@ The Dan Tranh tablature now uses a **dynamic string configuration** that:
 - **Supports microtones** (e.g., C4+15cents for precise tuning)
 - **Displays only played strings** for cleaner visualization
 
-### Tuning Systems Supported
-- **Pentatonic**: Traditional 5-note scale (C, D, E, G, A) repeated in octaves
-- **Hexachord**: 6-note tuning systems
-- **Heptachord**: 7-note tuning systems
-- **Custom**: Any combination of notes including chromatic variations
+### Song-Specific Pentatonic Tuning System (UPDATED v3.1.6)
+Each song now uses its own optimal tuning based on the 5 most frequently used pitch classes:
+
+- **Analysis**: Analyzes all notes in a song and counts pitch class frequencies (C, D, E, F, G, A, B)
+- **Selection**: Top 5 most common pitch classes become the open strings
+- **Ordering**: Sorted alphabetically starting from C (octaves begin at C, not D)
+- **Result**: Optimal 5-note pentatonic scale specific to each song
+
+**Examples**:
+- "Bồ Các là bác chim Ri": Uses C-F-G (only 3 notes, 0 bent notes)
+- "Bà rằng bà rí": Uses C-D-E-G-A (full pentatonic, 0 bent notes)
+- "Bài chòi": Uses D-E-F-A-B (1 bent note, 2.4%)
 
 ### String Bending for Non-Open Notes
-For notes that aren't on open strings:
-- Notes are placed **proportionally between strings**
-- A **bending symbol** (curved dashed line) shows the bend from the lower string
-- The bend ratio is calculated based on the interval between strings
-- This represents the traditional Dan Tranh playing technique of pressing strings
+For notes that aren't in the song's pentatonic tuning:
+- Notes are placed **proportionally between strings** based on semitone distance
+- A **red curved dashed line with arrow** (bend symbol) shows the bend from the lower open string
+- The bend ratio is calculated based on the interval between strings in cents
+- Bent notes can be **highlighted in red** by clicking the "Bent Strings / Bent Notes" button
+- **Metrics tracked**: Number of bent strings, number of bent notes, percentage of bent notes
+- This represents the traditional Dan Tranh playing technique of pressing strings to reach non-open pitches
 
 ### Example String Configurations
 
@@ -65,6 +74,50 @@ For notes that aren't on open strings:
 - etc.
 
 ## Visualization Features
+
+### Individual Song Viewer (v3.1.6)
+Each song has a dedicated viewer page with:
+
+**Compact Header Metrics (Minimalist Design)**:
+- **Tuning**: Song-specific pentatonic scale (e.g., "C-D-E-G-A")
+- **Total Notes**: Complete note count for the song
+- **Open-String Notes**: Notes played on open strings (no bending)
+- **Bent Strings / Bent Notes Button**:
+  - Clickable toggle button with clear on/off states
+  - **OFF state**: Green border, white background, green text
+  - **ON state**: Red background, white text, all bent notes highlighted in red
+  - Shows count of bent strings and bent notes
+- **Patterns**: Number of unique patterns to learn
+
+**Interactive Features**:
+- **Theme Selector**: 4 themes (White, Light Grey, Dark Grey, Black) in top-right corner
+- **Back to Library**: Button next to theme selector
+- **Zoom Controls**:
+  - X-Zoom slider with Fit Width button
+  - Y-Zoom slider with Fit Height button
+- **Bent Notes Highlighting**: Click button to toggle red highlighting of all bent notes
+
+**Button Toggle Behavior**:
+- All clickable buttons must have clear ON and OFF states
+- Visual feedback shows current state (color change, background change)
+- Second click returns to original state
+
+### Library Interface
+**Thumbnail Cards Display**:
+- **Tuning**: "Tuning: C-D-E-G-A" (green text, monospace font)
+- **Strings Used**: "X strings used" (actual strings played in song)
+- **Bent Notes**: "X bent strings, Y bent notes" (only shown if > 0)
+- **Other Tags**: Time signature, lyrics indicator, learn count
+
+**Sort Options**:
+- Strings (number of strings used)
+- Learn Only (pattern count)
+- Total Notes
+- **Tuning** (alphabetical by tuning scale)
+
+**Filter Options**:
+- By region (Northern, Southern, Central, etc.)
+- By genre (Work songs, Lullabies, Folk, etc.)
 
 ### Sankey Diagrams
 - **KPIC-2 Sankey**: Shows pitch transitions between strings

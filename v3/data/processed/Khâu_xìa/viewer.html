@@ -209,6 +209,33 @@
             font-weight: bold;
         }
 
+        /* Theme-adaptive string colors */
+        .string-line-played {
+            stroke: #2C3E50;
+            opacity: 0.6;
+        }
+        .string-line-unplayed {
+            stroke: #999999;
+            opacity: 0.4;
+        }
+        .string-label-played {
+            fill: #2C3E50;
+        }
+        .string-label-unplayed {
+            fill: #AAAAAA;
+        }
+
+        /* Dark themes: white for played strings */
+        body.theme-dark-grey .string-line-played,
+        body.theme-black .string-line-played {
+            stroke: #ECF0F1;
+            opacity: 0.8;
+        }
+        body.theme-dark-grey .string-label-played,
+        body.theme-black .string-label-played {
+            fill: #ECF0F1;
+        }
+
         .back-link {
             position: fixed;
             top: 90px;
@@ -240,32 +267,58 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Khâu Xìa</h1>
-            <div class="metadata">
-                <div class="metadata-item">
-                    <span class="metadata-label">Notes:</span>
-                    <span>36</span>
+        <header style="padding-bottom: 15px;">
+            <h1 style="margin-bottom: 10px;">Khâu Xìa</h1>
+
+            <!-- Compact Metrics Row -->
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                <!-- Tuning -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 14px; color: #95a5a6;">Tuning:</span>
+                    <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">D-F-G-A</span>
                 </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Learn Only:</span>
-                    <span>9</span>
+
+                <!-- Total Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #e74c3c; font-weight: 600;">36</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Total Notes</span>
                 </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Strings:</span>
-                    <span>6 (A3, D5, A4, G4, F4, D4)</span>
+
+                <!-- Open-String Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #3498db; font-weight: 600;">36</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Open-String Notes</span>
                 </div>
-                
-                <div class="metadata-item">
-                    <span class="efficiency-badge">
-                        Learn 9 patterns → Play 36 notes
+
+                <!-- Bent Notes (clickable button) -->
+                <button id="bentStringsMetric" onclick="toggleBentNotesHighlight()"
+                     style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 6px 12px; border-radius: 5px; border: 2px solid #27ae60; background: white; transition: all 0.2s; font-family: inherit;"
+                     title="Click to highlight bent notes in red">
+                    <span style="font-size: 16px; color: #27ae60; font-weight: 600;">
+                        <span id="bentStringsCount">0</span> Bent Strings / <span id="bentNotesCount">0</span> Bent Notes
                     </span>
+                </button>
+
+                <!-- Learn Only -->
+                
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #9b59b6; font-weight: 600;">9</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Patterns</span>
                 </div>
                 
             </div>
         </header>
 
-        <a href="/" class="back-link">← Back to Library</a>
+        <!-- Theme selector and Back button - top right corner -->
+        <div style="position: fixed; right: 20px; top: 20px; display: flex; gap: 15px; align-items: center; z-index: 1001;">
+            <a href="/" class="back-link" style="position: static; margin: 0; padding: 8px 16px; font-size: 14px;">← Back to Library</a>
+            <div class="theme-selector" style="display: flex; gap: 10px;">
+                <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
+                <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
+                <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
+                <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
+            </div>
+        </div>
 
         <div class="controls">
             <div class="zoom-controls">
@@ -288,1475 +341,818 @@
             </div>
         </div>
 
-        <!-- Theme selector - top right corner -->
-        <div class="theme-selector" style="position: fixed; right: 20px; top: 20px; display: flex; gap: 10px; z-index: 1001;">
-            <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
-            <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
-            <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
-            <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
-        </div>
-
         <div class="tablature-container">
             
-<svg id="tablature" xmlns="http://www.w3.org/2000/svg" width="6270" height="730">
-    <!-- Transparent background for direct drawing -->
-    <rect x="0" y="0" width="6270" height="730" fill="transparent"/>
-
-    <!-- String lines -->
-    <line x1="100" y1="680" x2="6270" y2="680"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
-    <line x1="100" y1="530" x2="6270" y2="530"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
-    <line x1="100" y1="470" x2="6270" y2="470"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
-    <line x1="100" y1="410" x2="6270" y2="410"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
-    <line x1="100" y1="320" x2="6270" y2="320"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
-    <line x1="100" y1="170" x2="6270" y2="170"
-          stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>
+<svg id="tablatureSvg" xmlns="http://www.w3.org/2000/svg" width="6490" height="1110">
     <defs>
-        <linearGradient id="grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
+        <linearGradient id="resonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.2" />
             <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
+            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.2" />
         </linearGradient>
     </defs>
-    <rect x="110" y="674"
-          width="320" height="12"
-          fill="url(#grad-1)"
-          rx="4" class="resonance-band"
-          data-note-index="1"
-          data-string-y="680"/>
-    <circle cx="120" cy="680" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="1"
-            data-is-grace="false"/>
-    <text x="120" y="685"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="1">
-        1
-    </text>
-    <text x="120" y="653"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="1">
-        #1
-    </text>
-    <text x="124" y="720"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 124, 720)"
-          data-note-index="1">
-        A
-    </text>
-    <defs>
-        <linearGradient id="grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="280" y="164"
-          width="320" height="12"
-          fill="url(#grad-2)"
-          rx="4" class="resonance-band"
-          data-note-index="2"
-          data-string-y="170"/>
-    <circle cx="290" cy="170" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="2"
-            data-is-grace="false"/>
-    <text x="290" y="175"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="2">
-        6
-    </text>
-    <text x="290" y="143"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="2">
-        #2
-    </text>
-    <text x="294" y="210"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 294, 210)"
-          data-note-index="2">
-        già
-    </text>
-    <defs>
-        <linearGradient id="grad-3" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="450" y="314"
-          width="320" height="12"
-          fill="url(#grad-3)"
-          rx="4" class="resonance-band"
-          data-note-index="3"
-          data-string-y="320"/>
-    <circle cx="460" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="3"
-            data-is-grace="false"/>
-    <text x="460" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="3">
-        5
-    </text>
-    <text x="460" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="3">
-        #3
-    </text>
-    <text x="464" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 464, 360)"
-          data-note-index="3">
-        tù
-    </text>
-    <defs>
-        <linearGradient id="grad-4" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="620" y="404"
-          width="320" height="12"
-          fill="url(#grad-4)"
-          rx="4" class="resonance-band"
-          data-note-index="4"
-          data-string-y="410"/>
-    <circle cx="630" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="4"
-            data-is-grace="false"/>
-    <text x="630" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="4">
-        4
-    </text>
-    <text x="630" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="4">
-        #4
-    </text>
-    <text x="634" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 634, 450)"
-          data-note-index="4">
-        dua
-    </text>
-    <defs>
-        <linearGradient id="grad-5" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="705" y="464"
-          width="320" height="12"
-          fill="url(#grad-5)"
-          rx="4" class="resonance-band"
-          data-note-index="5"
-          data-string-y="470"/>
-    <circle cx="715" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="5"
-            data-is-grace="false"/>
-    <text x="715" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="5">
-        3
-    </text>
-    <text x="715" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="5">
-        #5
-    </text>
-    <text x="719" y="510"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 719, 510)"
-          data-note-index="5">
-        minh
-    </text>
-    <defs>
-        <linearGradient id="grad-6" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="790" y="314"
-          width="320" height="12"
-          fill="url(#grad-6)"
-          rx="4" class="resonance-band"
-          data-note-index="6"
-          data-string-y="320"/>
-    <circle cx="800" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="6"
-            data-is-grace="false"/>
-    <text x="800" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="6">
-        5
-    </text>
-    <text x="800" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="6">
-        #6
-    </text>
-    <text x="804" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 804, 360)"
-          data-note-index="6">
-        cầu
-    </text>
-    <defs>
-        <linearGradient id="grad-7" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1130" y="524"
-          width="320" height="12"
-          fill="url(#grad-7)"
-          rx="4" class="resonance-band"
-          data-note-index="7"
-          data-string-y="530"/>
-    <circle cx="1140" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="7"
-            data-is-grace="false"/>
-    <text x="1140" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="7">
-        2
-    </text>
-    <text x="1140" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="7">
-        #7
-    </text>
-    <text x="1144" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1144, 570)"
-          data-note-index="7">
-        mông
-    </text>
-    <defs>
-        <linearGradient id="grad-8" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1215" y="464"
-          width="320" height="12"
-          fill="url(#grad-8)"
-          rx="4" class="resonance-band"
-          data-note-index="8"
-          data-string-y="470"/>
-    <circle cx="1225" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="8"
-            data-is-grace="false"/>
-    <text x="1225" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="8">
-        3
-    </text>
-    <text x="1225" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="8">
-        #8
-    </text>
-    <defs>
-        <linearGradient id="grad-9" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1300" y="524"
-          width="320" height="12"
-          fill="url(#grad-9)"
-          rx="4" class="resonance-band"
-          data-note-index="9"
-          data-string-y="530"/>
-    <circle cx="1310" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="9"
-            data-is-grace="false"/>
-    <text x="1310" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="9">
-        2
-    </text>
-    <text x="1310" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="9">
-        #9
-    </text>
-    <text x="1314" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1314, 570)"
-          data-note-index="9">
-        a
-    </text>
-    <defs>
-        <linearGradient id="grad-10" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1470" y="404"
-          width="320" height="12"
-          fill="url(#grad-10)"
-          rx="4" class="resonance-band"
-          data-note-index="10"
-          data-string-y="410"/>
-    <circle cx="1480" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="10"
-            data-is-grace="false"/>
-    <text x="1480" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="10">
-        4
-    </text>
-    <text x="1480" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="10">
-        #10
-    </text>
-    <text x="1484" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1484, 450)"
-          data-note-index="10">
-        lơ
-    </text>
-    <defs>
-        <linearGradient id="grad-11" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1640" y="404"
-          width="320" height="12"
-          fill="url(#grad-11)"
-          rx="4" class="resonance-band"
-          data-note-index="11"
-          data-string-y="410"/>
-    <circle cx="1650" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="11"
-            data-is-grace="false"/>
-    <text x="1650" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="11">
-        4
-    </text>
-    <text x="1650" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="11">
-        #11
-    </text>
-    <text x="1654" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1654, 450)"
-          data-note-index="11">
-        Tu
-    </text>
-    <defs>
-        <linearGradient id="grad-12" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1725" y="464"
-          width="320" height="12"
-          fill="url(#grad-12)"
-          rx="4" class="resonance-band"
-          data-note-index="12"
-          data-string-y="470"/>
-    <circle cx="1735" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="12"
-            data-is-grace="false"/>
-    <text x="1735" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="12">
-        3
-    </text>
-    <text x="1735" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="12">
-        #12
-    </text>
-    <text x="1739" y="510"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1739, 510)"
-          data-note-index="12">
-        mi
-    </text>
-    <defs>
-        <linearGradient id="grad-13" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1810" y="404"
-          width="320" height="12"
-          fill="url(#grad-13)"
-          rx="4" class="resonance-band"
-          data-note-index="13"
-          data-string-y="410"/>
-    <circle cx="1820" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="13"
-            data-is-grace="false"/>
-    <text x="1820" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="13">
-        4
-    </text>
-    <text x="1820" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="13">
-        #13
-    </text>
-    <text x="1824" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1824, 450)"
-          data-note-index="13">
-        chua
-    </text>
-    <defs>
-        <linearGradient id="grad-14" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="1980" y="314"
-          width="320" height="12"
-          fill="url(#grad-14)"
-          rx="4" class="resonance-band"
-          data-note-index="14"
-          data-string-y="320"/>
-    <circle cx="1990" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="14"
-            data-is-grace="false"/>
-    <text x="1990" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="14">
-        5
-    </text>
-    <text x="1990" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="14">
-        #14
-    </text>
-    <text x="1994" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 1994, 360)"
-          data-note-index="14">
-        tùa
-    </text>
-    <defs>
-        <linearGradient id="grad-15" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="2150" y="164"
-          width="320" height="12"
-          fill="url(#grad-15)"
-          rx="4" class="resonance-band"
-          data-note-index="15"
-          data-string-y="170"/>
-    <circle cx="2160" cy="170" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="15"
-            data-is-grace="false"/>
-    <text x="2160" y="175"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="15">
-        6
-    </text>
-    <text x="2160" y="143"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="15">
-        #15
-    </text>
-    <text x="2164" y="210"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 2164, 210)"
-          data-note-index="15">
-        già
-    </text>
-    <defs>
-        <linearGradient id="grad-16" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="2320" y="314"
-          width="320" height="12"
-          fill="url(#grad-16)"
-          rx="4" class="resonance-band"
-          data-note-index="16"
-          data-string-y="320"/>
-    <circle cx="2330" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="16"
-            data-is-grace="false"/>
-    <text x="2330" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="16">
-        5
-    </text>
-    <text x="2330" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="16">
-        #16
-    </text>
-    <text x="2334" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 2334, 360)"
-          data-note-index="16">
-        và
-    </text>
-    <defs>
-        <linearGradient id="grad-17" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="2490" y="404"
-          width="320" height="12"
-          fill="url(#grad-17)"
-          rx="4" class="resonance-band"
-          data-note-index="17"
-          data-string-y="410"/>
-    <circle cx="2500" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="17"
-            data-is-grace="false"/>
-    <text x="2500" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="17">
-        4
-    </text>
-    <text x="2500" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="17">
-        #17
-    </text>
-    <text x="2504" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 2504, 450)"
-          data-note-index="17">
-        li
-    </text>
-    <defs>
-        <linearGradient id="grad-18" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="2660" y="314"
-          width="320" height="12"
-          fill="url(#grad-18)"
-          rx="4" class="resonance-band"
-          data-note-index="18"
-          data-string-y="320"/>
-    <circle cx="2670" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="18"
-            data-is-grace="false"/>
-    <text x="2670" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="18">
-        5
-    </text>
-    <text x="2670" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="18">
-        #18
-    </text>
-    <text x="2674" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 2674, 360)"
-          data-note-index="18">
-        của
-    </text>
-    <defs>
-        <linearGradient id="grad-19" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="3000" y="464"
-          width="320" height="12"
-          fill="url(#grad-19)"
-          rx="4" class="resonance-band"
-          data-note-index="19"
-          data-string-y="470"/>
-    <circle cx="3010" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="19"
-            data-is-grace="false"/>
-    <text x="3010" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="19">
-        3
-    </text>
-    <text x="3010" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="19">
-        #19
-    </text>
-    <text x="3014" y="510"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 3014, 510)"
-          data-note-index="19">
-        chua
-    </text>
-    <defs>
-        <linearGradient id="grad-20" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="3170" y="524"
-          width="320" height="12"
-          fill="url(#grad-20)"
-          rx="4" class="resonance-band"
-          data-note-index="20"
-          data-string-y="530"/>
-    <circle cx="3180" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="20"
-            data-is-grace="false"/>
-    <text x="3180" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="20">
-        2
-    </text>
-    <text x="3180" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="20">
-        #20
-    </text>
-    <text x="3184" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 3184, 570)"
-          data-note-index="20">
-        tró
-    </text>
-    <defs>
-        <linearGradient id="grad-21" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="3340" y="314"
-          width="320" height="12"
-          fill="url(#grad-21)"
-          rx="4" class="resonance-band"
-          data-note-index="21"
-          data-string-y="320"/>
-    <circle cx="3350" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="21"
-            data-is-grace="false"/>
-    <text x="3350" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="21">
-        5
-    </text>
-    <text x="3350" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="21">
-        #21
-    </text>
-    <text x="3354" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 3354, 360)"
-          data-note-index="21">
-        và
-    </text>
-    <defs>
-        <linearGradient id="grad-22" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="3680" y="404"
-          width="320" height="12"
-          fill="url(#grad-22)"
-          rx="4" class="resonance-band"
-          data-note-index="22"
-          data-string-y="410"/>
-    <circle cx="3690" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="22"
-            data-is-grace="false"/>
-    <text x="3690" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="22">
-        4
-    </text>
-    <text x="3690" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="22">
-        #22
-    </text>
-    <text x="3694" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 3694, 450)"
-          data-note-index="22">
-        lì
-    </text>
-    <defs>
-        <linearGradient id="grad-23" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="3850" y="524"
-          width="320" height="12"
-          fill="url(#grad-23)"
-          rx="4" class="resonance-band"
-          data-note-index="23"
-          data-string-y="530"/>
-    <circle cx="3860" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="23"
-            data-is-grace="false"/>
-    <text x="3860" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="23">
-        2
-    </text>
-    <text x="3860" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="23">
-        #23
-    </text>
-    <text x="3864" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 3864, 570)"
-          data-note-index="23">
-        lí
-    </text>
-    <defs>
-        <linearGradient id="grad-24" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4020" y="464"
-          width="320" height="12"
-          fill="url(#grad-24)"
-          rx="4" class="resonance-band"
-          data-note-index="24"
-          data-string-y="470"/>
-    <circle cx="4030" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="24"
-            data-is-grace="false"/>
-    <text x="4030" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="24">
-        3
-    </text>
-    <text x="4030" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="24">
-        #24
-    </text>
-    <text x="4034" y="510"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 4034, 510)"
-          data-note-index="24">
-        câu
-    </text>
-    <defs>
-        <linearGradient id="grad-25" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4190" y="404"
-          width="320" height="12"
-          fill="url(#grad-25)"
-          rx="4" class="resonance-band"
-          data-note-index="25"
-          data-string-y="410"/>
-    <circle cx="4200" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="25"
-            data-is-grace="false"/>
-    <text x="4200" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="25">
-        4
-    </text>
-    <text x="4200" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="25">
-        #25
-    </text>
-    <defs>
-        <linearGradient id="grad-26" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4360" y="314"
-          width="320" height="12"
-          fill="url(#grad-26)"
-          rx="4" class="resonance-band"
-          data-note-index="26"
-          data-string-y="320"/>
-    <circle cx="4370" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="26"
-            data-is-grace="false"/>
-    <text x="4370" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="26">
-        5
-    </text>
-    <text x="4370" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="26">
-        #26
-    </text>
-    <text x="4374" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 4374, 360)"
-          data-note-index="26">
-        cầu
-    </text>
-    <defs>
-        <linearGradient id="grad-27" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4530" y="164"
-          width="320" height="12"
-          fill="url(#grad-27)"
-          rx="4" class="resonance-band"
-          data-note-index="27"
-          data-string-y="170"/>
-    <circle cx="4540" cy="170" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="27"
-            data-is-grace="false"/>
-    <text x="4540" y="175"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="27">
-        6
-    </text>
-    <text x="4540" y="143"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="27">
-        #27
-    </text>
-    <text x="4544" y="210"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 4544, 210)"
-          data-note-index="27">
-        lờư
-    </text>
-    <defs>
-        <linearGradient id="grad-28" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4700" y="314"
-          width="320" height="12"
-          fill="url(#grad-28)"
-          rx="4" class="resonance-band"
-          data-note-index="28"
-          data-string-y="320"/>
-    <circle cx="4710" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="28"
-            data-is-grace="false"/>
-    <text x="4710" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="28">
-        5
-    </text>
-    <text x="4710" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="28">
-        #28
-    </text>
-    <text x="4714" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 4714, 360)"
-          data-note-index="28">
-        lú
-    </text>
-    <defs>
-        <linearGradient id="grad-29" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="4870" y="404"
-          width="320" height="12"
-          fill="url(#grad-29)"
-          rx="4" class="resonance-band"
-          data-note-index="29"
-          data-string-y="410"/>
-    <circle cx="4880" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="29"
-            data-is-grace="false"/>
-    <text x="4880" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="29">
-        4
-    </text>
-    <text x="4880" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="29">
-        #29
-    </text>
-    <text x="4884" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 4884, 450)"
-          data-note-index="29">
-        lua
-    </text>
-    <defs>
-        <linearGradient id="grad-30" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5040" y="314"
-          width="320" height="12"
-          fill="url(#grad-30)"
-          rx="4" class="resonance-band"
-          data-note-index="30"
-          data-string-y="320"/>
-    <circle cx="5050" cy="320" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="30"
-            data-is-grace="false"/>
-    <text x="5050" y="325"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="30">
-        5
-    </text>
-    <text x="5050" y="293"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="30">
-        #30
-    </text>
-    <text x="5054" y="360"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 5054, 360)"
-          data-note-index="30">
-        tùa
-    </text>
-    <defs>
-        <linearGradient id="grad-31" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5380" y="524"
-          width="320" height="12"
-          fill="url(#grad-31)"
-          rx="4" class="resonance-band"
-          data-note-index="31"
-          data-string-y="530"/>
-    <circle cx="5390" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="31"
-            data-is-grace="false"/>
-    <text x="5390" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="31">
-        2
-    </text>
-    <text x="5390" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="31">
-        #31
-    </text>
-    <text x="5394" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 5394, 570)"
-          data-note-index="31">
-        tró
-    </text>
-    <defs>
-        <linearGradient id="grad-32" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5550" y="404"
-          width="320" height="12"
-          fill="url(#grad-32)"
-          rx="4" class="resonance-band"
-          data-note-index="32"
-          data-string-y="410"/>
-    <circle cx="5560" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="32"
-            data-is-grace="false"/>
-    <text x="5560" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="32">
-        4
-    </text>
-    <text x="5560" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="32">
-        #32
-    </text>
-    <text x="5564" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 5564, 450)"
-          data-note-index="32">
-        sâu
-    </text>
-    <defs>
-        <linearGradient id="grad-33" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5720" y="524"
-          width="320" height="12"
-          fill="url(#grad-33)"
-          rx="4" class="resonance-band"
-          data-note-index="33"
-          data-string-y="530"/>
-    <circle cx="5730" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="33"
-            data-is-grace="false"/>
-    <text x="5730" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="33">
-        2
-    </text>
-    <text x="5730" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="33">
-        #33
-    </text>
-    <text x="5734" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 5734, 570)"
-          data-note-index="33">
-        khâu
-    </text>
-    <defs>
-        <linearGradient id="grad-34" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5805" y="464"
-          width="320" height="12"
-          fill="url(#grad-34)"
-          rx="4" class="resonance-band"
-          data-note-index="34"
-          data-string-y="470"/>
-    <circle cx="5815" cy="470" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="34"
-            data-is-grace="false"/>
-    <text x="5815" y="475"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="34">
-        3
-    </text>
-    <text x="5815" y="443"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="34">
-        #34
-    </text>
-    <defs>
-        <linearGradient id="grad-35" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="5890" y="524"
-          width="320" height="12"
-          fill="url(#grad-35)"
-          rx="4" class="resonance-band"
-          data-note-index="35"
-          data-string-y="530"/>
-    <circle cx="5900" cy="530" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="35"
-            data-is-grace="false"/>
-    <text x="5900" y="535"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="35">
-        2
-    </text>
-    <text x="5900" y="503"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="35">
-        #35
-    </text>
-    <text x="5904" y="570"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 5904, 570)"
-          data-note-index="35">
-        a
-    </text>
-    <defs>
-        <linearGradient id="grad-36" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.1" />
-            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
-            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.05" />
-        </linearGradient>
-    </defs>
-    <rect x="6060" y="404"
-          width="320" height="12"
-          fill="url(#grad-36)"
-          rx="4" class="resonance-band"
-          data-note-index="36"
-          data-string-y="410"/>
-    <circle cx="6070" cy="410" r="12"
-            class="note-circle"
-            fill="#666666"
-            stroke="#444444"
-            stroke-width="2"
-            filter="drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-            data-note-index="36"
-            data-is-grace="false"/>
-    <text x="6070" y="415"
-          text-anchor="middle" class="string-number"
-          style="font-size: 14px; fill: white; font-weight: bold;"
-          data-note-index="36">
-        4
-    </text>
-    <text x="6070" y="383"
-          text-anchor="middle" class="note-index"
-          style="font-size: 9px; fill: var(--text-secondary); opacity: 0.7;"
-          data-note-index="36">
-        #36
-    </text>
-    <text x="6074" y="450"
-          text-anchor="start" class="lyric-text"
-          style="font-size: 11px; fill: var(--text-primary); font-weight: bold;"
-          transform="rotate(-90, 6074, 450)"
-          data-note-index="36">
-        lơ...
-    </text>
-    <text x="20" y="685" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String 1: D5
-    </text>
-    <text x="20" y="535" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String 2: A4
-    </text>
-    <text x="20" y="475" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String 3: G4
-    </text>
-    <text x="20" y="415" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String 4: F4
-    </text>
-    <text x="20" y="325" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
+    <rect x="0" y="0" width="6490" height="1110" fill="transparent"/>
+    
+    <line x1="120" y1="130" x2="6490" y2="130"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="135" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 1: D3
+    </text>
+    <line x1="120" y1="220" x2="6490" y2="220"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="225" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 2: F3
+    </text>
+    <line x1="120" y1="280" x2="6490" y2="280"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="285" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 3: G3
+    </text>
+    <line x1="120" y1="340" x2="6490" y2="340"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="345" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 4: A3
+    </text>
+    <line x1="120" y1="490" x2="6490" y2="490"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="495" font-size="12" font-weight="bold" class="string-label string-label-played">
         String 5: D4
     </text>
-    <text x="20" y="175" class="string-label"
-          style="font-size: 12px; fill: var(--text-primary); font-weight: bold;">
-        String 6: A3
+    <line x1="120" y1="580" x2="6490" y2="580"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="585" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 6: F4
+    </text>
+    <line x1="120" y1="640" x2="6490" y2="640"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="645" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 7: G4
+    </text>
+    <line x1="120" y1="700" x2="6490" y2="700"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="705" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 8: A4
+    </text>
+    <line x1="120" y1="850" x2="6490" y2="850"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="855" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 9: D5
+    </text>
+    <line x1="120" y1="940" x2="6490" y2="940"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="945" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 10: F5
+    </text>
+    <line x1="120" y1="1000" x2="6490" y2="1000"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1005" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 11: G5
+    </text>
+    <line x1="120" y1="1060" x2="6490" y2="1060"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1065" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 12: A5
+    </text>
+    <rect x="120" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="0" class="resonance-band"/>
+    <circle cx="120" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="0" class="note-circle"/>
+    <text x="120" y="859"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        9
+    </text>
+    <text x="120" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #1
+    </text>
+    <text x="124" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 124, 890)" class="lyric-text">
+        A
+    </text>
+    <rect x="290" y="335"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="1" class="resonance-band"/>
+    <circle cx="290" cy="340" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="1" class="note-circle"/>
+    <text x="290" y="349"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        4
+    </text>
+    <text x="290" y="305"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #2
+    </text>
+    <text x="294" y="380" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 294, 380)" class="lyric-text">
+        già
+    </text>
+    <rect x="460" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="2" class="resonance-band"/>
+    <circle cx="460" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="2" class="note-circle"/>
+    <text x="460" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="460" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #3
+    </text>
+    <text x="464" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 464, 530)" class="lyric-text">
+        tù
+    </text>
+    <rect x="630" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="3" class="resonance-band"/>
+    <circle cx="630" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="3" class="note-circle"/>
+    <text x="630" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="630" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #4
+    </text>
+    <text x="634" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 634, 620)" class="lyric-text">
+        dua
+    </text>
+    <rect x="715" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="4" class="resonance-band"/>
+    <circle cx="715" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="4" class="note-circle"/>
+    <text x="715" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="715" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #5
+    </text>
+    <text x="719" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 719, 680)" class="lyric-text">
+        minh
+    </text>
+    <rect x="800" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="5" class="resonance-band"/>
+    <circle cx="800" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="5" class="note-circle"/>
+    <text x="800" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="800" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #6
+    </text>
+    <text x="804" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 804, 530)" class="lyric-text">
+        cầu
+    </text>
+    <rect x="1140" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="6" class="resonance-band"/>
+    <circle cx="1140" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="6" class="note-circle"/>
+    <text x="1140" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="1140" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #7
+    </text>
+    <text x="1144" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1144, 740)" class="lyric-text">
+        mông
+    </text>
+    <rect x="1225" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="7" class="resonance-band"/>
+    <circle cx="1225" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="7" class="note-circle"/>
+    <text x="1225" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="1225" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #8
+    </text>
+    <rect x="1310" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="8" class="resonance-band"/>
+    <circle cx="1310" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="8" class="note-circle"/>
+    <text x="1310" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="1310" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #9
+    </text>
+    <text x="1314" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1314, 740)" class="lyric-text">
+        a
+    </text>
+    <rect x="1480" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="9" class="resonance-band"/>
+    <circle cx="1480" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="9" class="note-circle"/>
+    <text x="1480" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="1480" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #10
+    </text>
+    <text x="1484" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1484, 620)" class="lyric-text">
+        lơ
+    </text>
+    <rect x="1650" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="10" class="resonance-band"/>
+    <circle cx="1650" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="10" class="note-circle"/>
+    <text x="1650" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="1650" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #11
+    </text>
+    <text x="1654" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1654, 620)" class="lyric-text">
+        Tu
+    </text>
+    <rect x="1735" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="11" class="resonance-band"/>
+    <circle cx="1735" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="11" class="note-circle"/>
+    <text x="1735" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="1735" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #12
+    </text>
+    <text x="1739" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1739, 680)" class="lyric-text">
+        mi
+    </text>
+    <rect x="1820" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="12" class="resonance-band"/>
+    <circle cx="1820" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="12" class="note-circle"/>
+    <text x="1820" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="1820" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #13
+    </text>
+    <text x="1824" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1824, 620)" class="lyric-text">
+        chua
+    </text>
+    <rect x="1990" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="13" class="resonance-band"/>
+    <circle cx="1990" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="13" class="note-circle"/>
+    <text x="1990" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="1990" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #14
+    </text>
+    <text x="1994" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 1994, 530)" class="lyric-text">
+        tùa
+    </text>
+    <rect x="2160" y="335"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="14" class="resonance-band"/>
+    <circle cx="2160" cy="340" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="14" class="note-circle"/>
+    <text x="2160" y="349"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        4
+    </text>
+    <text x="2160" y="305"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #15
+    </text>
+    <text x="2164" y="380" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 2164, 380)" class="lyric-text">
+        già
+    </text>
+    <rect x="2330" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="15" class="resonance-band"/>
+    <circle cx="2330" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="15" class="note-circle"/>
+    <text x="2330" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="2330" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #16
+    </text>
+    <text x="2334" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 2334, 530)" class="lyric-text">
+        và
+    </text>
+    <rect x="2500" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="16" class="resonance-band"/>
+    <circle cx="2500" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="16" class="note-circle"/>
+    <text x="2500" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="2500" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #17
+    </text>
+    <text x="2504" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 2504, 620)" class="lyric-text">
+        li
+    </text>
+    <rect x="2670" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="17" class="resonance-band"/>
+    <circle cx="2670" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="17" class="note-circle"/>
+    <text x="2670" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="2670" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #18
+    </text>
+    <text x="2674" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 2674, 530)" class="lyric-text">
+        của
+    </text>
+    <rect x="3010" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="18" class="resonance-band"/>
+    <circle cx="3010" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="18" class="note-circle"/>
+    <text x="3010" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="3010" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #19
+    </text>
+    <text x="3014" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 3014, 680)" class="lyric-text">
+        chua
+    </text>
+    <rect x="3180" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="19" class="resonance-band"/>
+    <circle cx="3180" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="19" class="note-circle"/>
+    <text x="3180" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="3180" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #20
+    </text>
+    <text x="3184" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 3184, 740)" class="lyric-text">
+        tró
+    </text>
+    <rect x="3350" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="20" class="resonance-band"/>
+    <circle cx="3350" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="20" class="note-circle"/>
+    <text x="3350" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="3350" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #21
+    </text>
+    <text x="3354" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 3354, 530)" class="lyric-text">
+        và
+    </text>
+    <rect x="3690" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="21" class="resonance-band"/>
+    <circle cx="3690" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="21" class="note-circle"/>
+    <text x="3690" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="3690" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #22
+    </text>
+    <text x="3694" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 3694, 620)" class="lyric-text">
+        lì
+    </text>
+    <rect x="3860" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="22" class="resonance-band"/>
+    <circle cx="3860" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="22" class="note-circle"/>
+    <text x="3860" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="3860" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #23
+    </text>
+    <text x="3864" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 3864, 740)" class="lyric-text">
+        lí
+    </text>
+    <rect x="4030" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="23" class="resonance-band"/>
+    <circle cx="4030" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="23" class="note-circle"/>
+    <text x="4030" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="4030" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #24
+    </text>
+    <text x="4034" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 4034, 680)" class="lyric-text">
+        câu
+    </text>
+    <rect x="4200" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="24" class="resonance-band"/>
+    <circle cx="4200" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="24" class="note-circle"/>
+    <text x="4200" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="4200" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #25
+    </text>
+    <rect x="4370" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="25" class="resonance-band"/>
+    <circle cx="4370" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="25" class="note-circle"/>
+    <text x="4370" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="4370" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #26
+    </text>
+    <text x="4374" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 4374, 530)" class="lyric-text">
+        cầu
+    </text>
+    <rect x="4540" y="335"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="26" class="resonance-band"/>
+    <circle cx="4540" cy="340" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="26" class="note-circle"/>
+    <text x="4540" y="349"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        4
+    </text>
+    <text x="4540" y="305"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #27
+    </text>
+    <text x="4544" y="380" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 4544, 380)" class="lyric-text">
+        lờư
+    </text>
+    <rect x="4710" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="27" class="resonance-band"/>
+    <circle cx="4710" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="27" class="note-circle"/>
+    <text x="4710" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="4710" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #28
+    </text>
+    <text x="4714" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 4714, 530)" class="lyric-text">
+        lú
+    </text>
+    <rect x="4880" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="28" class="resonance-band"/>
+    <circle cx="4880" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="28" class="note-circle"/>
+    <text x="4880" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="4880" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #29
+    </text>
+    <text x="4884" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 4884, 620)" class="lyric-text">
+        lua
+    </text>
+    <rect x="5050" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="29" class="resonance-band"/>
+    <circle cx="5050" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="29" class="note-circle"/>
+    <text x="5050" y="499"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        5
+    </text>
+    <text x="5050" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #30
+    </text>
+    <text x="5054" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 5054, 530)" class="lyric-text">
+        tùa
+    </text>
+    <rect x="5390" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="30" class="resonance-band"/>
+    <circle cx="5390" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="30" class="note-circle"/>
+    <text x="5390" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="5390" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #31
+    </text>
+    <text x="5394" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 5394, 740)" class="lyric-text">
+        tró
+    </text>
+    <rect x="5560" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="31" class="resonance-band"/>
+    <circle cx="5560" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="31" class="note-circle"/>
+    <text x="5560" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="5560" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #32
+    </text>
+    <text x="5564" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 5564, 620)" class="lyric-text">
+        sâu
+    </text>
+    <rect x="5730" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="32" class="resonance-band"/>
+    <circle cx="5730" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="32" class="note-circle"/>
+    <text x="5730" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="5730" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #33
+    </text>
+    <text x="5734" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 5734, 740)" class="lyric-text">
+        khâu
+    </text>
+    <rect x="5815" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="33" class="resonance-band"/>
+    <circle cx="5815" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="33" class="note-circle"/>
+    <text x="5815" y="649"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        7
+    </text>
+    <text x="5815" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #34
+    </text>
+    <rect x="5900" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="34" class="resonance-band"/>
+    <circle cx="5900" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="34" class="note-circle"/>
+    <text x="5900" y="709"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        8
+    </text>
+    <text x="5900" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #35
+    </text>
+    <text x="5904" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 5904, 740)" class="lyric-text">
+        a
+    </text>
+    <rect x="6070" y="575"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="35" class="resonance-band"/>
+    <circle cx="6070" cy="580" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="35" class="note-circle"/>
+    <text x="6070" y="589"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        6
+    </text>
+    <text x="6070" y="545"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #36
+    </text>
+    <text x="6074" y="620" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, 6074, 620)" class="lyric-text">
+        lơ...
     </text>
 </svg>
         </div>
@@ -1791,7 +1187,7 @@
             }
             console.log('Starting zoom initialization...');
 
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
 
             // Store base positions for all elements
             const notes = svg.querySelectorAll('.note-circle');
@@ -1837,7 +1233,7 @@
 
         function updateZoom() {
             console.log('updateZoom called - X:', currentZoomX, 'Y:', currentZoomY);
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
 
             // Initialize if needed
             if (!initialized) {
@@ -1998,7 +1394,7 @@
 
         function fitWidth() {
             const container = document.querySelector('.tablature-container');
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
             const baseWidth = parseFloat(svg.getAttribute('data-base-width'));
 
             // Account for resonance band extension (340px) to show complete tablature
@@ -2018,7 +1414,7 @@
 
         function fitHeight() {
             const container = document.querySelector('.tablature-container');
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
             const baseHeight = parseFloat(svg.getAttribute('data-base-height'));
 
             containerHeight = window.innerHeight * 0.6; // Use 60% of viewport height
@@ -2041,6 +1437,48 @@
                 console.log(`Note #${index} clicked (Grace: ${isGrace})`);
             });
         });
+
+        // Bent notes highlight toggle
+        let bentNotesHighlighted = false;
+
+        function toggleBentNotesHighlight() {
+            const svg = document.getElementById('tablatureSvg');
+            const metric = document.getElementById('bentStringsMetric');
+            if (!svg || !metric) return;
+
+            const bentNoteCircles = [];
+            const allNotes = svg.querySelectorAll('.note-circle');
+
+            allNotes.forEach(noteCircle => {
+                const noteIndex = noteCircle.getAttribute('data-note-index');
+                const bendSymbol = svg.querySelector(`.bend-symbol[data-note-index="${noteIndex}"]`);
+                if (bendSymbol) {
+                    bentNoteCircles.push(noteCircle);
+                }
+            });
+
+            if (!bentNotesHighlighted) {
+                // Highlight ON
+                bentNoteCircles.forEach(circle => {
+                    circle.setAttribute('data-original-fill', circle.getAttribute('fill'));
+                    circle.setAttribute('fill', '#E74C3C');
+                });
+                bentNotesHighlighted = true;
+                metric.style.background = '#E74C3C';
+                metric.style.borderColor = '#E74C3C';
+                metric.querySelector('span').style.color = 'white';
+            } else {
+                // Highlight OFF
+                bentNoteCircles.forEach(circle => {
+                    const originalFill = circle.getAttribute('data-original-fill') || '#666666';
+                    circle.setAttribute('fill', originalFill);
+                });
+                bentNotesHighlighted = false;
+                metric.style.background = 'white';
+                metric.style.borderColor = '#27ae60';
+                metric.querySelector('span').style.color = '#27ae60';
+            }
+        }
 
         // Theme management
         function setTheme(theme) {

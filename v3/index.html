@@ -421,9 +421,13 @@
         .region-badge.southern { background: var(--melisma); }
         .region-badge.central { background: var(--kric-1); }
         .region-badge.traditional { background: var(--main-note); }
+
+        /* Genre badge colors matching filter buttons */
+        .region-badge.working { background: var(--kric-1); }
         .region-badge.lullaby { background: var(--grace-note); color: var(--grace-note-dark); }
-        .region-badge.work { background: var(--kric-2); }
-        .region-badge.folk { background: var(--kpic-3); }
+        .region-badge.folk { background: var(--kpic-2); }
+        .region-badge.ceremonial { background: var(--tone-mark); }
+        .region-badge.uncategorized { background: var(--text-secondary); }
 
         .song-pattern {
             width: 100%;
@@ -614,7 +618,7 @@
                         <button class="filter-btn" data-filter="lullaby">Lullabies</button>
                         <button class="filter-btn" data-filter="folk">Folk Tales</button>
                         <button class="filter-btn" data-filter="ceremonial">Ceremonial</button>
-                        <button class="filter-btn" data-filter="uncategorized">Uncategorized</button>
+                        <button class="filter-btn" data-filter="uncategorized">Other</button>
                     </div>
                 </div>
 
@@ -624,10 +628,11 @@
                 <!-- Song Metrics Section -->
                 <div class="filter-section" style="display: flex; flex-direction: column; gap: 8px;">
                     <div class="section-label" style="font-size: 12px; color: var(--text-secondary); font-weight: bold; text-transform: uppercase;">Song Metrics</div>
-                    <div class="sort-options" style="display: flex; gap: 8px;">
+                    <div class="sort-options" style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <button class="sort-btn" data-sort="strings">Strings</button>
                         <button class="sort-btn" data-sort="learn-only">Learn Only</button>
                         <button class="sort-btn" data-sort="total-notes">Total Notes</button>
+                        <button class="sort-btn" data-sort="tuning">Tuning</button>
                     </div>
                 </div>
 
@@ -730,26 +735,28 @@
             grid.innerHTML = '';
 
             // Try to load metadata for processed songs
-            for (const songName of songList) {
+            for (const song of songList) {
                 try {
-                    // songName is now the exact directory name, no conversion needed
-                    const response = await fetch(`/data/processed/${songName}/metadata.json`);
+                    // Use song.id as the directory name
+                    const response = await fetch(`/data/processed/${song.id}/metadata.json`);
                     if (response.ok) {
-                        songMetadata[songName] = await response.json();
+                        songMetadata[song.id] = await response.json();
                     } else {
-                        console.warn(`Failed to load metadata for ${songName}: ${response.status}`);
+                        console.warn(`Failed to load metadata for ${song.name}: ${response.status}`);
                     }
                 } catch (e) {
-                    console.warn(`Failed to load metadata for ${songName}:`, e);
+                    console.warn(`Failed to load metadata for ${song.name}:`, e);
                 }
             }
 
-            songList.forEach((songName, index) => {
-                // Convert directory name to display title
-                const displayTitle = toTitleCase(songName.replace(/_/g, ' '));
-                const card = createSongCard(displayTitle, songMetadata[songName]);
-                // Store original directory name for linking
-                card.dataset.dirName = songName;
+            songList.forEach((song, index) => {
+                // Use song.name for display
+                const displayTitle = song.name;
+                const card = createSongCard(displayTitle, songMetadata[song.id] || song);
+                // Store directory name for linking
+                card.dataset.dirName = song.id;
+                // Set click handler with the directory name
+                card.onclick = () => openSongViewer(song.id);
                 grid.appendChild(card);
             });
 
@@ -806,6 +813,7 @@
             let hasLyrics = false;
             let tuning = null;
             let patternEfficiency = null;
+            let bendingMetrics = null;
 
             if (metadata) {
                 region = metadata.region || 'Traditional';
@@ -818,6 +826,7 @@
                 hasLyrics = metadata.hasLyrics || false;
                 tuning = metadata.tuning || null;
                 patternEfficiency = metadata.patternEfficiency || null;
+                bendingMetrics = metadata.bendingMetrics || null;
             } else {
                 // Fallback region detection
                 if (songName.includes('quan họ') || songName.includes('chèo')) region = 'Northern';
@@ -835,11 +844,21 @@
             card.dataset.region = region.toLowerCase();
             card.dataset.genre = classifyGenre(songName); // Add genre classification
             card.dataset.learnOnly = patternEfficiency ? patternEfficiency.learnOnly : 0;
+            card.dataset.tuning = tuning ? tuning.join('-') : 'Unknown';
             // card.dataset.difficulty = difficulty.toLowerCase(); // Saved for future refinement
+
+            const genre = classifyGenre(songName);
+            const genreLabels = {
+                'working': 'WORKING',
+                'lullaby': 'LULLABY',
+                'folk': 'FOLK',
+                'ceremonial': 'CEREMONIAL',
+                'uncategorized': 'OTHER'
+            };
 
             card.innerHTML = `
                 <div class="song-thumbnail">
-                    <div class="region-badge ${region.toLowerCase()}">${region.toUpperCase()}</div>
+                    <div class="region-badge ${genre}">${genreLabels[genre] || genre.toUpperCase()}</div>
                     <svg class="song-pattern" viewBox="0 0 200 100">
                         ${generatePatternSVG()}
                     </svg>
@@ -851,16 +870,16 @@
                         <span>${patternEfficiency && patternEfficiency.efficiency > 0 ? patternEfficiency.efficiency + '% gain' : strings + ' strings'}</span>
                     </div>
                     <div class="song-tags">
-                        <span class="song-tag">${strings} strings</span>
+                        ${tuning && Array.isArray(tuning) ? `<span class="song-tag" style="font-family: monospace; font-weight: 600; color: #27ae60;">Tuning: ${tuning.join('-')}</span>` : ''}
+                        <span class="song-tag">${strings} strings used</span>
+                        ${bendingMetrics && bendingMetrics.bentNotes > 0 ? `<span class="song-tag">${bendingMetrics.uniqueBentStrings || 0} bent strings, ${bendingMetrics.bentNotes || 0} bent notes</span>` : ''}
                         ${timeSignature !== '4/4' ? `<span class="song-tag">${timeSignature}</span>` : ''}
-                        ${hasLyrics ? '<span class="song-tag">With lyrics</span>' : ''}
                         ${patternEfficiency ? `<span class="song-tag">Learn ${patternEfficiency.learnOnly}</span>` : ''}
                     </div>
                 </div>
             `;
 
-            card.onclick = () => openSongViewer(songName);
-
+            // Will set onclick after dirName is assigned
             return card;
         }
 
@@ -876,24 +895,13 @@
             return svg;
         }
 
-        function openSongViewer(displayTitle) {
-            // Find the card with this display title to get the directory name
-            const cards = document.querySelectorAll('.song-card');
-            let dirName = null;
-
-            for (const card of cards) {
-                const cardTitle = card.querySelector('.song-title')?.textContent;
-                if (cardTitle === displayTitle) {
-                    dirName = card.dataset.dirName;
-                    break;
-                }
-            }
-
+        function openSongViewer(dirName) {
             if (dirName) {
+                console.log('Opening song viewer:', dirName);
                 // Use the exact directory name
                 window.location.href = `/data/processed/${dirName}/viewer.html`;
             } else {
-                console.error('Could not find directory name for:', displayTitle);
+                console.error('Could not find directory name');
             }
         }
 
@@ -1061,6 +1069,11 @@
 
                     case 'total-notes':
                         return (parseInt(a.dataset.notes) || 0) - (parseInt(b.dataset.notes) || 0);
+
+                    case 'tuning':
+                        const tuningA = a.dataset.tuning || 'Unknown';
+                        const tuningB = b.dataset.tuning || 'Unknown';
+                        return tuningA.localeCompare(tuningB);
 
                     default:
                         // Default: alphabetical by song title

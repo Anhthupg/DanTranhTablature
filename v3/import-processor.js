@@ -230,14 +230,12 @@ class MusicXMLProcessor {
     }
 
     async generateViewer(songData, songDir) {
-        // Generate individual song viewer (V1 style)
+        // For V3, use simple placeholder - real viewers need full generation
+        // TODO: Integrate with generate-viewer.js for full tablature generation
         const template = fs.readFileSync(this.templatePath, 'utf8');
-
-        // Replace template placeholders with song data
         let viewer = template
             .replace(/Bà rằng bà rí/g, songData.name)
             .replace('<!-- SONG_DATA -->', JSON.stringify(songData));
-
         fs.writeFileSync(path.join(songDir, 'viewer.html'), viewer);
     }
 

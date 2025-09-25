@@ -295,6 +295,7 @@ When implementing V3 visualizations:
 - **Vertical theme selector** positioned on right side
 - **Vietnamese spelling** - "Đàn Tranh" throughout interface
 - **Compliant slider colors** using 12-color system variables
+- **Vietnamese-aware Title Case** with proper grammatical rules
 
 ### Library Interface Features
 ```css
@@ -312,12 +313,33 @@ When implementing V3 visualizations:
 - **Range sliders**: Accent color matches 12-color system
 - **Song cards**: Title Case formatting, Vietnamese instrument name
 - **Color compliance**: Zero non-approved colors in interface
+- **Vietnamese Title Case**: Grammatically correct capitalization preserving lowercase words
 
 ### Data Processing Status
 - **Real metadata**: Tempo, time signatures, note counts from MusicXML
 - **Pattern analysis**: V1-compatible efficiency calculations
 - **Tuning systems**: Automatic detection vs default classification
 - **Region detection**: Based on song name patterns and metadata
+
+### Vietnamese Language Processing
+```javascript
+// Vietnamese-aware Title Case function
+function toTitleCase(str) {
+    const lowercaseWords = ['và', 'của', 'cho', 'với', 'từ', 'trong',
+                           'em', 'con', 'là', 'quan', 'họ', 'ru', 'hò'];
+
+    return str.replace(/\w\S*/g, function(txt, index){
+        if (index === 0) return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        if (lowercaseWords.includes(txt.toLowerCase())) return txt.toLowerCase();
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
+```
+
+Examples:
+- "đò đưa quan họ" → "Đò Đưa quan họ"
+- "hát ru em cảnh dương" → "Hát Ru em Cảnh Dương"
+- "lý chiều chiều" → "Lý Chiều Chiều"
 
 ### Next Development Phases
 1. **Individual song viewers** - Full V1-style tablature generation

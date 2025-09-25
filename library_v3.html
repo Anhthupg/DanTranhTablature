@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Library V3 - Dynamic String System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .search-bar {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .search-bar button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-bar button:hover {
+            transform: translateY(-2px);
+        }
+
+        .library-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .song-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .song-thumbnail {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mini-tablature {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+        }
+
+        .song-info {
+            padding: 15px;
+        }
+
+        .song-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .song-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .string-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #00c851, #00ff7f);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0,200,81,0.3);
+            z-index: 10;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        #songModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+
+        #songModal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 1200px;
+            height: 90%;
+            max-height: 800px;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .modal-close:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        #songTablature {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Dan Tranh Library V3</h1>
+            <p class="subtitle">Dynamic String System - 130 Songs</p>
+
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search songs by title, composer, or number of strings...">
+                <button onclick="searchSongs()">Search</button>
+                <button onclick="showAllSongs()">Show All</button>
+            </div>
+        </header>
+
+        <div class="library-grid" id="libraryGrid">
+            <div class="loading">Loading songs...</div>
+        </div>
+    </div>
+
+    <!-- Song Modal -->
+    <div id="songModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Song Title</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid" id="songStats"></div>
+                <div id="songTablature"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import the Dynamic String Engine -->
+    <script type="module">
+        import { DanTranhTablature } from './danTranh.module.js';
+
+        // Song Database
+        const songDatabase = [
+            {
+                id: 'xia_ca_me',
+                title: 'Xỉa Cá Mè',
+                composer: 'Vietnamese Folk',
+                notes: generateXiaCaMeNotes(),
+                strings: 4,
+                stringList: [5, 6, 7, 9],
+                openStrings: ['C4', 'F4', 'G4', 'C5'],
+                tempo: 120,
+                patterns: 10
+            },
+            {
+                id: 'ba_rang_ba_ri',
+                title: 'Bà Rằng Bà Rí',
+                composer: 'Traditional',
+                notes: generateBaRangBaRiNotes(),
+                strings: 7,
+                stringList: [5, 7, 8, 9, 10, 11, 12],
+                openStrings: ['D4', 'G4', 'A4', 'C5', 'D5', 'E5', 'G5'],
+                tempo: 110,
+                patterns: 15
+            },
+            {
+                id: 'ly_ngua_o',
+                title: 'Lý Ngựa Ô',
+                composer: 'Southern Folk',
+                notes: generateLyNguaONotes(),
+                strings: 5,
+                stringList: [5, 6, 7, 8, 9],
+                openStrings: ['C4', 'D4', 'F4', 'G4', 'C5'],
+                tempo: 100,
+                patterns: 12
+            },
+            // Add more songs here...
+        ];
+
+        // Generate Xỉa Cá Mè notes with proper string assignments
+        function generateXiaCaMeNotes() {
+            return [
+                // First phrase - all on string 9 (C5)
+                { pitch: 'C5', time: 0, duration: 1, string: 9, lyric: 'Xỉa' },
+                { pitch: 'C5', time: 1, duration: 1, string: 9, lyric: 'cá' },
+                { pitch: 'C5', time: 2, duration: 1, string: 9, lyric: 'Mè' },
+                { pitch: 'C5', time: 3, duration: 1, string: 9, lyric: 'Đè' },
+                { pitch: 'C5', time: 4, duration: 1, string: 9, lyric: 'cá' },
+                { pitch: 'C5', time: 5, duration: 1, string: 9, lyric: 'Chép' },
+
+                // Second phrase - mixed strings
+                { pitch: 'G4', time: 6, duration: 1, string: 7, lyric: 'Chân' },
+                { pitch: 'F4', time: 7, duration: 0.5, string: 6 },
+                { pitch: 'C5', time: 7.5, duration: 1, string: 9, lyric: 'nào' },
+                { pitch: 'C5', time: 8.5, duration: 1, string: 9, lyric: 'đẹp' },
+                { pitch: 'C5', time: 9.5, duration: 0.5, string: 9, lyric: 'thì' },
+                { pitch: 'G4', time: 10, duration: 1, string: 7, lyric: 'đi' },
+                { pitch: 'G4', time: 11, duration: 1, string: 7, lyric: 'buôn' },
+                { pitch: 'G4', time: 12, duration: 1, string: 7, lyric: 'men' },
+                { pitch: 'F4', time: 13, duration: 0.5, string: 6 },
+
+                // Third phrase - all 4 strings used
+                { pitch: 'G4', time: 13.5, duration: 1, string: 7, lyric: 'Chân' },
+                { pitch: 'C5', time: 14.5, duration: 1, string: 9, lyric: 'nào' },
+                { pitch: 'C4', time: 15.5, duration: 0.5, string: 5 },
+                { pitch: 'G4', time: 16, duration: 1, string: 7, lyric: 'đen' },
+                { pitch: 'C5', time: 17, duration: 1, string: 9, lyric: 'thì' },
+                { pitch: 'C5', time: 18, duration: 0.5, string: 9, lyric: 'về' },
+                { pitch: 'C5', time: 18.5, duration: 0.5, string: 9, lyric: 'làm' },
+                { pitch: 'F4', time: 19, duration: 0.5, string: 6 },
+                { pitch: 'G4', time: 19.5, duration: 0.5, string: 7 },
+                { pitch: 'C4', time: 20, duration: 1, string: 5 }
+            ];
+        }
+
+        // Generate Bà Rằng Bà Rí notes
+        function generateBaRangBaRiNotes() {
+            return [
+                { pitch: 'D4', time: 0, duration: 1, string: 5 },
+                { pitch: 'G4', time: 1, duration: 1, string: 7 },
+                { pitch: 'A4', time: 2, duration: 1, string: 8 },
+                { pitch: 'C5', time: 3, duration: 1, string: 9 },
+                { pitch: 'D5', time: 4, duration: 1, string: 10 },
+                { pitch: 'E5', time: 5, duration: 1, string: 11 },
+                { pitch: 'G5', time: 6, duration: 1, string: 12 },
+                { pitch: 'E5', time: 7, duration: 1, string: 11 },
+                { pitch: 'D5', time: 8, duration: 1, string: 10 },
+                { pitch: 'C5', time: 9, duration: 1, string: 9 },
+                { pitch: 'A4', time: 10, duration: 1, string: 8 },
+                { pitch: 'G4', time: 11, duration: 1, string: 7 },
+                { pitch: 'D4', time: 12, duration: 2, string: 5 }
+            ];
+        }
+
+        // Generate Lý Ngựa Ô notes
+        function generateLyNguaONotes() {
+            return [
+                { pitch: 'C4', time: 0, duration: 2, string: 5 },
+                { pitch: 'D4', time: 2, duration: 1, string: 5 },
+                { pitch: 'F4', time: 3, duration: 1, string: 6 },
+                { pitch: 'G4', time: 4, duration: 2, string: 7 },
+                { pitch: 'C5', time: 6, duration: 1, string: 9 },
+                { pitch: 'G4', time: 7, duration: 1, string: 7 },
+                { pitch: 'F4', time: 8, duration: 1, string: 6 },
+                { pitch: 'D4', time: 9, duration: 1, string: 5 },
+                { pitch: 'C4', time: 10, duration: 2, string: 5 }
+            ];
+        }
+
+        let currentTablature = null;
+
+        // Initialize library
+        function initLibrary() {
+            displaySongs(songDatabase);
+        }
+
+        // Display songs in grid
+        function displaySongs(songs) {
+            const grid = document.getElementById('libraryGrid');
+            grid.innerHTML = '';
+
+            songs.forEach(song => {
+                const card = createSongCard(song);
+                grid.appendChild(card);
+            });
+        }
+
+        // Create song card
+        function createSongCard(song) {
+            const card = document.createElement('div');
+            card.className = 'song-card';
+            card.onclick = () => openSong(song);
+
+            card.innerHTML = `
+                <div class="song-thumbnail">
+                    <div class="string-badge">${song.strings} strings</div>
+                    <svg class="mini-tablature" viewBox="0 0 280 150">
+                        ${createMiniTablature(song)}
+                    </svg>
+                </div>
+                <div class="song-info">
+                    <div class="song-title">${song.title}</div>
+                    <div class="song-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Notes:</span>
+                            <span>${song.notes.length}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Strings:</span>
+                            <span>${song.stringList.join(', ')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Tempo:</span>
+                            <span>${song.tempo} BPM</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Patterns:</span>
+                            <span>${song.patterns}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Create mini tablature for thumbnail
+        function createMiniTablature(song) {
+            let svg = '';
+
+            // Draw string lines
+            const stringSpacing = 130 / (song.strings + 1);
+            for (let i = 0; i < song.strings; i++) {
+                const y = stringSpacing * (i + 1);
+                svg += `<line x1="10" y1="${y}" x2="270" y2="${y}" stroke="#ddd" stroke-width="1"/>`;
+            }
+
+            // Draw some notes
+            const noteSpacing = 250 / Math.min(song.notes.length, 10);
+            song.notes.slice(0, 10).forEach((note, i) => {
+                const x = 20 + (i * noteSpacing);
+                const stringIndex = song.stringList.indexOf(note.string);
+                const y = stringSpacing * (stringIndex + 1);
+                svg += `<circle cx="${x}" cy="${y}" r="3" fill="#667eea"/>`;
+            });
+
+            return svg;
+        }
+
+        // Open song in modal
+        function openSong(song) {
+            const modal = document.getElementById('songModal');
+            const title = document.getElementById('modalTitle');
+            const stats = document.getElementById('songStats');
+            const tablatureDiv = document.getElementById('songTablature');
+
+            // Set title
+            title.textContent = song.title;
+
+            // Set stats
+            stats.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${song.notes.length}</div>
+                    <div class="stat-label">Notes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${song.strings}</div>
+                    <div class="stat-label">Strings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${song.openStrings.length}</div>
+                    <div class="stat-label">Unique Pitches</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${song.tempo}</div>
+                    <div class="stat-label">BPM</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${song.stringList.join(', ')}</div>
+                    <div class="stat-label">String Numbers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${song.openStrings.join(', ')}</div>
+                    <div class="stat-label">Open Strings</div>
+                </div>
+            `;
+
+            // Clear and create tablature
+            tablatureDiv.innerHTML = '<div id="tablature-display"></div>';
+
+            // Initialize tablature
+            setTimeout(() => {
+                if (currentTablature) {
+                    currentTablature = null;
+                }
+
+                currentTablature = new DanTranhTablature('tablature-display', {
+                    showIntervals: true,
+                    showBending: true,
+                    displayMode: 'played',
+                    baseSpacing: 30,
+                    minSpacing: 50,
+                    maxSpacing: 100
+                });
+
+                currentTablature.loadSong({
+                    title: song.title,
+                    composer: song.composer,
+                    notes: song.notes,
+                    openStrings: song.openStrings
+                });
+            }, 100);
+
+            // Show modal
+            modal.classList.add('active');
+        }
+
+        // Close modal
+        window.closeModal = function() {
+            document.getElementById('songModal').classList.remove('active');
+            if (currentTablature) {
+                currentTablature = null;
+            }
+        };
+
+        // Search songs
+        window.searchSongs = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = songDatabase.filter(song => {
+                return song.title.toLowerCase().includes(query) ||
+                       song.composer.toLowerCase().includes(query) ||
+                       song.strings.toString().includes(query) ||
+                       song.stringList.join(',').includes(query);
+            });
+            displaySongs(filtered);
+        };
+
+        // Show all songs
+        window.showAllSongs = function() {
+            document.getElementById('searchInput').value = '';
+            displaySongs(songDatabase);
+        };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', initLibrary);
+
+        // Make functions available globally
+        window.openSong = openSong;
+    </script>
+</body>
+</html>

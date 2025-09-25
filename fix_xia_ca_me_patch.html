@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Xỉa Cá Mè - Apply Patch</title>
+    <script>
+        // This script patches the existing page to fix Xỉa Cá Mè string display
+
+        // Correct string configuration for Xỉa Cá Mè
+        const XIA_CA_ME_STRINGS = {
+            5: { note: 'C4', yPos: 85, midiValue: 60 },   // String 5 - C4
+            6: { note: 'F4', yPos: 145, midiValue: 65 },  // String 6 - F4
+            7: { note: 'G4', yPos: 265, midiValue: 67 },  // String 7 - G4
+            9: { note: 'C5', yPos: 415, midiValue: 72 }   // String 9 - C5
+        };
+
+        // Corrected note mappings (25 notes total)
+        const XIA_CA_ME_NOTES = [
+            // First 6 notes on string 9 (C5)
+            { string: 9, pitch: 'C5', time: 0, lyric: 'Xỉa' },
+            { string: 9, pitch: 'C5', time: 1, lyric: 'cá' },
+            { string: 9, pitch: 'C5', time: 2, lyric: 'Mè' },
+            { string: 9, pitch: 'C5', time: 3, lyric: 'Đè' },
+            { string: 9, pitch: 'C5', time: 4, lyric: 'cá' },
+            { string: 9, pitch: 'C5', time: 5, lyric: 'Chép' },
+
+            // Mixed strings for second phrase
+            { string: 7, pitch: 'G4', time: 6, lyric: 'Chân' },
+            { string: 6, pitch: 'F4', time: 7, lyric: '' },     // String 6 - NEW
+            { string: 9, pitch: 'C5', time: 7.5, lyric: 'nào' },
+            { string: 9, pitch: 'C5', time: 8.5, lyric: 'đẹp' },
+            { string: 9, pitch: 'C5', time: 9.5, lyric: '(thì)' },
+            { string: 7, pitch: 'G4', time: 10, lyric: 'đi' },
+            { string: 7, pitch: 'G4', time: 11, lyric: 'buôn' },
+            { string: 7, pitch: 'G4', time: 12, lyric: 'men' },
+            { string: 6, pitch: 'F4', time: 13, lyric: '' },    // String 6 - NEW
+
+            // Third phrase with all 4 strings
+            { string: 7, pitch: 'G4', time: 13.5, lyric: 'Chân' },
+            { string: 9, pitch: 'C5', time: 14.5, lyric: 'nào' },
+            { string: 5, pitch: 'C4', time: 15.5, lyric: '' },  // String 5 - NEW
+            { string: 7, pitch: 'G4', time: 16, lyric: 'đen' },
+            { string: 9, pitch: 'C5', time: 17, lyric: '(thì)' },
+
+            // Final notes showing all 4 strings
+            { string: 9, pitch: 'C5', time: 18 },
+            { string: 6, pitch: 'F4', time: 18.5 },  // String 6
+            { string: 5, pitch: 'C4', time: 19 },    // String 5
+            { string: 7, pitch: 'G4', time: 19.5 },  // String 7
+            { string: 9, pitch: 'C5', time: 20 }     // String 9
+        ];
+
+        // Function to apply the patch
+        function applyXiaCaMePatch() {
+            console.log('🔧 Applying Xỉa Cá Mè fix...');
+
+            // Update global string configuration if it exists
+            if (window.dynamicStringConfig) {
+                // Preserve existing strings but add/update the 4 needed for Xỉa Cá Mè
+                Object.assign(window.dynamicStringConfig, XIA_CA_ME_STRINGS);
+                console.log('✅ Updated string configuration');
+            } else {
+                // Create new configuration
+                window.dynamicStringConfig = XIA_CA_ME_STRINGS;
+                console.log('✅ Created string configuration');
+            }
+
+            // Check if this is the Xỉa Cá Mè page
+            const isXiaCaMePage = document.body.textContent.includes('Xỉa Cá Mè') ||
+                                 document.body.textContent.includes('Xia Ca Me');
+
+            if (isXiaCaMePage) {
+                console.log('📍 Detected Xỉa Cá Mè page');
+
+                // Update the display to show 4 strings
+                updateStringDisplay();
+
+                // Fix the tablature rendering
+                fixTablatureRendering();
+
+                // Update song info
+                updateSongInfo();
+            }
+
+            console.log('✅ Patch applied successfully!');
+        }
+
+        function updateStringDisplay() {
+            // Find and update string count displays
+            const stringCountElements = document.querySelectorAll(
+                '[data-metric="strings"], .string-count, #stringCount'
+            );
+
+            stringCountElements.forEach(elem => {
+                if (elem.textContent.includes('2')) {
+                    elem.innerHTML = elem.innerHTML.replace(/2\s*\(.*?\)/, '4 (5, 6, 7, 9)');
+                    console.log('✅ Updated string count display');
+                }
+            });
+
+            // Update unique pitches if shown as 2
+            const uniquePitchElements = document.querySelectorAll(
+                '[data-metric="unique"], .unique-count, #uniqueCount'
+            );
+
+            uniquePitchElements.forEach(elem => {
+                if (elem.textContent === '2' || elem.textContent === '4') {
+                    elem.textContent = '4';
+                    console.log('✅ Updated unique pitch count');
+                }
+            });
+        }
+
+        function fixTablatureRendering() {
+            // Find SVG tablature element
+            const svg = document.querySelector('#tablatureSvg, .tablature-svg, svg');
+            if (!svg) {
+                console.log('⚠️ No SVG tablature found');
+                return;
+            }
+
+            // Add the missing string lines for strings 5 and 6
+            const stringLines = svg.querySelectorAll('.string-line, line[data-string]');
+
+            if (stringLines.length === 2) {
+                console.log('🔧 Adding missing string lines...');
+
+                // Create string 5 (C4) line
+                const string5 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                string5.setAttribute('x1', '100');
+                string5.setAttribute('x2', svg.getAttribute('width') - 50);
+                string5.setAttribute('y1', '85');
+                string5.setAttribute('y2', '85');
+                string5.setAttribute('class', 'string-line');
+                string5.setAttribute('data-string', '5');
+                string5.setAttribute('stroke', '#333');
+                string5.setAttribute('stroke-width', '1');
+
+                // Create string 6 (F4) line
+                const string6 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                string6.setAttribute('x1', '100');
+                string6.setAttribute('x2', svg.getAttribute('width') - 50);
+                string6.setAttribute('y1', '145');
+                string6.setAttribute('y2', '145');
+                string6.setAttribute('class', 'string-line');
+                string6.setAttribute('data-string', '6');
+                string6.setAttribute('stroke', '#333');
+                string6.setAttribute('stroke-width', '1');
+
+                // Add to SVG
+                const firstLine = stringLines[0];
+                if (firstLine && firstLine.parentNode) {
+                    firstLine.parentNode.insertBefore(string5, firstLine);
+                    firstLine.parentNode.insertBefore(string6, firstLine);
+                    console.log('✅ Added string lines 5 and 6');
+                }
+
+                // Add string labels
+                addStringLabels(svg);
+            }
+
+            // Reposition notes to correct strings
+            repositionNotes(svg);
+        }
+
+        function addStringLabels(svg) {
+            // Add labels for the new strings
+            const labels = [
+                { string: 5, note: 'C4', y: 85 },
+                { string: 6, note: 'F4', y: 145 }
+            ];
+
+            labels.forEach(({ string, note, y }) => {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', '20');
+                text.setAttribute('y', y + 5);
+                text.setAttribute('class', 'string-label');
+                text.setAttribute('fill', '#666');
+                text.setAttribute('font-size', '14');
+                text.textContent = `${string}: ${note}`;
+                svg.appendChild(text);
+            });
+
+            console.log('✅ Added string labels');
+        }
+
+        function repositionNotes(svg) {
+            // Find all note circles
+            const notes = svg.querySelectorAll('circle[data-note], .note-circle');
+
+            if (notes.length > 0) {
+                console.log(`🔧 Repositioning ${notes.length} notes...`);
+
+                notes.forEach((note, index) => {
+                    if (index < XIA_CA_ME_NOTES.length) {
+                        const noteData = XIA_CA_ME_NOTES[index];
+                        const stringConfig = XIA_CA_ME_STRINGS[noteData.string];
+
+                        if (stringConfig) {
+                            // Update Y position
+                            note.setAttribute('cy', stringConfig.yPos);
+                            // Update data attributes
+                            note.setAttribute('data-string', noteData.string);
+                            note.setAttribute('data-pitch', noteData.pitch);
+                        }
+                    }
+                });
+
+                console.log('✅ Notes repositioned');
+            }
+        }
+
+        function updateSongInfo() {
+            // Update any info displays
+            const infoUpdates = {
+                'Strings': '4 (5, 6, 7, 9)',
+                'Unique': '4',
+                'Pitches': 'C4, F4, G4, C5'
+            };
+
+            Object.entries(infoUpdates).forEach(([key, value]) => {
+                const elements = document.querySelectorAll(`*:contains("${key}")`);
+                // Note: contains selector doesn't work directly, using alternative
+                document.querySelectorAll('div, span, p').forEach(elem => {
+                    if (elem.textContent.includes(key) && !elem.children.length) {
+                        elem.textContent = elem.textContent.replace(/\d+(\s*\([^)]*\))?/, value);
+                    }
+                });
+            });
+        }
+
+        // Apply patch when page loads
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', applyXiaCaMePatch);
+        } else {
+            applyXiaCaMePatch();
+        }
+
+        // Also listen for dynamic content changes
+        window.addEventListener('songChanged', applyXiaCaMePatch);
+        window.addEventListener('load', applyXiaCaMePatch);
+
+        // Export for manual use
+        window.fixXiaCaMe = applyXiaCaMePatch;
+    </script>
+</head>
+<body>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 50px auto; padding: 30px; background: white; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+        <h1 style="color: #667eea;">🔧 Xỉa Cá Mè String Fix</h1>
+
+        <p>This patch fixes the Xỉa Cá Mè song to display the correct 4 strings instead of just 2.</p>
+
+        <h2>What it fixes:</h2>
+        <ul>
+            <li>✅ Adds String 5 (C4)</li>
+            <li>✅ Adds String 6 (F4)</li>
+            <li>✅ Keeps String 7 (G4)</li>
+            <li>✅ Keeps String 9 (C5)</li>
+        </ul>
+
+        <h2>How to use:</h2>
+        <ol>
+            <li>Include this script in your main page</li>
+            <li>Or copy the JavaScript code into your existing file</li>
+            <li>The patch auto-applies when it detects Xỉa Cá Mè</li>
+        </ol>
+
+        <button onclick="window.fixXiaCaMe && window.fixXiaCaMe()" style="padding: 10px 20px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 20px;">
+            Apply Fix Now
+        </button>
+
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <strong>Status:</strong> <span id="status">Ready to apply</span>
+        </div>
+    </div>
+
+    <script>
+        // Update status when fix is applied
+        const originalApply = window.fixXiaCaMe;
+        window.fixXiaCaMe = function() {
+            if (originalApply) originalApply();
+            document.getElementById('status').textContent = '✅ Fix applied successfully!';
+            document.getElementById('status').style.color = '#28a745';
+        };
+    </script>
+</body>
+</html>

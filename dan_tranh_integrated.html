@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dan Tranh Dynamic String System - Integrated Build</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.95;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .song-selector {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .song-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .song-selector select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .song-selector select:hover {
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .song-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .info-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-card .value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .info-card .detail {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .dynamic-tablature-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .tablature-controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .string-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: linear-gradient(135deg, #00c851, #00ff7f);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 8px rgba(0, 200, 81, 0.3);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #c33;
+        }
+
+        .success-message {
+            background: #efe;
+            color: #3a3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3a3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Dan Tranh Dynamic String System</h1>
+            <p>Intelligent String Configuration with Proportional Spacing</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Song Selector -->
+            <div class="song-selector">
+                <label for="songSelect">Select a Song:</label>
+                <select id="songSelect">
+                    <option value="">-- Choose a song --</option>
+                </select>
+            </div>
+
+            <!-- Song Information -->
+            <div class="song-info" id="songInfo" style="display: none;">
+                <div class="info-card">
+                    <h3>Strings Used</h3>
+                    <div class="value" id="stringCount">-</div>
+                    <div class="detail" id="stringDetail">-</div>
+                </div>
+                <div class="info-card" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                    <h3>Total Notes</h3>
+                    <div class="value" id="noteCount">-</div>
+                    <div class="detail" id="noteDetail">-</div>
+                </div>
+                <div class="info-card" style="background: linear-gradient(135deg, #4facfe, #00f2fe);">
+                    <h3>Pitch Range</h3>
+                    <div class="value" id="pitchRange">-</div>
+                    <div class="detail" id="pitchDetail">-</div>
+                </div>
+                <div class="info-card" style="background: linear-gradient(135deg, #43e97b, #38f9d7);">
+                    <h3>Duration</h3>
+                    <div class="value" id="duration">-</div>
+                    <div class="detail" id="durationDetail">-</div>
+                </div>
+            </div>
+
+            <!-- Tablature Container -->
+            <div id="tablatureContainer"></div>
+
+            <!-- Messages -->
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <!-- Include the modules -->
+    <script type="module">
+        import { DanTranhTablature } from './danTranh.module.js';
+
+        // Sample song database with various string configurations
+        const songDatabase = {
+            'ba_rang_ba_ri': {
+                title: 'Bà Rằng Bà Rí',
+                composer: 'Traditional',
+                notes: [
+                    { pitch: 'D4', time: 0, duration: 1 },
+                    { pitch: 'G4', time: 1, duration: 1 },
+                    { pitch: 'A4', time: 2, duration: 1 },
+                    { pitch: 'C5', time: 3, duration: 1 },
+                    { pitch: 'D5', time: 4, duration: 1 },
+                    { pitch: 'E5', time: 5, duration: 1 },
+                    { pitch: 'G5', time: 6, duration: 1 },
+                    { pitch: 'A4', time: 7, duration: 1 },
+                    { pitch: 'C5', time: 8, duration: 1 },
+                    { pitch: 'D5', time: 9, duration: 1 },
+                    { pitch: 'G4', time: 10, duration: 1 },
+                    { pitch: 'A4', time: 11, duration: 1 },
+                    { pitch: 'E5', time: 12, duration: 1 },
+                    { pitch: 'D5', time: 13, duration: 1 },
+                    { pitch: 'C5', time: 14, duration: 1 },
+                ]
+            },
+            'xia_ca_me': {
+                title: 'Xỉa Cá Mè',
+                composer: 'Folk Song',
+                notes: [
+                    { pitch: 'C4', time: 0, duration: 2 },
+                    { pitch: 'F4', time: 2, duration: 1 },
+                    { pitch: 'G4', time: 3, duration: 1 },
+                    { pitch: 'C5', time: 4, duration: 2 },
+                    { pitch: 'F4', time: 6, duration: 1 },
+                    { pitch: 'G4', time: 7, duration: 1 },
+                    { pitch: 'C4', time: 8, duration: 1 },
+                    { pitch: 'F4', time: 9, duration: 1 },
+                    { pitch: 'C5', time: 10, duration: 2 },
+                    { pitch: 'G4', time: 12, duration: 1 },
+                    { pitch: 'F4', time: 13, duration: 1 },
+                    { pitch: 'C4', time: 14, duration: 2 },
+                    // With bending examples
+                    { pitch: 'E4', time: 16, duration: 1, bent: true },
+                    { pitch: 'A4', time: 17, duration: 1, bent: true },
+                    { pitch: 'Bb4', time: 18, duration: 1, bent: true },
+                ]
+            },
+            'single_string_melody': {
+                title: 'Single String Melody',
+                composer: 'Study Piece',
+                notes: [
+                    { pitch: 'C4', time: 0, duration: 1 },
+                    { pitch: 'C4', time: 1, duration: 0.5 },
+                    { pitch: 'C4', time: 1.5, duration: 0.5 },
+                    { pitch: 'C4', time: 2, duration: 2 },
+                    { pitch: 'C4', time: 4, duration: 1 },
+                    { pitch: 'C4', time: 5, duration: 1 },
+                    { pitch: 'C4', time: 6, duration: 1, grace: true },
+                    { pitch: 'C4', time: 7, duration: 2 },
+                ]
+            },
+            'two_string_harmony': {
+                title: 'Two String Harmony',
+                composer: 'Study Piece',
+                notes: [
+                    { pitch: 'C4', time: 0, duration: 2 },
+                    { pitch: 'G4', time: 0, duration: 2 },
+                    { pitch: 'C4', time: 2, duration: 1 },
+                    { pitch: 'G4', time: 3, duration: 1 },
+                    { pitch: 'C4', time: 4, duration: 1 },
+                    { pitch: 'G4', time: 4, duration: 1 },
+                    { pitch: 'C4', time: 5, duration: 1 },
+                    { pitch: 'G4', time: 6, duration: 2 },
+                    { pitch: 'C4', time: 8, duration: 2 },
+                ]
+            },
+            'chromatic_exercise': {
+                title: 'Chromatic Exercise',
+                composer: 'Technical Study',
+                notes: [
+                    { pitch: 'C4', time: 0, duration: 0.5 },
+                    { pitch: 'C#4', time: 0.5, duration: 0.5 },
+                    { pitch: 'D4', time: 1, duration: 0.5 },
+                    { pitch: 'Eb4', time: 1.5, duration: 0.5 },
+                    { pitch: 'E4', time: 2, duration: 0.5 },
+                    { pitch: 'F4', time: 2.5, duration: 0.5 },
+                    { pitch: 'F#4', time: 3, duration: 0.5 },
+                    { pitch: 'G4', time: 3.5, duration: 0.5 },
+                    { pitch: 'Ab4', time: 4, duration: 0.5 },
+                    { pitch: 'A4', time: 4.5, duration: 0.5 },
+                    { pitch: 'Bb4', time: 5, duration: 0.5 },
+                    { pitch: 'B4', time: 5.5, duration: 0.5 },
+                    { pitch: 'C5', time: 6, duration: 1 },
+                ]
+            },
+            'pentatonic_scale': {
+                title: 'Pentatonic Scale Pattern',
+                composer: 'Traditional Pattern',
+                notes: [
+                    { pitch: 'C3', time: 0, duration: 1 },
+                    { pitch: 'D3', time: 1, duration: 1 },
+                    { pitch: 'E3', time: 2, duration: 1 },
+                    { pitch: 'G3', time: 3, duration: 1 },
+                    { pitch: 'A3', time: 4, duration: 1 },
+                    { pitch: 'C4', time: 5, duration: 1 },
+                    { pitch: 'D4', time: 6, duration: 1 },
+                    { pitch: 'E4', time: 7, duration: 1 },
+                    { pitch: 'G4', time: 8, duration: 1 },
+                    { pitch: 'A4', time: 9, duration: 1 },
+                    { pitch: 'C5', time: 10, duration: 1 },
+                    { pitch: 'D5', time: 11, duration: 1 },
+                    { pitch: 'E5', time: 12, duration: 1 },
+                    { pitch: 'G5', time: 13, duration: 1 },
+                    { pitch: 'A5', time: 14, duration: 2 },
+                ]
+            },
+            'wide_interval_piece': {
+                title: 'Wide Intervals',
+                composer: 'Modern Composition',
+                notes: [
+                    { pitch: 'C2', time: 0, duration: 2 },
+                    { pitch: 'G5', time: 2, duration: 1 },
+                    { pitch: 'D3', time: 3, duration: 1 },
+                    { pitch: 'F#5', time: 4, duration: 1 },
+                    { pitch: 'Bb2', time: 5, duration: 1 },
+                    { pitch: 'E5', time: 6, duration: 1 },
+                    { pitch: 'Ab3', time: 7, duration: 1 },
+                    { pitch: 'C6', time: 8, duration: 2 },
+                    { pitch: 'F2', time: 10, duration: 1 },
+                    { pitch: 'A5', time: 11, duration: 1 },
+                    { pitch: 'Eb3', time: 12, duration: 2 },
+                ]
+            }
+        };
+
+        let currentTablature = null;
+
+        // Initialize the application
+        function init() {
+            populateSongSelector();
+            setupEventListeners();
+            showMessage('success', 'Dan Tranh Dynamic String System v3.0 loaded successfully!');
+        }
+
+        // Populate song selector
+        function populateSongSelector() {
+            const select = document.getElementById('songSelect');
+
+            for (const [id, song] of Object.entries(songDatabase)) {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = song.title;
+                select.appendChild(option);
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('songSelect').addEventListener('change', (e) => {
+                if (e.target.value) {
+                    loadSong(e.target.value);
+                } else {
+                    clearTablature();
+                }
+            });
+        }
+
+        // Load a song
+        function loadSong(songId) {
+            const song = songDatabase[songId];
+            if (!song) {
+                showMessage('error', `Song not found: ${songId}`);
+                return;
+            }
+
+            // Show song info
+            updateSongInfo(song);
+
+            // Clear existing tablature
+            clearTablature();
+
+            // Create new tablature container
+            const container = document.getElementById('tablatureContainer');
+
+            // Add controls
+            const controls = createControls();
+            container.appendChild(controls);
+
+            // Add tablature
+            const tablatureDiv = document.createElement('div');
+            tablatureDiv.id = 'tablature-' + Date.now();
+            container.appendChild(tablatureDiv);
+
+            // Initialize tablature
+            currentTablature = new DanTranhTablature(tablatureDiv.id, {
+                showIntervals: true,
+                showBending: true,
+                displayMode: 'played',
+                onNoteClick: (note, index) => {
+                    console.log('Note clicked:', note, 'at index:', index);
+                    showMessage('success', `Note clicked: ${note.pitch} at time ${note.time}`);
+                }
+            });
+
+            // Load the song
+            currentTablature.loadSong(song);
+
+            // Setup control listeners
+            setupControlListeners();
+
+            showMessage('success', `Loaded: ${song.title} with ${currentTablature.getStringConfiguration().count} strings`);
+        }
+
+        // Update song information display
+        function updateSongInfo(song) {
+            const infoDiv = document.getElementById('songInfo');
+            infoDiv.style.display = 'grid';
+
+            // Count strings
+            const usedStrings = new Set();
+            const bentNotes = [];
+            song.notes.forEach(note => {
+                if (!note.bent) {
+                    usedStrings.add(note.pitch);
+                } else {
+                    bentNotes.push(note.pitch);
+                }
+            });
+
+            // Find pitch range
+            const pitches = song.notes.map(n => n.pitch);
+            const sortedPitches = [...new Set(pitches)].sort((a, b) => {
+                return noteToMidi(a) - noteToMidi(b);
+            });
+            const lowest = sortedPitches[0];
+            const highest = sortedPitches[sortedPitches.length - 1];
+
+            // Calculate duration
+            const maxTime = Math.max(...song.notes.map(n => n.time + n.duration));
+
+            // Update display
+            document.getElementById('stringCount').textContent = usedStrings.size;
+            document.getElementById('stringDetail').textContent = Array.from(usedStrings).sort((a, b) =>
+                noteToMidi(a) - noteToMidi(b)
+            ).join(', ');
+
+            document.getElementById('noteCount').textContent = song.notes.length;
+            document.getElementById('noteDetail').textContent = bentNotes.length > 0 ?
+                `${bentNotes.length} bent notes` : 'No bent notes';
+
+            document.getElementById('pitchRange').textContent = `${lowest} - ${highest}`;
+            document.getElementById('pitchDetail').textContent = `${sortedPitches.length} unique pitches`;
+
+            document.getElementById('duration').textContent = `${maxTime} beats`;
+            document.getElementById('durationDetail').textContent = `~${Math.round(maxTime * 2)} seconds`;
+        }
+
+        // Create control panel
+        function createControls() {
+            const controls = document.createElement('div');
+            controls.className = 'tablature-controls';
+            controls.innerHTML = `
+                <div class="control-group">
+                    <label>Display Mode:</label>
+                    <select id="displayMode">
+                        <option value="played">Only Played Strings</option>
+                        <option value="all">All Available Strings</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>String Spacing:</label>
+                    <input type="range" id="spacing" min="10" max="40" value="20">
+                    <span id="spacingValue">20px</span>
+                </div>
+                <div class="control-group">
+                    <input type="checkbox" id="showIntervals" checked>
+                    <label for="showIntervals">Show Intervals</label>
+                </div>
+                <div class="control-group">
+                    <input type="checkbox" id="showBending" checked>
+                    <label for="showBending">Show Bending</label>
+                </div>
+                <button id="exportSvg">Export SVG</button>
+                <button id="resetView">Reset View</button>
+            `;
+            return controls;
+        }
+
+        // Setup control listeners
+        function setupControlListeners() {
+            // Display mode
+            document.getElementById('displayMode')?.addEventListener('change', (e) => {
+                if (currentTablature) {
+                    currentTablature.setOptions({ displayMode: e.target.value });
+                }
+            });
+
+            // Spacing
+            const spacing = document.getElementById('spacing');
+            const spacingValue = document.getElementById('spacingValue');
+            spacing?.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                spacingValue.textContent = value + 'px';
+                if (currentTablature) {
+                    currentTablature.setOptions({ baseSpacing: value });
+                }
+            });
+
+            // Show intervals
+            document.getElementById('showIntervals')?.addEventListener('change', (e) => {
+                if (currentTablature) {
+                    currentTablature.setOptions({ showIntervals: e.target.checked });
+                }
+            });
+
+            // Show bending
+            document.getElementById('showBending')?.addEventListener('change', (e) => {
+                if (currentTablature) {
+                    currentTablature.setOptions({ showBending: e.target.checked });
+                }
+            });
+
+            // Export SVG
+            document.getElementById('exportSvg')?.addEventListener('click', () => {
+                if (currentTablature) {
+                    const svg = currentTablature.exportSVG();
+                    downloadSVG(svg, 'tablature.svg');
+                }
+            });
+
+            // Reset view
+            document.getElementById('resetView')?.addEventListener('click', () => {
+                if (currentTablature) {
+                    currentTablature.setOptions({
+                        baseSpacing: 20,
+                        showIntervals: true,
+                        showBending: true,
+                        displayMode: 'played'
+                    });
+                    // Reset controls
+                    document.getElementById('displayMode').value = 'played';
+                    document.getElementById('spacing').value = 20;
+                    document.getElementById('spacingValue').textContent = '20px';
+                    document.getElementById('showIntervals').checked = true;
+                    document.getElementById('showBending').checked = true;
+                }
+            });
+        }
+
+        // Clear tablature
+        function clearTablature() {
+            const container = document.getElementById('tablatureContainer');
+            container.innerHTML = '';
+            document.getElementById('songInfo').style.display = 'none';
+            currentTablature = null;
+        }
+
+        // Note to MIDI conversion
+        function noteToMidi(note) {
+            if (!note || note === 'Unknown') return 0;
+
+            const noteMap = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+            const parts = note.match(/([A-G])([#b]?)(\d+)/);
+            if (!parts) return 0;
+
+            let midi = noteMap[parts[1]];
+            if (parts[2] === '#') midi++;
+            if (parts[2] === 'b') midi--;
+            midi += (parseInt(parts[3]) + 1) * 12;
+
+            return midi;
+        }
+
+        // Download SVG
+        function downloadSVG(svgString, filename) {
+            const blob = new Blob([svgString], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Show message
+        function showMessage(type, text) {
+            const container = document.getElementById('messages');
+            const message = document.createElement('div');
+            message.className = type + '-message';
+            message.textContent = text;
+            container.appendChild(message);
+
+            setTimeout(() => {
+                message.style.opacity = '0';
+                setTimeout(() => message.remove(), 300);
+            }, 3000);
+        }
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

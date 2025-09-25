@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytical Đàn Tranh Tablature V2 - Full Featured</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: #f0f0f0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 24px;
+        }
+
+        h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 14px;
+        }
+
+        /* Control Panel */
+        .control-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+
+        .control-group h3 {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .tone-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .tone-btn {
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .tone-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .tone-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
+        .slider-control {
+            margin: 10px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+            background: #ddd;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #007bff;
+            cursor: pointer;
+        }
+
+        .pattern-display {
+            min-height: 60px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .pattern-item {
+            padding: 4px 8px;
+            margin: 2px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            display: inline-block;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pattern-item:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+
+        .pattern-item.selected {
+            background: #2196f3;
+            color: white;
+            border-color: #1976d2;
+        }
+
+        /* Section Controls */
+        .section-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .section-group {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            background: #fafafa;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .section-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .section-btn {
+            padding: 4px;
+            font-size: 11px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .section-btn:hover {
+            background: #e3f2fd;
+        }
+
+        .section-labels {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 3px;
+            font-size: 10px;
+        }
+
+        .section-label {
+            padding: 2px 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            text-align: center;
+        }
+
+        .section-label.opening { background: #ffecb3; }
+        .section-label.development { background: #c8e6c9; }
+        .section-label.signature { background: #ffccbc; }
+        .section-label.closing { background: #d1c4e9; }
+
+        /* Tablature Display */
+        .tablature-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        svg {
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        .string-line {
+            stroke: #999;
+            stroke-width: 1;
+        }
+
+        .string-label {
+            fill: #666;
+            font-size: 11px;
+            font-family: monospace;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .note-circle:hover {
+            stroke-width: 3;
+            filter: brightness(1.1);
+        }
+
+        .note-circle.playing {
+            animation: pulse 0.5s ease-in-out;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); opacity: 0.8; }
+            100% { transform: scale(1); }
+        }
+
+        .note-number {
+            fill: white;
+            font-size: 10px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+        }
+
+        .note-label {
+            fill: #333;
+            font-size: 9px;
+            text-anchor: middle;
+            dominant-baseline: hanging;
+        }
+
+        .grace-indicator {
+            fill: #666;
+            font-size: 8px;
+            font-style: italic;
+        }
+
+        /* Lyrics Section */
+        .lyrics-container {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .lyrics-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .lyrics-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .language-tabs {
+            display: flex;
+            gap: 5px;
+        }
+
+        .lang-tab {
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .lang-tab.active {
+            background: #007bff;
+            color: white;
+            border-color: #0056b3;
+        }
+
+        .lyrics-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .lyrics-column {
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+
+        .lyrics-column h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .lyrics-line {
+            padding: 5px;
+            margin: 3px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .lyrics-line:hover {
+            background: #f0f0f0;
+        }
+
+        .lyrics-line.active {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .line-playback-btn {
+            width: 20px;
+            height: 20px;
+            padding: 0;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background: white;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .line-playback-btn:hover {
+            background: #e3f2fd;
+        }
+
+        .syllable {
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .syllable:hover {
+            background: #e3f2fd;
+        }
+
+        .syllable.active {
+            background: #ffeb3b;
+            font-weight: bold;
+            transform: scale(1.1);
+        }
+
+        .syllable.melismatic {
+            border-bottom: 2px dotted #666;
+        }
+
+        .line-break-marker {
+            color: #999;
+            cursor: pointer;
+            padding: 0 2px;
+            user-select: none;
+        }
+
+        .line-break-marker:hover {
+            color: #007bff;
+            background: #e3f2fd;
+        }
+
+        /* Playback Controls */
+        .playback-bar {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .playback-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .playback-btn:hover {
+            background: #0056b3;
+        }
+
+        .playback-btn.stop {
+            background: #dc3545;
+        }
+
+        .playback-btn.stop:hover {
+            background: #c82333;
+        }
+
+        .tempo-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tempo-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        /* Statistics Bar */
+        .stats-bar {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 5px;
+        }
+
+        .stat-label {
+            font-weight: bold;
+        }
+
+        .string-stats {
+            display: flex;
+            gap: 10px;
+        }
+
+        .string-stat {
+            padding: 2px 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Analytical Đàn Tranh Tablature</h1>
+        <h2>KPIC/KRIC Analysis with Interactive Highlighting</h2>
+    </div>
+
+    <!-- Main Control Panel -->
+    <div class="control-panel">
+        <div class="controls-grid">
+            <!-- Note Filters -->
+            <div class="control-group">
+                <h3>Note Filters</h3>
+                <div style="margin-bottom: 8px;">
+                    <label><input type="checkbox" id="showAllNotes" checked> All Notes</label>
+                    <label><input type="checkbox" id="showMainNotes" checked> Main Notes</label>
+                </div>
+                <div class="tone-filters">
+                    <button class="tone-btn" data-tone="sac">Sắc</button>
+                    <button class="tone-btn" data-tone="huyen">Huyền</button>
+                    <button class="tone-btn" data-tone="hoi">Hỏi</button>
+                    <button class="tone-btn" data-tone="nga">Ngã</button>
+                    <button class="tone-btn" data-tone="nang">Nặng</button>
+                    <button class="tone-btn" data-tone="ngang">Ngang</button>
+                </div>
+                <div style="margin-top: 8px;">
+                    <label><input type="checkbox" id="showGrace"> Grace</label>
+                    <label><input type="checkbox" id="showMelisma"> Melisma</label>
+                </div>
+            </div>
+
+            <!-- Zoom Controls -->
+            <div class="control-group">
+                <h3>Zoom Controls</h3>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>X-Zoom:</span>
+                        <span id="xZoomValue">100%</span>
+                    </div>
+                    <input type="range" id="xZoom" min="10" max="200" value="100">
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>Y-Zoom:</span>
+                        <span id="yZoomValue">67%</span>
+                    </div>
+                    <input type="range" id="yZoom" min="10" max="200" value="67">
+                </div>
+            </div>
+
+            <!-- Pattern Controls -->
+            <div class="control-group">
+                <h3>Pattern Analysis</h3>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>KPIC</span>
+                        <span id="kpicValue">0</span>
+                    </div>
+                    <input type="range" id="kpicSlider" min="0" max="5" value="0">
+                    <div class="pattern-display" id="kpicPatterns">
+                        Move KPIC slider to see patterns...<br>
+                        Hold Ctrl/Cmd for multiple
+                    </div>
+                </div>
+                <div class="slider-control">
+                    <div class="slider-label">
+                        <span>KRIC</span>
+                        <span id="kricValue">0</span>
+                    </div>
+                    <input type="range" id="kricSlider" min="0" max="5" value="0">
+                    <div class="pattern-display" id="kricPatterns">
+                        Move KRIC slider to see patterns...<br>
+                        Hold Ctrl/Cmd for multiple
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Controls -->
+        <div class="section-controls">
+            <div class="section-group">
+                <div class="section-title">Section 1</div>
+                <div class="section-buttons">
+                    <button class="section-btn" onclick="playSection(1, 'all')">▶</button>
+                    <button class="section-btn" onclick="stopSection(1)">⏹</button>
+                    <button class="section-btn" onclick="playSection(1, 'opening')">▶</button>
+                    <button class="section-btn" onclick="stopSection(1)">⏹</button>
+                    <button class="section-btn" onclick="playSection(1, 'development')">▶</button>
+                    <button class="section-btn" onclick="stopSection(1)">⏹</button>
+                    <button class="section-btn" onclick="playSection(1, 'signature')">▶</button>
+                    <button class="section-btn" onclick="stopSection(1)">⏹</button>
+                    <button class="section-btn" onclick="playSection(1, 'closing')">▶</button>
+                    <button class="section-btn" onclick="stopSection(1)">⏹</button>
+                </div>
+                <div class="section-labels">
+                    <div class="section-label opening">Opening</div>
+                    <div class="section-label development">Development</div>
+                    <div class="section-label signature">Signature</div>
+                    <div class="section-label closing">Closing</div>
+                </div>
+            </div>
+
+            <div class="section-group">
+                <div class="section-title">Section 2</div>
+                <div class="section-buttons">
+                    <button class="section-btn" onclick="playSection(2, 'all')">▶</button>
+                    <button class="section-btn" onclick="stopSection(2)">⏹</button>
+                    <button class="section-btn" onclick="playSection(2, 'opening')">▶</button>
+                    <button class="section-btn" onclick="stopSection(2)">⏹</button>
+                    <button class="section-btn" onclick="playSection(2, 'development')">▶</button>
+                    <button class="section-btn" onclick="stopSection(2)">⏹</button>
+                    <button class="section-btn" onclick="playSection(2, 'signature')">▶</button>
+                    <button class="section-btn" onclick="stopSection(2)">⏹</button>
+                    <button class="section-btn" onclick="playSection(2, 'closing')">▶</button>
+                    <button class="section-btn" onclick="stopSection(2)">⏹</button>
+                </div>
+                <div class="section-labels">
+                    <div class="section-label opening">Opening</div>
+                    <div class="section-label development">Development</div>
+                    <div class="section-label signature">Signature</div>
+                    <div class="section-label closing">Closing</div>
+                </div>
+            </div>
+
+            <div class="section-group">
+                <div class="section-title">Section 3</div>
+                <div class="section-buttons">
+                    <button class="section-btn" onclick="playSection(3, 'all')">▶</button>
+                    <button class="section-btn" onclick="stopSection(3)">⏹</button>
+                    <button class="section-btn" onclick="playSection(3, 'opening')">▶</button>
+                    <button class="section-btn" onclick="stopSection(3)">⏹</button>
+                    <button class="section-btn" onclick="playSection(3, 'development')">▶</button>
+                    <button class="section-btn" onclick="stopSection(3)">⏹</button>
+                    <button class="section-btn" onclick="playSection(3, 'signature')">▶</button>
+                    <button class="section-btn" onclick="stopSection(3)">⏹</button>
+                    <button class="section-btn" onclick="playSection(3, 'closing')">▶</button>
+                    <button class="section-btn" onclick="stopSection(3)">⏹</button>
+                </div>
+                <div class="section-labels">
+                    <div class="section-label opening">Opening</div>
+                    <div class="section-label development">Development</div>
+                    <div class="section-label signature">Signature</div>
+                    <div class="section-label closing">Closing</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <span class="stat-label">Total Notes:</span>
+            <span id="totalNotes">136</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Grace Notes:</span>
+            <span id="graceNotes">11</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">String Distribution:</span>
+            <div class="string-stats" id="stringStats">
+                <span class="string-stat">D4: 33</span>
+                <span class="string-stat">G4: 7</span>
+                <span class="string-stat">A4: 14</span>
+                <span class="string-stat">C5: 9</span>
+                <span class="string-stat">D5: 8</span>
+                <span class="string-stat">E5: 5</span>
+                <span class="string-stat">G5: 42</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tablature Display -->
+    <div class="tablature-container">
+        <svg id="tablature" viewBox="0 0 11400 700" width="100%" height="400">
+            <!-- Content will be dynamically generated -->
+        </svg>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="playback-bar">
+        <button class="playback-btn" onclick="app.startPlayback()">
+            <span>🔊</span> ▶ Play
+        </button>
+        <button class="playback-btn stop" onclick="app.stopPlayback()">
+            ⏹ Stop
+        </button>
+        <div class="tempo-control">
+            <label>Tempo:</label>
+            <input type="number" class="tempo-input" id="tempo" value="120" min="40" max="200">
+            <span>BPM</span>
+        </div>
+        <label>
+            <input type="checkbox" id="autoScroll" checked> Auto-scroll
+        </label>
+        <span>|</span>
+        <button onclick="toggleLyrics()">📝 Lyrics</button>
+        <button onclick="toggleAnalysis()">📊 Analysis</button>
+        <button onclick="showLegend()">🏷️ Legend</button>
+    </div>
+
+    <!-- Bilingual Lyrics -->
+    <div class="lyrics-container">
+        <div class="lyrics-header">
+            <h3>📝 Interactive Lyrics</h3>
+            <div class="lyrics-controls">
+                <div class="language-tabs">
+                    <button class="lang-tab active" onclick="setLanguage('both')">Both</button>
+                    <button class="lang-tab" onclick="setLanguage('vn')">Tiếng Việt</button>
+                    <button class="lang-tab" onclick="setLanguage('en')">English</button>
+                </div>
+                <select id="fontSize" onchange="updateFontSize()">
+                    <option value="14">14px</option>
+                    <option value="16">16px</option>
+                    <option value="18" selected>18px</option>
+                    <option value="20">20px</option>
+                </select>
+                <select id="voice">
+                    <option value="female">👩 Female</option>
+                    <option value="male">👨 Male</option>
+                </select>
+                <button onclick="startLearning()">▶️ Start Learning</button>
+            </div>
+        </div>
+        <div class="lyrics-display">
+            <div class="lyrics-column" id="vnLyrics">
+                <h4>Tiếng Việt (Vietnamese)</h4>
+                <div id="vnLyricsContent">
+                    <!-- Vietnamese lyrics will be loaded here -->
+                </div>
+            </div>
+            <div class="lyrics-column" id="enLyrics">
+                <h4>English Translation</h4>
+                <div id="enLyricsContent">
+                    <!-- English translation will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Main application class
+        class DanTranhFull {
+            constructor() {
+                this.data = null;
+                this.audioContext = null;
+                this.masterVolume = null;
+                this.isPlaying = false;
+                this.playbackIndex = 0;
+                this.playbackTimer = null;
+                this.tempo = 120;
+                this.selectedPatterns = new Set();
+                this.activeFilters = new Set();
+                this.currentLanguage = 'both';
+
+                this.initAudio();
+                this.init();
+            }
+
+            initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.masterVolume = this.audioContext.createGain();
+                    this.masterVolume.gain.value = 0.5;
+                    this.masterVolume.connect(this.audioContext.destination);
+                    console.log('🔊 Audio initialized');
+                } catch (error) {
+                    console.error('Audio init failed:', error);
+                }
+            }
+
+            async init() {
+                console.log('🚀 Initializing Full Featured V2...');
+                await this.loadData();
+                this.renderTablature();
+                this.renderLyrics();
+                this.setupEventListeners();
+                this.updateStatistics();
+                console.log('✅ Initialization complete');
+            }
+
+            async loadData() {
+                try {
+                    const [notes, lyrics, strings, sections, patterns] = await Promise.all([
+                        fetch('/data/song-001/notes.json').then(r => r.json()),
+                        fetch('/data/song-001/lyrics.json').then(r => r.json()),
+                        fetch('/data/song-001/strings.json').then(r => r.json()),
+                        fetch('/data/song-001/sections.json').then(r => r.json()),
+                        fetch('/data/song-001/patterns.json').then(r => r.json())
+                    ]);
+
+                    this.data = { notes, lyrics, strings, sections, patterns };
+                    console.log('📊 Data loaded:', {
+                        notes: notes.length,
+                        syllables: lyrics.syllables.length,
+                        lines: lyrics.lines.length
+                    });
+                } catch (error) {
+                    console.error('Failed to load data:', error);
+                }
+            }
+
+            renderTablature() {
+                const svg = document.getElementById('tablature');
+                svg.innerHTML = '';
+
+                // Draw string lines
+                this.data.strings.forEach(string => {
+                    // String line
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', '0');
+                    line.setAttribute('y1', string.y);
+                    line.setAttribute('x2', '11400');
+                    line.setAttribute('y2', string.y);
+                    line.setAttribute('class', 'string-line');
+                    svg.appendChild(line);
+
+                    // String label
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', '20');
+                    label.setAttribute('y', string.y - 5);
+                    label.setAttribute('class', 'string-label');
+                    label.textContent = `String ${string.number}: ${string.note}`;
+                    svg.appendChild(label);
+                });
+
+                // Draw notes with numbers and labels
+                this.data.notes.forEach(note => {
+                    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+                    // Note circle
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', note.x);
+                    circle.setAttribute('cy', note.y);
+                    circle.setAttribute('r', note.isGrace ? 6 : 12);
+                    circle.setAttribute('fill', note.isGrace ? '#FFD700' : '#008080');
+                    circle.setAttribute('stroke', note.isGrace ? '#0066FF' : 'crimson');
+                    circle.setAttribute('stroke-width', '2');
+                    circle.setAttribute('class', 'note-circle');
+                    circle.setAttribute('id', `note-${note.id}`);
+                    circle.setAttribute('data-note-id', note.id);
+                    group.appendChild(circle);
+
+                    // Note number inside circle
+                    const number = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    number.setAttribute('x', note.x);
+                    number.setAttribute('y', note.y);
+                    number.setAttribute('class', 'note-number');
+                    number.textContent = note.id;
+                    group.appendChild(number);
+
+                    // Note label below
+                    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    label.setAttribute('x', note.x);
+                    label.setAttribute('y', note.y + 20);
+                    label.setAttribute('class', 'note-label');
+
+                    // Get syllable for this note
+                    const syllable = this.data.lyrics.syllables.find(s => s.position === note.id);
+                    if (syllable) {
+                        label.textContent = syllable.text;
+                    }
+
+                    // Grace indicator
+                    if (note.isGrace) {
+                        const graceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        graceText.setAttribute('x', note.x);
+                        graceText.setAttribute('y', note.y - 15);
+                        graceText.setAttribute('class', 'grace-indicator');
+                        graceText.textContent = 'i';
+                        group.appendChild(graceText);
+                    }
+
+                    group.appendChild(label);
+
+                    // Add note ID label above
+                    const idLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    idLabel.setAttribute('x', note.x);
+                    idLabel.setAttribute('y', note.y - 25);
+                    idLabel.setAttribute('class', 'note-label');
+                    idLabel.setAttribute('fill', '#666');
+                    idLabel.setAttribute('font-size', '8');
+                    idLabel.textContent = `#${note.id}`;
+                    group.appendChild(idLabel);
+
+                    svg.appendChild(group);
+
+                    // Click handler
+                    group.onclick = () => this.selectNote(note.id);
+                });
+            }
+
+            renderLyrics() {
+                const vnContent = document.getElementById('vnLyricsContent');
+                const enContent = document.getElementById('enLyricsContent');
+
+                if (!vnContent || !enContent) return;
+
+                vnContent.innerHTML = '';
+                enContent.innerHTML = '';
+
+                // Vietnamese lyrics
+                this.data.lyrics.lines.forEach((line, idx) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'lyrics-line';
+                    lineDiv.id = `vn-line-${idx}`;
+
+                    const playBtn = document.createElement('button');
+                    playBtn.className = 'line-playback-btn';
+                    playBtn.textContent = '▶️';
+                    playBtn.onclick = () => this.playLine(idx);
+                    lineDiv.appendChild(playBtn);
+
+                    const textSpan = document.createElement('span');
+                    line.syllables.forEach((syl, sylIdx) => {
+                        const sylSpan = document.createElement('span');
+                        sylSpan.className = 'syllable';
+                        if (syl.isMelismatic) sylSpan.classList.add('melismatic');
+                        sylSpan.id = `vn-syl-${syl.position}`;
+                        sylSpan.textContent = syl.text;
+                        sylSpan.onclick = () => this.showTranslation(syl);
+                        textSpan.appendChild(sylSpan);
+
+                        // Add line break marker
+                        if (sylIdx < line.syllables.length - 1) {
+                            const marker = document.createElement('span');
+                            marker.className = 'line-break-marker';
+                            marker.textContent = ' | ';
+                            marker.onclick = () => this.toggleLineBreak(idx, sylIdx);
+                            textSpan.appendChild(marker);
+                        } else {
+                            textSpan.appendChild(document.createTextNode(' '));
+                        }
+                    });
+
+                    lineDiv.appendChild(textSpan);
+                    vnContent.appendChild(lineDiv);
+                });
+
+                // English translation (simplified for now)
+                const englishLines = [
+                    "Lady Rang lady Ri,",
+                    "Oh telling lady where-to-go,",
+                    "oh going is where",
+                    "lady goes everywhere places connecting threads silk red",
+                    "the destiny of husband making miserable the life of-mine",
+                    "oh lady Ri oh",
+                    "lady Rang lady Ri oh."
+                ];
+
+                englishLines.forEach((text, idx) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'lyrics-line';
+                    lineDiv.id = `en-line-${idx}`;
+                    lineDiv.textContent = text;
+                    enContent.appendChild(lineDiv);
+                });
+            }
+
+            selectNote(noteId) {
+                const circle = document.getElementById(`note-${noteId}`);
+                if (circle) {
+                    circle.classList.toggle('selected');
+                }
+            }
+
+            playLine(lineIndex) {
+                const line = this.data.lyrics.lines[lineIndex];
+                if (!line) return;
+
+                this.playbackIndex = line.syllables[0].position;
+                this.startPlayback();
+            }
+
+            startPlayback() {
+                if (this.isPlaying) return;
+
+                console.log('🎵 Starting playback...');
+                this.isPlaying = true;
+                this.tempo = parseInt(document.getElementById('tempo').value) || 120;
+                this.playNext();
+            }
+
+            stopPlayback() {
+                console.log('⏹ Stopping playback');
+                this.isPlaying = false;
+                if (this.playbackTimer) {
+                    clearTimeout(this.playbackTimer);
+                    this.playbackTimer = null;
+                }
+                this.clearHighlights();
+            }
+
+            playNext() {
+                if (!this.isPlaying || this.playbackIndex >= this.data.notes.length) {
+                    this.stopPlayback();
+                    return;
+                }
+
+                const note = this.data.notes[this.playbackIndex];
+
+                // Play sound
+                this.playNoteSound(note);
+
+                // Visual feedback
+                this.highlightNote(note.id);
+                this.highlightSyllable(this.playbackIndex);
+
+                // Auto-scroll
+                if (document.getElementById('autoScroll').checked) {
+                    this.scrollToNote(note);
+                }
+
+                this.playbackIndex++;
+
+                // Calculate delay based on tempo
+                const beatDuration = 60000 / this.tempo; // ms per beat
+                const delay = beatDuration / 2; // Adjust as needed
+
+                this.playbackTimer = setTimeout(() => this.playNext(), delay);
+            }
+
+            playNoteSound(note) {
+                if (!this.audioContext) return;
+
+                if (this.audioContext.state === 'suspended') {
+                    this.audioContext.resume();
+                }
+
+                const frequency = this.getNoteFrequency(note);
+                const now = this.audioContext.currentTime;
+
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+
+                osc.frequency.value = frequency;
+                osc.type = 'triangle';
+                osc.connect(gain);
+                gain.connect(this.masterVolume);
+
+                const volume = note.isGrace ? 0.3 : 0.5;
+                const duration = note.isGrace ? 0.3 : 0.8;
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(volume, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+
+                osc.start(now);
+                osc.stop(now + duration + 0.1);
+            }
+
+            getNoteFrequency(note) {
+                const frequencies = {
+                    5: 293.66, 7: 392.00, 8: 440.00, 9: 523.25,
+                    10: 587.33, 11: 659.25, 12: 783.99
+                };
+                return frequencies[note.string] || 440;
+            }
+
+            highlightNote(noteId) {
+                this.clearHighlights();
+                const circle = document.getElementById(`note-${noteId}`);
+                if (circle) {
+                    circle.classList.add('playing');
+                }
+            }
+
+            highlightSyllable(position) {
+                document.querySelectorAll('.syllable').forEach(s => {
+                    s.classList.remove('active');
+                });
+                const vnSyl = document.getElementById(`vn-syl-${position}`);
+                if (vnSyl) {
+                    vnSyl.classList.add('active');
+                }
+            }
+
+            clearHighlights() {
+                document.querySelectorAll('.note-circle').forEach(n => {
+                    n.classList.remove('playing');
+                });
+                document.querySelectorAll('.syllable').forEach(s => {
+                    s.classList.remove('active');
+                });
+            }
+
+            scrollToNote(note) {
+                const svg = document.getElementById('tablature');
+                const container = svg.parentElement;
+                const noteX = note.x;
+                const containerWidth = container.clientWidth;
+                container.scrollLeft = noteX - containerWidth / 2;
+            }
+
+            updateStatistics() {
+                // Count notes by string
+                const stringCounts = {};
+                this.data.notes.forEach(note => {
+                    stringCounts[note.string] = (stringCounts[note.string] || 0) + 1;
+                });
+
+                // Update display
+                document.getElementById('totalNotes').textContent = this.data.notes.length;
+                document.getElementById('graceNotes').textContent =
+                    this.data.notes.filter(n => n.isGrace).length;
+            }
+
+            setupEventListeners() {
+                // Zoom controls
+                document.getElementById('xZoom').addEventListener('input', (e) => {
+                    const zoom = e.target.value / 100;
+                    document.getElementById('xZoomValue').textContent = `${e.target.value}%`;
+                    document.getElementById('tablature').style.transform = `scaleX(${zoom})`;
+                });
+
+                document.getElementById('yZoom').addEventListener('input', (e) => {
+                    const zoom = e.target.value / 100;
+                    document.getElementById('yZoomValue').textContent = `${e.target.value}%`;
+                    document.getElementById('tablature').style.transform = `scaleY(${zoom})`;
+                });
+
+                // Tone filter buttons
+                document.querySelectorAll('.tone-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        btn.classList.toggle('active');
+                        this.updateFilters();
+                    });
+                });
+
+                // Pattern sliders
+                document.getElementById('kpicSlider').addEventListener('input', (e) => {
+                    const level = e.target.value;
+                    document.getElementById('kpicValue').textContent = level;
+                    this.showPatterns('kpic', level);
+                });
+
+                document.getElementById('kricSlider').addEventListener('input', (e) => {
+                    const level = e.target.value;
+                    document.getElementById('kricValue').textContent = level;
+                    this.showPatterns('kric', level);
+                });
+            }
+
+            showPatterns(type, level) {
+                const display = document.getElementById(`${type}Patterns`);
+                if (level == 0) {
+                    display.innerHTML = `Move ${type.toUpperCase()} slider to see patterns...<br>Hold Ctrl/Cmd for multiple`;
+                    return;
+                }
+
+                // Get patterns from data
+                const patterns = this.data.patterns[`${type}_patterns`]?.full?.[`${type}-${level}`] || [];
+
+                display.innerHTML = '';
+                patterns.slice(0, 10).forEach(pattern => {
+                    const item = document.createElement('div');
+                    item.className = 'pattern-item';
+                    item.textContent = pattern.pattern.join(' → ') + ` (${pattern.count})`;
+                    item.onclick = (e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                            item.classList.toggle('selected');
+                        } else {
+                            document.querySelectorAll('.pattern-item').forEach(p => p.classList.remove('selected'));
+                            item.classList.add('selected');
+                        }
+                        this.highlightPattern(pattern);
+                    };
+                    display.appendChild(item);
+                });
+            }
+
+            highlightPattern(pattern) {
+                // Implement pattern highlighting on tablature
+                console.log('Highlighting pattern:', pattern);
+            }
+
+            showTranslation(syllable) {
+                console.log('Show translation for:', syllable.text);
+            }
+
+            toggleLineBreak(lineIdx, sylIdx) {
+                console.log('Toggle line break at:', lineIdx, sylIdx);
+            }
+
+            updateFilters() {
+                // Update note visibility based on filters
+                console.log('Updating filters');
+            }
+        }
+
+        // Global functions
+        window.app = null;
+
+        function playSection(section, part) {
+            console.log(`Playing section ${section}, part: ${part}`);
+        }
+
+        function stopSection(section) {
+            console.log(`Stopping section ${section}`);
+        }
+
+        function toggleLyrics() {
+            const container = document.querySelector('.lyrics-container');
+            container.style.display = container.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleAnalysis() {
+            console.log('Toggle analysis panel');
+        }
+
+        function showLegend() {
+            console.log('Show legend');
+        }
+
+        function setLanguage(lang) {
+            document.querySelectorAll('.lang-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (lang === 'both') {
+                document.getElementById('vnLyrics').style.display = 'block';
+                document.getElementById('enLyrics').style.display = 'block';
+            } else if (lang === 'vn') {
+                document.getElementById('vnLyrics').style.display = 'block';
+                document.getElementById('enLyrics').style.display = 'none';
+            } else if (lang === 'en') {
+                document.getElementById('vnLyrics').style.display = 'none';
+                document.getElementById('enLyrics').style.display = 'block';
+            }
+        }
+
+        function updateFontSize() {
+            const size = document.getElementById('fontSize').value;
+            document.querySelector('.lyrics-display').style.fontSize = size + 'px';
+        }
+
+        function startLearning() {
+            console.log('Start learning mode');
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            window.app = new DanTranhFull();
+        });
+    </script>
+</body>
+</html>

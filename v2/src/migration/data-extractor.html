@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Extractor - Extract from Original</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #0f0;
+        }
+        button {
+            background: #333;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #444;
+        }
+        #output {
+            background: #000;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #0f0;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .info { color: #2196F3; }
+    </style>
+</head>
+<body>
+    <h1>📊 Data Extraction Tool</h1>
+    <p>This tool safely extracts data from the original analytical_tablature.html</p>
+
+    <button onclick="extractAllData()">🔍 Extract All Data</button>
+    <button onclick="validateExtraction()">✅ Validate Extraction</button>
+    <button onclick="downloadData()">💾 Download JSON Files</button>
+
+    <div id="output"></div>
+
+    <iframe id="originalFrame" src="/original" style="display:none"></iframe>
+
+    <script>
+        let extractedData = null;
+        const output = document.getElementById('output');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            output.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function extractAllData() {
+            log('Starting data extraction from original...', 'info');
+
+            try {
+                const frame = document.getElementById('originalFrame');
+                const doc = frame.contentDocument || frame.contentWindow.document;
+
+                // Wait for frame to load
+                if (!doc.querySelector('.note-circle')) {
+                    log('Waiting for original to load...', 'info');
+                    setTimeout(extractAllData, 1000);
+                    return;
+                }
+
+                // Extract notes
+                log('Extracting notes...', 'info');
+                const notes = extractNotes(doc);
+                log(`✓ Extracted ${notes.length} notes`, 'success');
+
+                // Extract analysis data
+                log('Extracting analysis patterns...', 'info');
+                const patterns = extractPatterns(doc);
+                log(`✓ Extracted patterns (KPIC levels: ${Object.keys(patterns.kpic || {}).length})`, 'success');
+
+                // Extract sections
+                log('Extracting sections...', 'info');
+                const sections = extractSections(doc);
+                log(`✓ Extracted ${sections.length} sections`, 'success');
+
+                // Extract string configuration
+                log('Extracting string configuration...', 'info');
+                const strings = extractStrings(doc);
+                log(`✓ Extracted ${strings.length} string definitions`, 'success');
+
+                // Store extracted data
+                extractedData = {
+                    metadata: {
+                        extractedAt: new Date().toISOString(),
+                        sourceFile: 'analytical_tablature.html',
+                        version: '1.0',
+                        stats: {
+                            noteCount: notes.length,
+                            sectionCount: sections.length,
+                            stringCount: strings.length
+                        }
+                    },
+                    notes,
+                    patterns,
+                    sections,
+                    strings
+                };
+
+                log('\n✅ Extraction complete!', 'success');
+                log(`Total data size: ${JSON.stringify(extractedData).length} bytes`, 'info');
+
+            } catch (error) {
+                log(`❌ Extraction failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        function extractNotes(doc) {
+            const notes = [];
+            const circles = doc.querySelectorAll('.note-circle');
+
+            circles.forEach(circle => {
+                const noteIndex = parseInt(circle.getAttribute('data-note-index'));
+                const cx = parseFloat(circle.getAttribute('cx'));
+                const cy = parseFloat(circle.getAttribute('cy'));
+                const isGrace = circle.getAttribute('data-is-grace') === 'true';
+                const baseX = parseFloat(circle.getAttribute('data-base-x'));
+                const baseY = parseFloat(circle.getAttribute('data-base-y'));
+
+                // Determine string and pitch from Y position
+                const stringInfo = getStringFromY(cy);
+
+                notes.push({
+                    id: noteIndex,
+                    x: cx,
+                    y: cy,
+                    baseX: baseX,
+                    baseY: baseY,
+                    string: stringInfo.string,
+                    pitch: stringInfo.pitch,
+                    isGrace: isGrace,
+                    radius: isGrace ? 6 : 12
+                });
+            });
+
+            return notes.sort((a, b) => a.id - b.id);
+        }
+
+        function getStringFromY(y) {
+            // String mapping based on Y positions
+            const stringMap = [
+                { y: 110, string: 5, pitch: 'D4' },
+                { y: 260, string: 7, pitch: 'G4' },
+                { y: 320, string: 8, pitch: 'A4' },
+                { y: 410, string: 9, pitch: 'C5' },
+                { y: 470, string: 10, pitch: 'D5' },
+                { y: 530, string: 11, pitch: 'E5' },
+                { y: 620, string: 12, pitch: 'G5' }
+            ];
+
+            // Find closest string
+            let closest = stringMap[0];
+            let minDiff = Math.abs(y - closest.y);
+
+            for (const s of stringMap) {
+                const diff = Math.abs(y - s.y);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = s;
+                }
+            }
+
+            return closest;
+        }
+
+        function extractPatterns(doc) {
+            // Try to extract from script tags
+            const scripts = doc.querySelectorAll('script');
+
+            for (const script of scripts) {
+                const text = script.textContent;
+                if (text.includes('analysisData')) {
+                    // Extract analysisData object
+                    const match = text.match(/const analysisData = ({[\s\S]*?});/);
+                    if (match) {
+                        try {
+                            return eval('(' + match[1] + ')');
+                        } catch (e) {
+                            console.error('Failed to parse analysisData:', e);
+                        }
+                    }
+                }
+            }
+
+            return { kpic: {}, kric: {} };
+        }
+
+        function extractSections(doc) {
+            const sections = [];
+
+            // Look for section definitions in scripts
+            const scripts = doc.querySelectorAll('script');
+
+            for (const script of scripts) {
+                const text = script.textContent;
+                if (text.includes('sectionParts')) {
+                    // Extract section definitions
+                    const matches = text.match(/['"](\w+)['"]\s*:\s*{[^}]+}/g);
+                    if (matches) {
+                        matches.forEach((match, index) => {
+                            const nameMatch = match.match(/['"](\w+)['"]/);
+                            const sectionMatch = match.match(/sections:\s*['"]([^'"]+)['"]/);
+
+                            if (nameMatch && sectionMatch) {
+                                sections.push({
+                                    id: nameMatch[1].toLowerCase(),
+                                    name: nameMatch[1],
+                                    description: sectionMatch[1]
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Default sections if none found
+            if (sections.length === 0) {
+                sections.push(
+                    { id: 'intro', name: 'Introduction', noteRange: [0, 6] },
+                    { id: 'signature', name: 'Signature', noteRange: [22, 37] },
+                    { id: 'development', name: 'Development', noteRange: [7, 21] },
+                    { id: 'closing', name: 'Closing', noteRange: [38, 45] }
+                );
+            }
+
+            return sections;
+        }
+
+        function extractStrings(doc) {
+            return [
+                { number: 5, note: 'D4', y: 110 },
+                { number: 7, note: 'G4', y: 260 },
+                { number: 8, note: 'A4', y: 320 },
+                { number: 9, note: 'C5', y: 410 },
+                { number: 10, note: 'D5', y: 470 },
+                { number: 11, note: 'E5', y: 530 },
+                { number: 12, note: 'G5', y: 620 }
+            ];
+        }
+
+        function validateExtraction() {
+            if (!extractedData) {
+                log('❌ No data extracted yet. Extract first!', 'error');
+                return;
+            }
+
+            log('\n🔍 Validating extracted data...', 'info');
+
+            const validations = [
+                { name: 'Notes have IDs', pass: extractedData.notes.every(n => n.id !== undefined) },
+                { name: 'Notes have positions', pass: extractedData.notes.every(n => n.x && n.y) },
+                { name: 'Notes have pitch', pass: extractedData.notes.every(n => n.pitch) },
+                { name: 'Notes are ordered', pass: extractedData.notes.every((n, i) => i === 0 || n.id >= extractedData.notes[i-1].id) },
+                { name: 'Sections exist', pass: extractedData.sections.length > 0 },
+                { name: 'Strings defined', pass: extractedData.strings.length === 7 }
+            ];
+
+            validations.forEach(v => {
+                log(`${v.pass ? '✅' : '❌'} ${v.name}`, v.pass ? 'success' : 'error');
+            });
+
+            const allPassed = validations.every(v => v.pass);
+            log(`\n${allPassed ? '✅ All validations passed!' : '❌ Some validations failed'}`, allPassed ? 'success' : 'error');
+        }
+
+        function downloadData() {
+            if (!extractedData) {
+                log('❌ No data to download. Extract first!', 'error');
+                return;
+            }
+
+            log('📦 Preparing downloads...', 'info');
+
+            // Create downloads for each data type
+            const files = [
+                { name: 'notes.json', data: extractedData.notes },
+                { name: 'patterns.json', data: extractedData.patterns },
+                { name: 'sections.json', data: extractedData.sections },
+                { name: 'strings.json', data: extractedData.strings },
+                { name: 'metadata.json', data: extractedData.metadata }
+            ];
+
+            files.forEach(file => {
+                const blob = new Blob([JSON.stringify(file.data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                a.click();
+                URL.revokeObjectURL(url);
+                log(`✓ Downloaded ${file.name}`, 'success');
+            });
+
+            log('\n✅ All files downloaded to your Downloads folder', 'success');
+            log('Move these to v2/data/test-song/ directory', 'info');
+        }
+
+        // Auto-start extraction when page loads
+        window.addEventListener('load', () => {
+            log('Data Extractor Ready', 'success');
+            log('Click "Extract All Data" to begin\n', 'info');
+        });
+    </script>
+</body>
+</html>

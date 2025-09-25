@@ -678,15 +678,21 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
     </text>`;
         }
 
+        // Determine if this is a grace note for sizing
+        const isGrace = note.grace || note.isGrace || false;
+        const noteRadius = isGrace ? 6 : circleRadius;
+        const noteFontSize = isGrace ? 10 : 16;
+        const noteYOffset = isGrace ? 3 : 8;
+
         // Note circle (neutral grey, theme-adaptive)
         svg += `
-    <circle cx="${note.x}" cy="${adjustedY}" r="${circleRadius}"
+    <circle cx="${note.x}" cy="${adjustedY}" r="${noteRadius}"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="${index}" class="note-circle"/>
-    <text x="${note.x}" y="${adjustedY + 9}"
-          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
-          class="string-number" pointer-events="none">
-        ${note.string}
+    <text x="${note.x}" y="${adjustedY + noteYOffset}"
+          text-anchor="middle" font-size="${noteFontSize}" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        ${note.noteName || note.pitch || ''}
     </text>`;
 
         // Note index (V1 style: #1, #2, #3...)
@@ -696,14 +702,15 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         #${index + 1}
     </text>`;
 
-        // Lyric (V1 style: rotated -90°)
+        // Lyric (V1 style: rotated -90°, fixed distance from note)
         if (note.lyric) {
-            const lyricX = note.x + 4;
-            const lyricY = adjustedY + 40;
+            const lyricX = note.x + 15;  // Offset 15px to the right of note
+            const lyricY = adjustedY + 40;  // Fixed 40px below note center
             svg += `
     <text x="${lyricX}" y="${lyricY}" text-anchor="start"
-          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
-          transform="rotate(-90, ${lyricX}, ${lyricY})" class="lyric-text">
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, ${lyricX}, ${lyricY})" class="lyric-text"
+          data-note-index="${index}">
         ${note.lyric}
     </text>`;
         }

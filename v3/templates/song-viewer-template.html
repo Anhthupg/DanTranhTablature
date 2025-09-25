@@ -2695,16 +2695,23 @@
                         const noteBaseY = parseFloat(associatedNote.getAttribute('data-base-y') || associatedNote.getAttribute('cy'));
                         const scaledNoteY = noteBaseY * yZoomLevel;
 
-                        // Calculate the original offset from the note
-                        const originalOffset = baseY - noteBaseY;
+                        // For lyrics, keep fixed distance (40px) from note
+                        // For other text, scale with note position
+                        let scaledY;
+                        if (text.classList.contains('lyric-text')) {
+                            // Lyrics: fixed 40px offset from note (don't scale)
+                            scaledY = scaledNoteY + 40;
+                        } else {
+                            // Other text: maintain original scaled offset
+                            const originalOffset = baseY - noteBaseY;
+                            scaledY = scaledNoteY + originalOffset;
+                        }
 
-                        // Apply the same offset to the scaled note position
-                        const scaledY = scaledNoteY + originalOffset;
                         text.setAttribute('y', scaledY);
 
                         // Debug specific elements
                         if (text.classList.contains('string-number') && minDistance < 1) {
-                            console.log(`String number: baseY=${baseY}, noteBaseY=${noteBaseY}, offset=${originalOffset}, scaledY=${scaledY}`);
+                            console.log(`String number: baseY=${baseY}, noteBaseY=${noteBaseY}, scaledY=${scaledY}`);
                         }
 
                         // Update transforms for rotated text (lyrics)

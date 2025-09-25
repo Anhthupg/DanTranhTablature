@@ -320,40 +320,101 @@ function generateTablatureSVG(songData) {
     const maxX = Math.max(...notes.map(n => n.x)) + 200;
 
     // Find which strings are actually used
-    const usedStrings = new Set(notes.map(n => n.string));
+    const playedStrings = new Set(notes.map(n => n.string));
 
-    // Special handling for Xỉa Cá Mè - show 4 strings for the 4 pitches
-    let usedStringConfigs;
-    const titleNormalized = title.toLowerCase().normalize('NFC');
+    // Extract all unique pitches from the song
+    const uniquePitches = new Set();
+    notes.forEach(note => {
+        if (note.noteName) {
+            uniquePitches.add(note.noteName);
+        }
+    });
 
-    if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
-        // For Xỉa Cá Mè, show strings 5, 6, 7, 9 with proportional spacing based on cents
-        // Base position for C4, then scale by cents (1 semitone = 100 cents)
-        // C4 to F4 = 500 cents, F4 to G4 = 200 cents, G4 to C5 = 500 cents
-        const baseY = 110;
-        const pixelsPerCent = 0.4; // Scale factor: 1200 cents total = ~480 pixels
+    // Create unique string assignments for each unique pitch
+    // Comprehensive pitch order system - designed so C notes start each octave
+    const pitchOrder = {
+        // Octave 3
+        'C3': 0, 'C#3': 1, 'Db3': 1, 'D3': 2, 'D#3': 3, 'Eb3': 3, 'E3': 4, 'F3': 5, 'F#3': 6, 'Gb3': 6, 'G3': 7, 'G#3': 8, 'Ab3': 8, 'A3': 9, 'A#3': 10, 'Bb3': 10, 'B3': 11,
 
-        usedStringConfigs = [
-            ['5', { note: 'C4', y: baseY }],                          // C4 at base
-            ['6', { note: 'F4', y: baseY + (500 * pixelsPerCent) }],  // F4 at +500 cents = +200px
-            ['7', { note: 'G4', y: baseY + (700 * pixelsPerCent) }],  // G4 at +700 cents = +280px
-            ['9', { note: 'C5', y: baseY + (1200 * pixelsPerCent) }]  // C5 at +1200 cents = +480px
-        ];
-        // Update usedStrings to include all 4
-        songData.usedStrings = new Set([5, 6, 7, 9]);
-    } else {
-        // Normal behavior for other songs
-        usedStringConfigs = Object.entries(STRING_CONFIG)
-            .filter(([num, config]) => usedStrings.has(parseInt(num)))
-            .sort((a, b) => a[1].y - b[1].y);
-        // Store in songData for use in metadata display
-        songData.usedStrings = usedStrings;
-    }
+        // Octave 4 (main reference)
+        'C4': 12, 'C#4': 13, 'Db4': 13, 'D4': 14, 'D#4': 15, 'Eb4': 15, 'E4': 16, 'F4': 17, 'F#4': 18, 'Gb4': 18, 'G4': 19, 'G#4': 20, 'Ab4': 20, 'A4': 21, 'A#4': 22, 'Bb4': 22, 'B4': 23,
 
-    // Calculate adaptive height based on used strings
-    const minY = usedStringConfigs.length > 0 ? usedStringConfigs[0][1].y - 50 : 60;
-    const maxY = usedStringConfigs.length > 0 ? usedStringConfigs[usedStringConfigs.length - 1][1].y + 50 : 650;
-    const svgHeight = maxY - minY + 100;
+        // Octave 5
+        'C5': 24, 'C#5': 25, 'Db5': 25, 'D5': 26, 'D#5': 27, 'Eb5': 27, 'E5': 28, 'F5': 29, 'F#5': 30, 'Gb5': 30, 'G5': 31, 'G#5': 32, 'Ab5': 32, 'A5': 33, 'A#5': 34, 'Bb5': 34, 'B5': 35,
+
+        // Octave 6
+        'C6': 36, 'C#6': 37, 'Db6': 37, 'D6': 38, 'D#6': 39, 'Eb6': 39, 'E6': 40, 'F6': 41, 'F#6': 42, 'Gb6': 42, 'G6': 43
+    };
+
+    // Sort unique pitches by musical order with proper octave grouping
+    const sortedPitches = Array.from(uniquePitches).sort((a, b) => {
+        const orderA = pitchOrder[a] || 999;
+        const orderB = pitchOrder[b] || 999;
+
+        // First sort by octave (C4 comes before any other note in octave 4)
+        const octaveA = Math.floor(orderA / 12);
+        const octaveB = Math.floor(orderB / 12);
+
+        if (octaveA !== octaveB) {
+            return octaveA - octaveB;
+        }
+
+        // Within same octave, sort chromatically from C
+        return orderA - orderB;
+    });
+
+    // Assign each unique pitch to its own string position
+    const usedStringConfigs = [];
+    const pitchToStringAssignment = new Map();
+    const usedYPositions = new Set();
+
+    sortedPitches.forEach((pitch, index) => {
+        // Calculate proportional Y position based on semitones from first pitch
+        const firstPitchSemitones = pitchOrder[sortedPitches[0]] || 0;
+        const thisPitchSemitones = pitchOrder[pitch] || 0;
+        const semitoneDistance = thisPitchSemitones - firstPitchSemitones;
+
+        // Use proportional spacing based on actual musical intervals
+        const baseY = 150;
+        let yPosition = baseY + (semitoneDistance * 30); // 30px per semitone (proportional to cents)
+
+        // Avoid exact duplicates by adding small offset if position already used
+        while (usedYPositions.has(yPosition)) {
+            yPosition += 5; // Small 5px offset to prevent overlaps
+        }
+        usedYPositions.add(yPosition);
+
+        const stringNum = index + 1; // Assign sequential string numbers
+        const config = { note: pitch, y: yPosition };
+
+        usedStringConfigs.push([stringNum.toString(), config]);
+        pitchToStringAssignment.set(pitch, stringNum);
+    });
+
+    // Store for metadata display - use the pitch count
+    songData.usedStrings = new Set(sortedPitches.map((pitch, index) => index + 1));
+
+    // Update note mapping to use the new pitch-based string assignments
+    notes.forEach(note => {
+        if (note.noteName && pitchToStringAssignment.has(note.noteName)) {
+            const newStringNum = pitchToStringAssignment.get(note.noteName);
+            const newConfig = usedStringConfigs.find(([num, config]) => num == newStringNum)[1];
+            note.string = newStringNum;
+            note.y = newConfig.y;
+        }
+    });
+
+    // Calculate adaptive height based on used strings with proper padding
+    const stringYPositions = usedStringConfigs.map(([num, config]) => config.y);
+    const minStringY = Math.min(...stringYPositions);
+    const maxStringY = Math.max(...stringYPositions);
+
+    // Ensure minimum padding above and below strings
+    const topPadding = 80;
+    const bottomPadding = 80;
+    const minY = minStringY - topPadding;
+    const maxY = maxStringY + bottomPadding;
+    const svgHeight = maxY - minY;
 
     let svg = `
 <svg id="tablature" xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${svgHeight}">
@@ -486,15 +547,63 @@ function generateViewer(songData, metadata) {
     let stringsDisplay;
     const titleNormalized = songData.title.toLowerCase().normalize('NFC');
 
-    // Special case for Xỉa Cá Mè - show the 4 unique pitches as strings 5, 6, 7, 9
-    if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
-        // Xỉa Cá Mè uses strings 5, 6, 7, 9 for C4, F4, G4, C5
-        stringsDisplay = '4 (5, 6, 7, 9)';
-    } else {
-        // For other songs, show the actually played strings
-        const usedStrings = Array.from(songData.usedStrings).sort((a, b) => a - b);
-        stringsDisplay = `${usedStrings.length} (${usedStrings.join(', ')})`;
-    }
+    // Extract unique pitches from all notes in the song
+    const uniquePitches = new Set();
+    songData.notes.forEach(note => {
+        if (note.noteName) {
+            uniquePitches.add(note.noteName);
+        }
+    });
+
+    // Pitch ordering system (same as in tablature generation)
+    const pitchOrder = {
+        'C4': 0, 'C#4': 1, 'Db4': 1, 'D4': 2, 'D#4': 3, 'Eb4': 3, 'E4': 4, 'F4': 5, 'F#4': 6, 'Gb4': 6, 'G4': 7, 'G#4': 8, 'Ab4': 8, 'A4': 9, 'A#4': 10, 'Bb4': 10, 'B4': 11,
+        'C5': 12, 'C#5': 13, 'Db5': 13, 'D5': 14, 'D#5': 15, 'Eb5': 15, 'E5': 16, 'F5': 17, 'F#5': 18, 'Gb5': 18, 'G5': 19, 'G#5': 20, 'Ab5': 20, 'A5': 21, 'A#5': 22, 'Bb5': 22, 'B5': 23
+    };
+
+    // Convert pitches to strings and sort them musically
+    const pitchToStringMap = {
+        'C4': 5, 'D4': 5, 'E4': 7, 'F4': 7, 'G4': 7, 'A4': 8, 'B4': 9, 'C5': 9,
+        'D5': 10, 'E5': 11, 'F5': 11, 'G5': 12, 'A5': 12, 'B5': 12
+    };
+
+    // Get unique strings for the unique pitches
+    const uniqueStrings = new Set();
+    const pitchList = [];
+
+    Array.from(uniquePitches).forEach(pitch => {
+        pitchList.push(pitch);
+        const stringNum = pitchToStringMap[pitch];
+        if (stringNum) {
+            uniqueStrings.add(stringNum);
+        }
+    });
+
+    // Sort pitches musically using the same order as the tablature generation
+    pitchList.sort((a, b) => {
+        const orderA = pitchOrder[a] || 999;
+        const orderB = pitchOrder[b] || 999;
+
+        // First sort by octave (C4 comes before any other note in octave 4)
+        const octaveA = Math.floor(orderA / 12);
+        const octaveB = Math.floor(orderB / 12);
+
+        if (octaveA !== octaveB) {
+            return octaveA - octaveB;
+        }
+
+        // Within same octave, sort chromatically from C
+        return orderA - orderB;
+    });
+
+    // Clean up pitch names for display (handle accidentals consistently)
+    const cleanedPitches = pitchList.map(pitch => {
+        // Normalize accidental notation: use # and b consistently
+        return pitch.replace('♯', '#').replace('♭', 'b');
+    });
+
+    // Display format: "4 (C4, D4, F4, G4)" showing unique pitches
+    stringsDisplay = `${cleanedPitches.length} (${cleanedPitches.join(', ')})`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -1160,15 +1269,14 @@ async function processAllSongs() {
                 metadata.noteCount = songData.notes.length;
                 metadata.processedDate = new Date().toISOString();
 
-                // Update string count
-                const titleNormalized = songData.title.toLowerCase().normalize('NFC');
-                if (titleNormalized.includes('xỉa') || titleNormalized.includes('xia')) {
-                    // Xỉa Cá Mè has 4 unique pitches
-                    metadata.strings = 4;
-                } else {
-                    // Other songs show actual played strings
-                    metadata.strings = songData.usedStrings.size;
-                }
+                // Update string count based on unique pitches
+                const uniquePitches = new Set();
+                songData.notes.forEach(note => {
+                    if (note.noteName) {
+                        uniquePitches.add(note.noteName);
+                    }
+                });
+                metadata.strings = uniquePitches.size;
 
                 // Also update pattern efficiency totalNotes to match corrected count
                 if (metadata.patternEfficiency) {

@@ -596,7 +596,11 @@
 <body>
     <div class="container">
         <header>
-            <h1>🎼 Analytical Đàn Tranh Tablature <span style="background: #667eea; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 10px;">V3 TEMPLATE</span></h1>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <a href="../../../index.html" style="text-decoration: none; color: #008080; font-weight: 600; font-size: 14px; padding: 8px 16px; border: 2px solid #008080; border-radius: 8px; transition: all 0.2s;">← Back to Library</a>
+                <h1 style="margin: 0; flex: 1; text-align: center;">🎼 Analytical Đàn Tranh Tablature <span style="background: #667eea; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; margin-left: 10px;">V3</span></h1>
+                <div style="width: 140px;"></div>
+            </div>
             <h2>MusicXML/Bà rằng bà rí.musicxml</h2>
         </header>
         
@@ -843,11 +847,11 @@
                       data-base-width="11475">
 <defs>
     <linearGradient id="resonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" style="stop-color:#008080;stop-opacity:0.8"/>
-        <stop offset="25%" style="stop-color:#008080;stop-opacity:0.6"/>
-        <stop offset="50%" style="stop-color:#008080;stop-opacity:0.4"/>
-        <stop offset="75%" style="stop-color:#008080;stop-opacity:0.2"/>
-        <stop offset="100%" style="stop-color:#008080;stop-opacity:0"/>
+        <stop offset="0%" style="stop-color:#666666;stop-opacity:0.8"/>
+        <stop offset="25%" style="stop-color:#666666;stop-opacity:0.6"/>
+        <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4"/>
+        <stop offset="75%" style="stop-color:#666666;stop-opacity:0.2"/>
+        <stop offset="100%" style="stop-color:#666666;stop-opacity:0"/>
     </linearGradient>
 
     <linearGradient id="graceResonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1855,22 +1859,36 @@
                         <h3 style="color: #2c3e50; margin: 0 0 15px 0; font-size: 18px;">📌 Key Takeaways</h3>
 
                         <!-- Quick Overview Metrics -->
-                        <div class="overview-metrics" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px;">
+                        <div class="overview-metrics" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px;">
                             <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #e74c3c;">
                                 <div style="font-size: 16px; font-weight: bold; color: #e74c3c;">137</div>
                                 <div style="font-size: 11px; color: #7f8c8d;">Total Notes</div>
                             </div>
                             <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #3498db;">
                                 <div style="font-size: 16px; font-weight: bold; color: #3498db;">7</div>
-                                <div style="font-size: 11px; color: #7f8c8d;">Strings Used</div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Open Strings</div>
                             </div>
-                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #9b59b6;">
-                                <div style="font-size: 16px; font-weight: bold; color: #9b59b6;">3</div>
-                                <div style="font-size: 11px; color: #7f8c8d;">Sections (cyclical)</div>
+                            <div id="bentStringsMetric" style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #27ae60; cursor: pointer; transition: all 0.2s;"
+                                 onclick="toggleBentNotesHighlight()"
+                                 title="Click to highlight bent notes in tablature">
+                                <div style="font-size: 16px; font-weight: bold; color: #27ae60;">
+                                    <span id="bentStringsCount">0</span> str / <span id="bentNotesCount">0</span> notes
+                                </div>
+                                <div style="font-size: 11px; color: #7f8c8d;">Bent Strings/Notes</div>
                             </div>
-                            <div style="background: white; padding: 10px; border-radius: 5px; text-align: center; border-left: 3px solid #f39c12;">
-                                <div style="font-size: 16px; font-weight: bold; color: #f39c12;">2</div>
-                                <div style="font-size: 11px; color: #7f8c8d;">Key Phrases</div>
+                        </div>
+
+                        <!-- Tuning Information -->
+                        <div class="tuning-info" style="background: #e8f5e9; padding: 12px; border-radius: 5px; margin-bottom: 20px; border-left: 3px solid #27ae60;">
+                            <h4 style="color: #27ae60; margin: 0 0 8px 0; font-size: 14px;">🎵 Tuning System</h4>
+                            <div style="font-size: 13px; color: #2e7d32; font-weight: 600; margin-bottom: 5px;">
+                                Pentatonic (5-note scale)
+                            </div>
+                            <div id="tuningDisplay" style="font-size: 12px; color: #558b57; font-family: monospace;">
+                                C - D - E - G - A
+                            </div>
+                            <div style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">
+                                Song-specific optimal tuning
                             </div>
                         </div>
 
@@ -2604,23 +2622,27 @@
                 }
 
                 if (associatedNote) {
-                    // Get the scaled note center position
+                    // Get the note's base (unscaled) center position
                     const noteBaseY = parseFloat(associatedNote.getAttribute('data-base-y') || associatedNote.getAttribute('cy'));
-                    const scaledNoteY = noteBaseY * yZoomLevel;
+
+                    // Store note's base-y if not already stored
+                    if (!associatedNote.getAttribute('data-base-y')) {
+                        associatedNote.setAttribute('data-base-y', noteBaseY);
+                    }
 
                     // Get band height to center it
                     const bandHeight = parseFloat(band.getAttribute('height'));
 
-                    // Center the band on the scaled note position
-                    const centeredBandY = scaledNoteY - (bandHeight / 2);
-                    band.setAttribute('y', centeredBandY);
-
-                    // Store the original centered position
+                    // Calculate and store the band's base (unscaled) Y position if not already stored
                     if (!band.getAttribute('data-base-y')) {
-                        const originalNoteY = noteBaseY;
-                        const originalBandY = originalNoteY - (bandHeight / 2);
-                        band.setAttribute('data-base-y', originalBandY);
+                        const baseBandY = noteBaseY - (bandHeight / 2);
+                        band.setAttribute('data-base-y', baseBandY);
                     }
+
+                    // Get the stored base position and scale it
+                    const baseBandY = parseFloat(band.getAttribute('data-base-y'));
+                    const scaledBandY = baseBandY * yZoomLevel;
+                    band.setAttribute('y', scaledBandY);
                 } else {
                     // Fallback: just scale the position
                     const baseY = parseFloat(band.getAttribute('data-base-y') || band.getAttribute('y'));
@@ -12497,6 +12519,84 @@ Generated by Đàn Tranh Tablature Analysis System
             if (event.target == modal) {
                 closeAnalysisModal();
             }
+        }
+
+        // Bent Notes Highlighting System
+        let bentNotesHighlighted = false;
+
+        function toggleBentNotesHighlight() {
+            const svg = document.getElementById('tablatureSvg');
+            if (!svg) return;
+
+            const bentNoteCircles = [];
+            const allNotes = svg.querySelectorAll('.note-circle');
+
+            // Find all bent notes by checking for bend symbols
+            allNotes.forEach(noteCircle => {
+                const noteIndex = noteCircle.getAttribute('data-note-index');
+                const bendSymbol = svg.querySelector(`.bend-symbol[data-note-index="${noteIndex}"]`);
+                if (bendSymbol) {
+                    bentNoteCircles.push(noteCircle);
+                }
+            });
+
+            const metric = document.getElementById('bentStringsMetric');
+
+            if (!bentNotesHighlighted) {
+                // Highlight bent notes in red (fill only)
+                bentNoteCircles.forEach(circle => {
+                    circle.setAttribute('data-original-fill', circle.getAttribute('fill'));
+                    circle.setAttribute('fill', '#E74C3C'); // Red fill
+                });
+                bentNotesHighlighted = true;
+                metric.style.background = '#ffe5e5';
+                metric.style.borderLeftColor = '#E74C3C';
+            } else {
+                // Restore original fill
+                bentNoteCircles.forEach(circle => {
+                    const originalFill = circle.getAttribute('data-original-fill') || '#666666';
+                    circle.setAttribute('fill', originalFill);
+                });
+                bentNotesHighlighted = false;
+                metric.style.background = 'white';
+                metric.style.borderLeftColor = '#27ae60';
+            }
+        }
+
+        // Update bent strings/notes metrics on page load
+        function updateBentMetrics() {
+            const svg = document.getElementById('tablatureSvg');
+            if (!svg) return;
+
+            const bentStrings = new Set();
+            const bentNoteIndices = new Set();
+            const allNotes = svg.querySelectorAll('.note-circle');
+
+            allNotes.forEach(noteCircle => {
+                const noteIndex = noteCircle.getAttribute('data-note-index');
+                const bendSymbol = svg.querySelector(`.bend-symbol[data-note-index="${noteIndex}"]`);
+                if (bendSymbol) {
+                    bentNoteIndices.add(noteIndex);
+                    // Extract string number from the note
+                    const stringText = noteCircle.nextElementSibling;
+                    if (stringText && stringText.classList.contains('string-number')) {
+                        bentStrings.add(stringText.textContent.trim());
+                    }
+                }
+            });
+
+            document.getElementById('bentStringsCount').textContent = bentStrings.size;
+            document.getElementById('bentNotesCount').textContent = bentNoteIndices.size;
+        }
+
+        // Call on page load
+        setTimeout(updateBentMetrics, 500);
+
+        // Update tuning display with song-specific tuning
+        const SONG_TUNING = '__SONG_TUNING__'; // Will be replaced by generator
+        if (SONG_TUNING && SONG_TUNING !== '__SONG_TUNING__') {
+            const tuningArray = JSON.parse(SONG_TUNING);
+            document.getElementById('tuningDisplay').textContent = tuningArray.join(' - ');
         }
 
     </script>

@@ -2,29 +2,273 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-// String configuration with proportional spacing based on musical intervals (cents)
-// Base at D4 (string 5), then calculate positions based on semitone distances
-// 1 semitone = 100 cents, using 0.3 pixels per cent for good visual spacing
+// Pentatonic Tuning System - Based on collection analysis
+// Top 5 pitch classes: D, A, G, C, E (covers 81.6% of all notes)
+// Remaining notes require string bending
 const baseY = 110;
 const pixelsPerCent = 0.3;
 
-const STRING_CONFIG = {
-    5: { note: 'D4', y: baseY },                           // D4: base position
-    7: { note: 'G4', y: baseY + (500 * pixelsPerCent) },   // G4: +500 cents (5 semitones from D4)
-    8: { note: 'A4', y: baseY + (700 * pixelsPerCent) },   // A4: +700 cents (7 semitones from D4)
-    9: { note: 'C5', y: baseY + (1000 * pixelsPerCent) },  // C5: +1000 cents (10 semitones from D4)
-    10: { note: 'D5', y: baseY + (1200 * pixelsPerCent) }, // D5: +1200 cents (12 semitones from D4)
-    11: { note: 'E5', y: baseY + (1400 * pixelsPerCent) }, // E5: +1400 cents (14 semitones from D4)
-    12: { note: 'G5', y: baseY + (1700 * pixelsPerCent) }  // G5: +1700 cents (17 semitones from D4)
+// Pentatonic scale configuration (5 open strings per octave)
+// Each octave repeats the same 5 notes, starting at C (octave switches at C)
+const PENTATONIC_SCALE = ['C', 'D', 'E', 'G', 'A'];
+
+// Semitone offsets from C for each note in the pentatonic scale
+const SEMITONE_OFFSETS = {
+    'C': 0,  'D': 2,  'E': 4,  'G': 7,  'A': 9
 };
+
+// Generate string configuration for multiple octaves
+function generatePentatonicStrings(startOctave, endOctave) {
+    const strings = {};
+    let stringNum = 1;
+
+    for (let octave = startOctave; octave <= endOctave; octave++) {
+        for (const pitch of PENTATONIC_SCALE) {
+            const noteName = `${pitch}${octave}`;
+            const semitones = (octave - 3) * 12 + SEMITONE_OFFSETS[pitch];
+            const yPos = baseY + (semitones * 100 * pixelsPerCent);
+            strings[stringNum] = { note: noteName, y: yPos, pitchClass: pitch };
+            stringNum++;
+        }
+    }
+    return strings;
+}
+
+const STRING_CONFIG = generatePentatonicStrings(3, 5); // Octaves 3-5
 
 // 12-color system from CLAUDE.md
 const COLORS = {
     mainNote: { fill: '#008080', stroke: '#005959' },  // Teal with darker teal stroke
     graceNote: { fill: '#FFD700', stroke: '#CC9900' }, // Gold with darker gold stroke
     toneMarking: { fill: '#9B59B6', stroke: '#7D3C98' },
-    melisma: { fill: '#E74C3C', stroke: '#C0392B' }
+    melisma: { fill: '#E74C3C', stroke: '#C0392B' },
+    bentNote: { fill: '#E74C3C', stroke: '#C0392B' }   // Red for bent notes
 };
+
+// Calculate semitone distance between two notes
+function getSemitoneDistance(note1, note2) {
+    const pitchOrder = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+    };
+
+    const match1 = note1.match(/^([A-G][#b]?)(\d+)$/);
+    const match2 = note2.match(/^([A-G][#b]?)(\d+)$/);
+    if (!match1 || !match2) return 0;
+
+    const [, pitch1, octave1] = match1;
+    const [, pitch2, octave2] = match2;
+
+    const semitones1 = parseInt(octave1) * 12 + (pitchOrder[pitch1] || 0);
+    const semitones2 = parseInt(octave2) * 12 + (pitchOrder[pitch2] || 0);
+
+    return semitones2 - semitones1;
+}
+
+// Find closest open string below a given note
+function findClosestOpenString(noteName, stringConfig) {
+    const noteMatch = noteName.match(/^([A-G][#b]?)(\d+)$/);
+    if (!noteMatch) return null;
+
+    const [, pitchClass, octave] = noteMatch;
+    const openStrings = Object.entries(stringConfig)
+        .filter(([_, config]) => PENTATONIC_SCALE.includes(config.pitchClass))
+        .sort((a, b) => a[1].y - b[1].y); // Sort by Y position (low to high)
+
+    // Find the closest open string below or at this note
+    let closestString = null;
+    let minDistance = Infinity;
+
+    for (const [stringNum, config] of openStrings) {
+        const distance = getSemitoneDistance(config.note, noteName);
+        if (distance >= 0 && distance < minDistance) {
+            minDistance = distance;
+            closestString = { stringNum: parseInt(stringNum), config, semitoneDistance: distance };
+        }
+    }
+
+    return closestString;
+}
+
+// Calculate song-specific pentatonic tuning (top 5 pitch classes)
+function calculateSongTuning(noteElements) {
+    const pitchClassCounts = {};
+
+    noteElements.forEach(noteEl => {
+        const pitch = noteEl.querySelector('pitch');
+        if (!pitch) return;
+
+        const step = pitch.querySelector('step')?.textContent;
+        const alter = pitch.querySelector('alter')?.textContent || '0';
+        if (step) {
+            const pitchClass = step + (alter === '1' ? '#' : alter === '-1' ? 'b' : '');
+            pitchClassCounts[pitchClass] = (pitchClassCounts[pitchClass] || 0) + 1;
+        }
+    });
+
+    // Sort by frequency and take top 5
+    const sortedPitches = Object.entries(pitchClassCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([pitch, _]) => pitch);
+
+    // Sort by chromatic position (C=0, C#/Db=1, D=2, etc.)
+    const chromaticOrder = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8,
+        'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+    };
+    const tuning = sortedPitches.sort((a, b) => chromaticOrder[a] - chromaticOrder[b]);
+
+    return tuning;
+}
+
+// Generate song-specific string configuration
+function generateSongSpecificStrings(tuning, startOctave, endOctave) {
+    const strings = {};
+    let stringNum = 1;
+
+    // Define semitone offsets from C for all notes (including accidentals)
+    const semitoneFromC = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8,
+        'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+    };
+
+    for (let octave = startOctave; octave <= endOctave; octave++) {
+        for (const pitch of tuning) {
+            const noteName = `${pitch}${octave}`;
+            const semitones = (octave - 3) * 12 + semitoneFromC[pitch];
+            const yPos = baseY + (semitones * 100 * pixelsPerCent);
+            strings[stringNum] = { note: noteName, y: yPos, pitchClass: pitch };
+            stringNum++;
+        }
+    }
+    return strings;
+}
+
+// Parse multi-part score (for ensemble pieces with multiple đàn tranh)
+function parseMultiPartScore(doc, xmlPath, parts) {
+    const partData = [];
+
+    parts.forEach((part, partIndex) => {
+        const notes = [];
+        const noteElements = part.querySelectorAll('note');
+
+        // Calculate song-specific tuning for this part
+        const songTuning = calculateSongTuning(noteElements);
+
+        // Calculate octave range from actual notes
+        const octaves = [];
+        noteElements.forEach(noteEl => {
+            const pitch = noteEl.querySelector('pitch');
+            if (pitch) {
+                const octave = parseInt(pitch.querySelector('octave')?.textContent);
+                if (octave) octaves.push(octave);
+            }
+        });
+        const minOctave = Math.min(...octaves);
+        const maxOctave = Math.max(...octaves);
+
+        const SONG_SPECIFIC_STRINGS = generateSongSpecificStrings(songTuning, minOctave, maxOctave);
+
+        let currentX = 120;
+
+        noteElements.forEach((noteEl, index) => {
+            // Check for rests first - advance X but don't create a note
+            const rest = noteEl.querySelector('rest');
+            if (rest) {
+                const duration = noteEl.querySelector('duration')?.textContent || '1';
+                currentX += parseInt(duration) * 60;
+                return;
+            }
+
+            const pitch = noteEl.querySelector('pitch');
+            if (!pitch) return;
+
+            const step = pitch.querySelector('step')?.textContent;
+            const octave = pitch.querySelector('octave')?.textContent;
+            const alter = pitch.querySelector('alter')?.textContent || '0';
+            const duration = noteEl.querySelector('duration')?.textContent || '1';
+            const grace = noteEl.querySelector('grace') !== null;
+            const lyricEl = noteEl.querySelector('lyric text');
+            const lyric = lyricEl ? lyricEl.textContent : '';
+
+            const slurStart = noteEl.querySelector('notations slur[type="start"]') !== null;
+            const slurStop = noteEl.querySelector('notations slur[type="stop"]') !== null;
+            let slurType = null;
+            if (slurStart && slurStop) slurType = 'both';
+            else if (slurStart) slurType = 'start';
+            else if (slurStop) slurType = 'stop';
+
+            const noteName = step + (alter === '1' ? '#' : alter === '-1' ? 'b' : '') + octave;
+            const pitchClass = noteName.match(/^([A-G][#b]?)/)?.[1];
+
+            let stringNum = null;
+            let stringY = null;
+            let isBent = false;
+            let bendFromString = null;
+            let bendRatio = 0;
+
+            const openStringMatch = Object.entries(SONG_SPECIFIC_STRINGS).find(
+                ([_, config]) => config.note === noteName
+            );
+
+            if (openStringMatch) {
+                stringNum = parseInt(openStringMatch[0]);
+                stringY = openStringMatch[1].y;
+                isBent = false;
+            } else {
+                const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS);
+                if (closestString) {
+                    stringNum = closestString.stringNum;
+                    stringY = closestString.y;
+                    isBent = true;
+                    bendFromString = stringNum;
+                    bendRatio = closestString.bendRatio;
+                }
+            }
+
+            if (stringNum !== null) {
+                notes.push({
+                    noteName,
+                    string: stringNum,
+                    stringY,
+                    x: currentX,
+                    duration: parseInt(duration),
+                    grace,
+                    lyric,
+                    slurType,
+                    index,
+                    isBent,
+                    bendFromString,
+                    bendRatio
+                });
+
+                if (!grace) currentX += parseInt(duration) * 60;
+            }
+        });
+
+        partData.push({
+            partIndex,
+            partNumber: partIndex + 1,
+            notes,
+            tuning: songTuning,
+            stringConfig: SONG_SPECIFIC_STRINGS
+        });
+    });
+
+    return {
+        isMultiPart: true,
+        parts: partData,
+        title: path.basename(xmlPath, '.musicxml.xml'),
+        // For metadata, use combined notes from all parts
+        notes: partData.flatMap(p => p.notes),
+        tuning: partData[0].tuning, // Use first part's tuning for overall metadata
+        stringConfig: partData[0].stringConfig
+    };
+}
 
 // Parse MusicXML and extract note data
 async function parseMusicXML(xmlPath) {
@@ -32,11 +276,26 @@ async function parseMusicXML(xmlPath) {
     const dom = new JSDOM(xmlContent, { contentType: 'text/xml' });
     const doc = dom.window.document;
 
+    // Check if there are multiple parts (for ensemble pieces with 2+ đàn tranh)
+    const parts = doc.querySelectorAll('part');
+    const hasMultipleParts = parts.length > 1;
+
+    if (hasMultipleParts) {
+        // Parse each part separately
+        return parseMultiPartScore(doc, xmlPath, parts);
+    }
+
+    // Single part - use original logic
     const notes = [];
     const lyrics = [];
 
     // Extract notes
     const noteElements = doc.querySelectorAll('note');
+
+    // Calculate song-specific tuning FIRST
+    const songTuning = calculateSongTuning(noteElements);
+    const SONG_SPECIFIC_STRINGS = generateSongSpecificStrings(songTuning, 3, 5);
+
     let currentX = 120; // Starting X position
 
     noteElements.forEach((noteEl, index) => {
@@ -66,81 +325,60 @@ async function parseMusicXML(xmlPath) {
         // Calculate note name (keeping original notation)
         const noteName = step + (alter === '1' ? '#' : alter === '-1' ? 'b' : '') + octave;
 
-        // Find matching string with comprehensive mapping
+        // Map note to song-specific pentatonic string system with bending support
         let stringNum = null;
         let stringY = null;
+        let isBent = false;
+        let bendFromString = null;
+        let bendRatio = 0;
 
-        // Special mapping for Xỉa Cá Mè to distribute notes across 4 strings
-        const isXiaCaMe = path.basename(xmlPath, '.musicxml.xml').toLowerCase().normalize('NFC').includes('xỉa') ||
-                         path.basename(xmlPath, '.musicxml.xml').toLowerCase().includes('xia');
+        // Extract pitch class from note name
+        const pitchClass = noteName.match(/^([A-G][#b]?)/)?.[1];
 
-        // Create a more comprehensive mapping including bent notes
-        const noteToString = isXiaCaMe ? {
-            // Special mapping for Xỉa Cá Mè - proportional spacing based on cents
-            'C4': { num: 5, y: 110 },   // String 5 for C4 (base)
-            'F4': { num: 6, y: 310 },   // String 6 for F4 (+500 cents = +200px)
-            'G4': { num: 7, y: 390 },   // String 7 for G4 (+700 cents = +280px)
-            'C5': { num: 9, y: 590 }    // String 9 for C5 (+1200 cents = +480px)
-        } : {
-            // Standard mapping for all other songs
-            // Octave 2
-            'F2': { num: 5, y: STRING_CONFIG[5].y },
+        // Check if note is on an open string (song-specific)
+        const openStringMatch = Object.entries(SONG_SPECIFIC_STRINGS).find(
+            ([_, config]) => config.note === noteName
+        );
 
-            // Octave 3 - using proportional spacing
-            'C3': { num: 5, y: STRING_CONFIG[5].y }, 'C#3': { num: 5, y: STRING_CONFIG[5].y },
-            'Db3': { num: 5, y: STRING_CONFIG[5].y }, 'D3': { num: 5, y: STRING_CONFIG[5].y },
-            'D#3': { num: 5, y: STRING_CONFIG[5].y }, 'Eb3': { num: 5, y: STRING_CONFIG[5].y },
-            'E3': { num: 7, y: STRING_CONFIG[7].y }, 'F3': { num: 7, y: STRING_CONFIG[7].y },
-            'E#3': { num: 7, y: STRING_CONFIG[7].y }, 'F#3': { num: 7, y: STRING_CONFIG[7].y },
-            'Gb3': { num: 7, y: STRING_CONFIG[7].y }, 'G3': { num: 7, y: STRING_CONFIG[7].y },
-            'G#3': { num: 7, y: STRING_CONFIG[7].y }, 'Ab3': { num: 8, y: STRING_CONFIG[8].y },
-            'A3': { num: 8, y: STRING_CONFIG[8].y }, 'A#3': { num: 8, y: STRING_CONFIG[8].y },
-            'Bb3': { num: 8, y: STRING_CONFIG[8].y }, 'B3': { num: 8, y: STRING_CONFIG[8].y },
-            'B#3': { num: 9, y: STRING_CONFIG[9].y }, 'Cb3': { num: 8, y: STRING_CONFIG[8].y },
-
-            // Octave 4 (main range) - using proportional spacing
-            'C4': { num: 9, y: STRING_CONFIG[9].y }, 'C#4': { num: 9, y: STRING_CONFIG[9].y },
-            'Db4': { num: 5, y: STRING_CONFIG[5].y }, 'D4': { num: 5, y: STRING_CONFIG[5].y },
-            'D#4': { num: 5, y: STRING_CONFIG[5].y }, 'Eb4': { num: 5, y: STRING_CONFIG[5].y },
-            'E4': { num: 7, y: STRING_CONFIG[7].y }, 'F4': { num: 7, y: STRING_CONFIG[7].y },
-            'Fb4': { num: 7, y: STRING_CONFIG[7].y }, 'E#4': { num: 7, y: STRING_CONFIG[7].y },
-            'F#4': { num: 7, y: STRING_CONFIG[7].y }, 'Gb4': { num: 7, y: STRING_CONFIG[7].y },
-            'G4': { num: 7, y: STRING_CONFIG[7].y }, 'G#4': { num: 8, y: STRING_CONFIG[8].y },
-            'Ab4': { num: 8, y: STRING_CONFIG[8].y }, 'A4': { num: 8, y: STRING_CONFIG[8].y },
-            'A#4': { num: 9, y: STRING_CONFIG[9].y }, 'Bb4': { num: 9, y: STRING_CONFIG[9].y },
-            'B4': { num: 9, y: STRING_CONFIG[9].y }, 'B#4': { num: 9, y: STRING_CONFIG[9].y },
-            'Cb4': { num: 9, y: STRING_CONFIG[9].y },
-
-            // Octave 5 (main range) - using proportional spacing
-            'C5': { num: 9, y: STRING_CONFIG[9].y }, 'C#5': { num: 10, y: STRING_CONFIG[10].y },
-            'Db5': { num: 10, y: STRING_CONFIG[10].y }, 'D5': { num: 10, y: STRING_CONFIG[10].y },
-            'D#5': { num: 11, y: STRING_CONFIG[11].y }, 'Eb5': { num: 11, y: STRING_CONFIG[11].y },
-            'E5': { num: 11, y: STRING_CONFIG[11].y }, 'F5': { num: 11, y: STRING_CONFIG[11].y },
-            'Fb5': { num: 11, y: STRING_CONFIG[11].y }, 'E#5': { num: 11, y: STRING_CONFIG[11].y },
-            'F#5': { num: 12, y: STRING_CONFIG[12].y }, 'Gb5': { num: 12, y: STRING_CONFIG[12].y },
-            'G5': { num: 12, y: STRING_CONFIG[12].y }, 'G#5': { num: 12, y: STRING_CONFIG[12].y },
-            'Ab5': { num: 12, y: STRING_CONFIG[12].y }, 'A5': { num: 12, y: STRING_CONFIG[12].y },
-            'A#5': { num: 12, y: STRING_CONFIG[12].y }, 'Bb5': { num: 12, y: STRING_CONFIG[12].y },
-            'B5': { num: 12, y: STRING_CONFIG[12].y }, 'Cb5': { num: 9, y: STRING_CONFIG[9].y },
-
-            // Octave 6 - using proportional spacing
-            'C6': { num: 12, y: STRING_CONFIG[12].y }, 'C#6': { num: 12, y: STRING_CONFIG[12].y },
-            'Db6': { num: 12, y: STRING_CONFIG[12].y }, 'D6': { num: 12, y: STRING_CONFIG[12].y },
-            'D#6': { num: 12, y: STRING_CONFIG[12].y }, 'Eb6': { num: 12, y: STRING_CONFIG[12].y },
-            'E6': { num: 12, y: STRING_CONFIG[12].y }, 'F6': { num: 12, y: STRING_CONFIG[12].y },
-            'F#6': { num: 12, y: STRING_CONFIG[12].y }, 'Gb6': { num: 12, y: STRING_CONFIG[12].y },
-            'G6': { num: 12, y: STRING_CONFIG[12].y }
-        };
-
-        const mapping = noteToString[noteName];
-        if (mapping) {
-            stringNum = mapping.num;
-            stringY = mapping.y;
+        if (openStringMatch) {
+            // Note is on an open string - no bending needed
+            stringNum = parseInt(openStringMatch[0]);
+            stringY = openStringMatch[1].y;
+            isBent = false;
         } else {
-            // Default to middle string if not found
-            console.warn(`Note ${noteName} not in mapping, defaulting to string 9`);
-            stringNum = 9;
-            stringY = 410;
+            // Note requires bending - find closest open string below
+            const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS);
+
+            if (closestString && closestString.semitoneDistance > 0) {
+                // This note should be bent from the closest open string
+                stringNum = closestString.stringNum;
+                bendFromString = closestString.config.note;
+                isBent = true;
+
+                // Calculate proportional Y position based on semitone distance
+                // Find the next open string above for reference
+                const nextOpenString = Object.entries(SONG_SPECIFIC_STRINGS).find(([_, config]) => {
+                    const dist = getSemitoneDistance(closestString.config.note, config.note);
+                    return dist > 0 && songTuning.includes(config.pitchClass);
+                });
+
+                if (nextOpenString) {
+                    const lowerY = closestString.config.y;
+                    const upperY = nextOpenString[1].y;
+                    const totalSemitones = getSemitoneDistance(closestString.config.note, nextOpenString[1].note);
+                    bendRatio = closestString.semitoneDistance / totalSemitones;
+                    stringY = lowerY + (upperY - lowerY) * bendRatio;
+                } else {
+                    // No string above, just offset proportionally
+                    stringY = closestString.config.y + (closestString.semitoneDistance * 100 * pixelsPerCent);
+                }
+            } else {
+                // Fallback to first string if no match found
+                const firstString = Object.entries(SONG_SPECIFIC_STRINGS)[0];
+                stringNum = parseInt(firstString[0]);
+                stringY = firstString[1].y;
+                console.warn(`Could not map note ${noteName}, using first string`);
+            }
         }
 
         notes.push({
@@ -152,14 +390,22 @@ async function parseMusicXML(xmlPath) {
             duration: parseInt(duration),
             grace,
             lyric,
-            slur: slurType
+            slur: slurType,
+            isBent,
+            bendFromString,
+            bendRatio
         });
 
         // Advance X position based on duration
         currentX += grace ? 25 : parseInt(duration) * 85;
     });
 
-    return { notes, title: path.basename(xmlPath, '.musicxml.xml') };
+    return {
+        notes,
+        title: path.basename(xmlPath, '.musicxml.xml'),
+        tuning: songTuning,
+        stringConfig: SONG_SPECIFIC_STRINGS
+    };
 }
 
 // Convert slurs between identical pitches to ties and combine them
@@ -314,87 +560,210 @@ function convertSlursToTies(notes) {
     return finalNotes;
 }
 
+// Generate multi-part SVG tablature (stacked parallel tablatures)
+function generateMultiPartTablatureSVG(songData) {
+    const { parts } = songData;
+    const partSVGs = [];
+    let currentYOffset = 0;
+    const partSpacing = 150; // Space between parts
+
+    parts.forEach((partData, index) => {
+        const partSVG = generateSinglePartSVG(partData, currentYOffset, index + 1);
+        partSVGs.push(partSVG);
+        currentYOffset += partSVG.height + partSpacing;
+    });
+
+    const maxX = Math.max(...partSVGs.map(p => p.width));
+    const totalHeight = currentYOffset - partSpacing; // Remove last spacing
+
+    let svg = `
+<svg id="tablatureSvg" xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${totalHeight}">
+    <defs>
+        <linearGradient id="resonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.2" />
+            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
+            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.2" />
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="${maxX}" height="${totalHeight}" fill="transparent"/>
+
+    ${partSVGs.map(p => p.svg).join('\n')}
+</svg>`;
+
+    return svg;
+}
+
+// Generate SVG for a single part (used by both single and multi-part scores)
+function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
+    const { notes, stringConfig, tuning } = partData;
+    const lastNoteX = Math.max(...notes.map(n => n.x));
+    const maxX = lastNoteX + 320 + 100;
+
+    // Show ALL strings in the tuning (full instrument view)
+    // Color: grey for non-played, black for played
+    const playedStringNums = new Set(notes.map(n => n.string));
+    const allStringConfigs = Object.entries(stringConfig)
+        .filter(([stringNum, config]) => tuning.includes(config.pitchClass))
+        .sort((a, b) => a[1].y - b[1].y);
+
+    const stringYPositions = allStringConfigs.map(([num, config]) => config.y);
+    const minStringY = Math.min(...stringYPositions);
+    const maxStringY = Math.max(...stringYPositions);
+
+    const topPadding = 80;
+    const bottomPadding = 100;  // Extra padding to ensure all strings visible
+    const minY = minStringY - topPadding;
+    const maxY = maxStringY + bottomPadding;
+    const svgHeight = maxY - minY;
+
+    let svg = '';
+
+    // Part label if this is a multi-part score
+    if (partNumber !== null) {
+        svg += `
+    <text x="20" y="${yOffset + 20}" font-size="16" font-weight="bold" fill="#2C3E50">
+        Đàn Tranh ${partNumber}
+    </text>
+    <text x="20" y="${yOffset + 38}" font-size="12" fill="#7f8c8d" font-family="monospace">
+        Tuning: ${tuning.join('-')}
+    </text>`;
+    }
+
+    // String lines (all strings: grey for non-played, theme-adaptive for played)
+    allStringConfigs.forEach(([stringNum, config]) => {
+        const adjustedY = config.y - minY + 50 + yOffset;
+        const isPlayed = playedStringNums.has(parseInt(stringNum));
+        const lineClass = isPlayed ? "string-line-played" : "string-line-unplayed";
+        const labelClass = isPlayed ? "string-label-played" : "string-label-unplayed";
+        svg += `
+    <line x1="120" y1="${adjustedY}" x2="${maxX}" y2="${adjustedY}"
+          stroke-width="3" class="string-line ${lineClass}"/>
+    <text x="20" y="${adjustedY + 5}" font-size="12" font-weight="bold" class="string-label ${labelClass}">
+        String ${stringNum}: ${config.note}
+    </text>`;
+    });
+
+    // Notes and resonance bands
+    notes.forEach((note, index) => {
+        const stringConfig = allStringConfigs.find(([num, _]) => parseInt(num) === note.string);
+        if (!stringConfig) return;
+
+        const adjustedY = stringConfig[1].y - minY + 50 + yOffset;
+        const bandHeight = 30;
+        const circleRadius = 12;
+
+        // Resonance band (V1 style: 320px wide, 10px height)
+        const resonanceWidth = 320;
+        svg += `
+    <rect x="${note.x}" y="${adjustedY - 5}"
+          width="${resonanceWidth}" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="${index}" class="resonance-band"/>`;
+
+        // Bending symbol
+        if (note.isBent && note.bendFromString) {
+            const stringY = adjustedY;
+            const bendHeight = adjustedY - stringY;
+            svg += `
+    <path d="M ${note.x - 20},${stringY} Q ${note.x - 15},${stringY + bendHeight/2} ${note.x - 10},${adjustedY}"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="${index}"
+          class="bend-symbol"/>
+    <text x="${note.x - 25}" y="${stringY + bendHeight/2}"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="${index}">
+        ↗
+    </text>`;
+        }
+
+        // Note circle (neutral grey, theme-adaptive)
+        svg += `
+    <circle cx="${note.x}" cy="${adjustedY}" r="${circleRadius}"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="${index}" class="note-circle"/>
+    <text x="${note.x}" y="${adjustedY + 9}"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="string-number" pointer-events="none">
+        ${note.string}
+    </text>`;
+
+        // Note index (V1 style: #1, #2, #3...)
+        svg += `
+    <text x="${note.x}" y="${adjustedY - 35}"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #${index + 1}
+    </text>`;
+
+        // Lyric (V1 style: rotated -90°)
+        if (note.lyric) {
+            const lyricX = note.x + 4;
+            const lyricY = adjustedY + 40;
+            svg += `
+    <text x="${lyricX}" y="${lyricY}" text-anchor="start"
+          style="font-family: Arial; font-size: 11px; fill: #333; font-weight: bold;"
+          transform="rotate(-90, ${lyricX}, ${lyricY})" class="lyric-text">
+        ${note.lyric}
+    </text>`;
+        }
+    });
+
+    return {
+        svg,
+        width: maxX,
+        height: svgHeight + (partNumber !== null ? 60 : 0) // Extra height for label
+    };
+}
+
 // Generate V1-style SVG tablature
 function generateTablatureSVG(songData) {
-    const { notes, title } = songData;
-    const maxX = Math.max(...notes.map(n => n.x)) + 200;
+    // Check if this is a multi-part score
+    if (songData.isMultiPart) {
+        return generateMultiPartTablatureSVG(songData);
+    }
 
-    // Find which strings are actually used
-    const playedStrings = new Set(notes.map(n => n.string));
-
-    // Extract all unique pitches from the song
-    const uniquePitches = new Set();
-    notes.forEach(note => {
-        if (note.noteName) {
-            uniquePitches.add(note.noteName);
-        }
-    });
-
-    // Create unique string assignments for each unique pitch
-    // Comprehensive pitch order system - designed so C notes start each octave
-    const pitchOrder = {
-        // Octave 3
-        'C3': 0, 'C#3': 1, 'Db3': 1, 'D3': 2, 'D#3': 3, 'Eb3': 3, 'E3': 4, 'F3': 5, 'F#3': 6, 'Gb3': 6, 'G3': 7, 'G#3': 8, 'Ab3': 8, 'A3': 9, 'A#3': 10, 'Bb3': 10, 'B3': 11,
-
-        // Octave 4 (main reference) - including enharmonic equivalents in correct positions
-        'C4': 12, 'C#4': 13, 'Db4': 13, 'D4': 14, 'D#4': 15, 'Eb4': 15, 'E4': 16, 'F4': 17, 'F#4': 18, 'Gb4': 18, 'G4': 19, 'G#4': 20, 'Ab4': 20, 'A4': 21, 'A#4': 22, 'Bb4': 22, 'B4': 23, 'Cb5': 23,
-
-        // Octave 5
-        'C5': 24, 'C#5': 25, 'Db5': 25, 'D5': 26, 'D#5': 27, 'Eb5': 27, 'E5': 28, 'F5': 29, 'F#5': 30, 'Gb5': 30, 'G5': 31, 'G#5': 32, 'Ab5': 32, 'A5': 33, 'A#5': 34, 'Bb5': 34, 'B5': 35,
-
-        // Octave 6
-        'C6': 36, 'C#6': 37, 'Db6': 37, 'D6': 38, 'D#6': 39, 'Eb6': 39, 'E6': 40, 'F6': 41, 'F#6': 42, 'Gb6': 42, 'G6': 43
+    // Single part - use the single part generator
+    const singlePartData = {
+        notes: songData.notes,
+        stringConfig: songData.stringConfig,
+        tuning: songData.tuning
     };
 
-    // Sort unique pitches by musical order - HIGHEST to LOWEST (for tablature display)
-    const sortedPitches = Array.from(uniquePitches).sort((a, b) => {
-        const orderA = pitchOrder[a] || 999;
-        const orderB = pitchOrder[b] || 999;
+    const partSVG = generateSinglePartSVG(singlePartData, 0, null);
 
-        // Sort highest to lowest (reverse order for tablature where top = high pitch)
-        return orderB - orderA;
-    });
+    return `
+<svg id="tablatureSvg" xmlns="http://www.w3.org/2000/svg" width="${partSVG.width}" height="${partSVG.height}">
+    <defs>
+        <linearGradient id="resonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.2" />
+            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
+            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.2" />
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="${partSVG.width}" height="${partSVG.height}" fill="transparent"/>
+    ${partSVG.svg}
+</svg>`;
+}
 
-    // Assign each unique pitch to its own string position
-    const usedStringConfigs = [];
-    const pitchToStringAssignment = new Map();
-    const usedYPositions = new Set();
+// Original single-part SVG generation (kept for reference, now using generateSinglePartSVG)
+function generateTablatureSVG_ORIGINAL(songData) {
+    const { notes, title, stringConfig } = songData;
+    // Calculate maxX to include:
+    // - Last note position
+    // - Resonance band width (320px extends to the right)
+    // - Extra padding for safety (100px)
+    const lastNoteX = Math.max(...notes.map(n => n.x));
+    const maxX = lastNoteX + 320 + 100; // Include full resonance band + padding
 
-    sortedPitches.forEach((pitch, index) => {
-        // Calculate proportional Y position based on semitones from first pitch
-        const firstPitchSemitones = pitchOrder[sortedPitches[0]] || 0;
-        const thisPitchSemitones = pitchOrder[pitch] || 0;
-        const semitoneDistance = thisPitchSemitones - firstPitchSemitones;
+    // Use only song-specific pentatonic strings that are actually played
+    const playedStringNums = new Set(notes.map(n => n.string));
+    const usedStringConfigs = Object.entries(stringConfig)
+        .filter(([stringNum, _]) => playedStringNums.has(parseInt(stringNum)))
+        .sort((a, b) => a[1].y - b[1].y); // Sort by Y position (top to bottom)
 
-        // Use proportional spacing based on actual musical intervals
-        const baseY = 150;
-        let yPosition = baseY + (semitoneDistance * 30); // 30px per semitone (proportional to cents)
-
-        // Avoid exact duplicates by adding small offset if position already used
-        while (usedYPositions.has(yPosition)) {
-            yPosition += 5; // Small 5px offset to prevent overlaps
-        }
-        usedYPositions.add(yPosition);
-
-        const stringNum = index + 1; // Assign sequential string numbers
-        const config = { note: pitch, y: yPosition };
-
-        usedStringConfigs.push([stringNum.toString(), config]);
-        pitchToStringAssignment.set(pitch, stringNum);
-    });
-
-    // Store for metadata display - use the pitch count
-    songData.usedStrings = new Set(sortedPitches.map((pitch, index) => index + 1));
-
-    // Update note mapping to use the new pitch-based string assignments
-    notes.forEach(note => {
-        if (note.noteName && pitchToStringAssignment.has(note.noteName)) {
-            const newStringNum = pitchToStringAssignment.get(note.noteName);
-            const newConfig = usedStringConfigs.find(([num, config]) => num == newStringNum)[1];
-            note.string = newStringNum;
-            note.y = newConfig.y;
-        }
-    });
+    // Store for metadata display - count of unique open strings
+    songData.usedStrings = playedStringNums;
 
     // Calculate adaptive height based on used strings with proper padding
     const stringYPositions = usedStringConfigs.map(([num, config]) => config.y);
@@ -409,7 +778,7 @@ function generateTablatureSVG(songData) {
     const svgHeight = maxY - minY;
 
     let svg = `
-<svg id="tablature" xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${svgHeight}">
+<svg id="tablatureSvg" xmlns="http://www.w3.org/2000/svg" width="${maxX}" height="${svgHeight}">
     <!-- Transparent background for direct drawing -->
     <rect x="0" y="0" width="${maxX}" height="${svgHeight}" fill="transparent"/>
 
@@ -507,6 +876,29 @@ function generateTablatureSVG(songData) {
           data-note-index="${note.index}">
         ${note.lyric}
     </text>`;
+        }
+
+        // Bending symbol for bent notes
+        if (note.isBent && note.bendFromString) {
+            const stringConfig = usedStringConfigs.find(([num, _]) => parseInt(num) === note.string);
+            if (stringConfig) {
+                const stringY = stringConfig[1].y - minY + 50;
+                const bendHeight = adjustedY - stringY;
+
+                // Draw curved dashed line showing the bend from base string to bent position
+                svg += `
+    <path d="M ${note.x - 20},${stringY} Q ${note.x - 15},${stringY + bendHeight/2} ${note.x - 10},${adjustedY}"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="${note.index}"
+          class="bend-symbol"/>
+    <text x="${note.x - 25}" y="${stringY + bendHeight/2}"
+          text-anchor="end" class="bend-label"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="${note.index}">
+        ↗
+    </text>`;
+            }
         }
     });
 
@@ -921,6 +1313,33 @@ function generateViewer(songData, metadata) {
             font-weight: bold;
         }
 
+        /* Theme-adaptive string colors */
+        .string-line-played {
+            stroke: #2C3E50;
+            opacity: 0.6;
+        }
+        .string-line-unplayed {
+            stroke: #999999;
+            opacity: 0.4;
+        }
+        .string-label-played {
+            fill: #2C3E50;
+        }
+        .string-label-unplayed {
+            fill: #AAAAAA;
+        }
+
+        /* Dark themes: white for played strings */
+        body.theme-dark-grey .string-line-played,
+        body.theme-black .string-line-played {
+            stroke: #ECF0F1;
+            opacity: 0.8;
+        }
+        body.theme-dark-grey .string-label-played,
+        body.theme-black .string-label-played {
+            fill: #ECF0F1;
+        }
+
         .back-link {
             position: fixed;
             top: 90px;
@@ -952,32 +1371,58 @@ function generateViewer(songData, metadata) {
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>${toTitleCase(songData.title)}</h1>
-            <div class="metadata">
-                <div class="metadata-item">
-                    <span class="metadata-label">Notes:</span>
-                    <span>${metadata?.noteCount || songData.notes.length}</span>
+        <header style="padding-bottom: 15px;">
+            <h1 style="margin-bottom: 10px;">${toTitleCase(songData.title)}</h1>
+
+            <!-- Compact Metrics Row -->
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                <!-- Tuning -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 14px; color: #95a5a6;">Tuning:</span>
+                    <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">${songData.tuning ? songData.tuning.join('-') : 'C-D-E-G-A'}</span>
                 </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Learn Only:</span>
-                    <span>${metadata?.patternEfficiency?.learnOnly || '?'}</span>
+
+                <!-- Total Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #e74c3c; font-weight: 600;">${songData.notes.length}</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Total Notes</span>
                 </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Strings:</span>
-                    <span>${stringsDisplay}</span>
+
+                <!-- Open-String Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #3498db; font-weight: 600;">${metadata?.bendingMetrics?.openStringNotes || 0}</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Open-String Notes</span>
                 </div>
-                ${metadata?.patternEfficiency ? `
-                <div class="metadata-item">
-                    <span class="efficiency-badge">
-                        Learn ${metadata.patternEfficiency.learnOnly} patterns → Play ${metadata.patternEfficiency.totalNotes} notes
+
+                <!-- Bent Notes (clickable button) -->
+                <button id="bentStringsMetric" onclick="toggleBentNotesHighlight()"
+                     style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 6px 12px; border-radius: 5px; border: 2px solid #27ae60; background: white; transition: all 0.2s; font-family: inherit;"
+                     title="Click to highlight bent notes in red">
+                    <span style="font-size: 16px; color: #27ae60; font-weight: 600;">
+                        <span id="bentStringsCount">${metadata?.bendingMetrics?.uniqueBentStrings || 0}</span> Bent Strings / <span id="bentNotesCount">${metadata?.bendingMetrics?.bentNotes || 0}</span> Bent Notes
                     </span>
+                </button>
+
+                <!-- Learn Only -->
+                ${metadata?.patternEfficiency ? `
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #9b59b6; font-weight: 600;">${metadata.patternEfficiency.learnOnly}</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Patterns</span>
                 </div>
                 ` : ''}
             </div>
         </header>
 
-        <a href="/" class="back-link">← Back to Library</a>
+        <!-- Theme selector and Back button - top right corner -->
+        <div style="position: fixed; right: 20px; top: 20px; display: flex; gap: 15px; align-items: center; z-index: 1001;">
+            <a href="/" class="back-link" style="position: static; margin: 0; padding: 8px 16px; font-size: 14px;">← Back to Library</a>
+            <div class="theme-selector" style="display: flex; gap: 10px;">
+                <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
+                <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
+                <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
+                <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
+            </div>
+        </div>
 
         <div class="controls">
             <div class="zoom-controls">
@@ -998,14 +1443,6 @@ function generateViewer(songData, metadata) {
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Theme selector - top right corner -->
-        <div class="theme-selector" style="position: fixed; right: 20px; top: 20px; display: flex; gap: 10px; z-index: 1001;">
-            <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
-            <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
-            <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
-            <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
         </div>
 
         <div class="tablature-container">
@@ -1042,7 +1479,7 @@ function generateViewer(songData, metadata) {
             }
             console.log('Starting zoom initialization...');
 
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
 
             // Store base positions for all elements
             const notes = svg.querySelectorAll('.note-circle');
@@ -1088,7 +1525,7 @@ function generateViewer(songData, metadata) {
 
         function updateZoom() {
             console.log('updateZoom called - X:', currentZoomX, 'Y:', currentZoomY);
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
 
             // Initialize if needed
             if (!initialized) {
@@ -1249,7 +1686,7 @@ function generateViewer(songData, metadata) {
 
         function fitWidth() {
             const container = document.querySelector('.tablature-container');
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
             const baseWidth = parseFloat(svg.getAttribute('data-base-width'));
 
             // Account for resonance band extension (340px) to show complete tablature
@@ -1269,7 +1706,7 @@ function generateViewer(songData, metadata) {
 
         function fitHeight() {
             const container = document.querySelector('.tablature-container');
-            const svg = document.getElementById('tablature');
+            const svg = document.getElementById('tablatureSvg');
             const baseHeight = parseFloat(svg.getAttribute('data-base-height'));
 
             containerHeight = window.innerHeight * 0.6; // Use 60% of viewport height
@@ -1292,6 +1729,48 @@ function generateViewer(songData, metadata) {
                 console.log(\`Note #\${index} clicked (Grace: \${isGrace})\`);
             });
         });
+
+        // Bent notes highlight toggle
+        let bentNotesHighlighted = false;
+
+        function toggleBentNotesHighlight() {
+            const svg = document.getElementById('tablatureSvg');
+            const metric = document.getElementById('bentStringsMetric');
+            if (!svg || !metric) return;
+
+            const bentNoteCircles = [];
+            const allNotes = svg.querySelectorAll('.note-circle');
+
+            allNotes.forEach(noteCircle => {
+                const noteIndex = noteCircle.getAttribute('data-note-index');
+                const bendSymbol = svg.querySelector(\`.bend-symbol[data-note-index="\${noteIndex}"]\`);
+                if (bendSymbol) {
+                    bentNoteCircles.push(noteCircle);
+                }
+            });
+
+            if (!bentNotesHighlighted) {
+                // Highlight ON
+                bentNoteCircles.forEach(circle => {
+                    circle.setAttribute('data-original-fill', circle.getAttribute('fill'));
+                    circle.setAttribute('fill', '#E74C3C');
+                });
+                bentNotesHighlighted = true;
+                metric.style.background = '#E74C3C';
+                metric.style.borderColor = '#E74C3C';
+                metric.querySelector('span').style.color = 'white';
+            } else {
+                // Highlight OFF
+                bentNoteCircles.forEach(circle => {
+                    const originalFill = circle.getAttribute('data-original-fill') || '#666666';
+                    circle.setAttribute('fill', originalFill);
+                });
+                bentNotesHighlighted = false;
+                metric.style.background = 'white';
+                metric.style.borderColor = '#27ae60';
+                metric.querySelector('span').style.color = '#27ae60';
+            }
+        }
 
         // Theme management
         function setTheme(theme) {
@@ -1374,21 +1853,32 @@ async function processAllSongs() {
                 metadata.noteCount = songData.notes.length;
                 metadata.processedDate = new Date().toISOString();
 
-                // Update string count based on unique pitches
-                const uniquePitches = new Set();
-                songData.notes.forEach(note => {
-                    if (note.noteName) {
-                        uniquePitches.add(note.noteName);
-                    }
-                });
-                metadata.strings = uniquePitches.size;
+                // Calculate bending metrics
+                const bentNotes = songData.notes.filter(n => n.isBent);
+                const bentStrings = new Set(bentNotes.map(n => n.string));
+                const openNotes = songData.notes.filter(n => !n.isBent);
+
+                metadata.bendingMetrics = {
+                    totalNotes: songData.notes.length,
+                    openStringNotes: openNotes.length,
+                    bentNotes: bentNotes.length,
+                    bentNotePercentage: ((bentNotes.length / songData.notes.length) * 100).toFixed(1),
+                    uniqueBentStrings: bentStrings.size,
+                    openStringsUsed: Array.from(usedStrings).sort((a, b) => a - b)
+                };
+
+                // Update string count based on open strings (pentatonic system)
+                metadata.strings = usedStrings.size;
+
+                // Add song-specific tuning
+                metadata.tuning = songData.tuning;
 
                 // Update with calculated pattern efficiency
                 metadata.patternEfficiency = patternEfficiency;
 
                 // Write updated metadata
                 fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
-                console.log(`Updated metadata: noteCount = ${metadata.noteCount}, strings = ${metadata.strings} (corrected)`);
+                console.log(`Updated metadata: noteCount = ${metadata.noteCount}, strings = ${metadata.strings}, tuning = ${songData.tuning.join('-')}, bentNotes = ${bentNotes.length} (${metadata.bendingMetrics.bentNotePercentage}%)`);
             }
 
             // Save viewer

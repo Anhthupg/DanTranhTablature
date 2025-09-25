@@ -12,39 +12,44 @@ const DEFAULT_STRING_COUNT = danTranhConfig.stringConfiguration.default;
 const baseY = 110;
 const pixelsPerCent = 0.3;
 
-// Pentatonic scale configuration (5 open strings per octave)
-// Each octave repeats the same 5 notes, starting at C (octave switches at C)
-const PENTATONIC_SCALE = ['C', 'D', 'E', 'G', 'A'];
-
-// Semitone offsets from C for each note in the pentatonic scale
-const SEMITONE_OFFSETS = {
-    'C': 0,  'D': 2,  'E': 4,  'G': 7,  'A': 9
-};
-
-// Generate string configuration for multiple octaves
-// Standard Dan Tranh has 17 strings starting at E3, but supports 1-30 strings
-function generatePentatonicStrings(startNote = 'E', startOctave = 3, maxStrings = 17) {
+// Generate string configuration based on song's actual tuning
+// Dan Tranh uses the detected tuning from the song, starting at lowest note used
+function generateDanTranhStrings(tuning, lowestNote = 'E3', maxStrings = 17) {
     const strings = {};
     let stringNum = 1;
 
-    // Find starting position in pentatonic scale
-    let startIndex = PENTATONIC_SCALE.indexOf(startNote);
-    if (startIndex === -1) startIndex = 0;
+    // Extract note and octave from lowestNote
+    const match = lowestNote.match(/^([A-G][#b]?)(\d+)$/);
+    if (!match) return strings;
 
-    let octave = startOctave;
-    let noteIndex = startIndex;
+    const [, startPitch, startOctaveStr] = match;
+    let octave = parseInt(startOctaveStr);
+
+    // Find starting position in tuning array
+    let noteIndex = tuning.indexOf(startPitch);
+    if (noteIndex === -1) {
+        // If exact note not in tuning, find closest
+        noteIndex = 0;
+    }
+
+    // Calculate semitone offsets for the specific tuning
+    const pitchOrder = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+        'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+        'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+    };
 
     while (stringNum <= maxStrings && octave <= 7) {
-        const pitch = PENTATONIC_SCALE[noteIndex];
+        const pitch = tuning[noteIndex];
         const noteName = `${pitch}${octave}`;
-        const semitones = (octave - 3) * 12 + SEMITONE_OFFSETS[pitch];
+        const semitones = (octave - 3) * 12 + (pitchOrder[pitch] || 0);
         const yPos = baseY + (semitones * 100 * pixelsPerCent);
         strings[stringNum] = { note: noteName, y: yPos, pitchClass: pitch };
         stringNum++;
 
-        // Move to next note in scale
+        // Move to next note in tuning
         noteIndex++;
-        if (noteIndex >= PENTATONIC_SCALE.length) {
+        if (noteIndex >= tuning.length) {
             noteIndex = 0;
             octave++;
         }
@@ -53,9 +58,10 @@ function generatePentatonicStrings(startNote = 'E', startOctave = 3, maxStrings 
     return strings;
 }
 
-// Standard 17-string configuration starting at E3
-// E3,G3,A3,C4,D4,E4,G4,A4,C5,D5,E5,G5,A5,C6,D6,E6,G6
-const STRING_CONFIG = generatePentatonicStrings('E', 3, 17); // Standard 17 strings starting at E3
+// Default 17-string configuration with standard pentatonic tuning
+// Will be overridden by song-specific tuning
+const DEFAULT_TUNING = ['C', 'D', 'E', 'G', 'A'];
+const STRING_CONFIG = generateDanTranhStrings(DEFAULT_TUNING, 'E3', 17);
 
 // 12-color system from CLAUDE.md
 const COLORS = {
@@ -88,13 +94,13 @@ function getSemitoneDistance(note1, note2) {
 }
 
 // Find closest open string below a given note
-function findClosestOpenString(noteName, stringConfig) {
+function findClosestOpenString(noteName, stringConfig, tuning) {
     const noteMatch = noteName.match(/^([A-G][#b]?)(\d+)$/);
     if (!noteMatch) return null;
 
     const [, pitchClass, octave] = noteMatch;
     const openStrings = Object.entries(stringConfig)
-        .filter(([_, config]) => PENTATONIC_SCALE.includes(config.pitchClass))
+        .filter(([_, config]) => tuning.includes(config.pitchClass))
         .sort((a, b) => a[1].y - b[1].y); // Sort by Y position (low to high)
 
     // Find the closest open string below or at this note
@@ -192,8 +198,11 @@ function parseMultiPartScore(doc, xmlPath, parts) {
         const minOctave = Math.min(...octaves);
         const maxOctave = Math.max(...octaves);
 
-        // Use standard 17-string configuration instead of song-specific
-        const SONG_SPECIFIC_STRINGS = STRING_CONFIG;
+        // Generate 17-string configuration based on song's tuning
+        const startNote = songTuning.includes('E') ? 'E3' :
+                          songTuning.includes('D') ? 'D3' :
+                          songTuning.includes('F') ? 'F3' : `${songTuning[0]}3`;
+        const SONG_SPECIFIC_STRINGS = generateDanTranhStrings(songTuning, startNote, 17);
 
         let currentX = 120;
 
@@ -242,7 +251,7 @@ function parseMultiPartScore(doc, xmlPath, parts) {
                 stringY = openStringMatch[1].y;
                 isBent = false;
             } else {
-                const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS);
+                const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS, songTuning);
                 if (closestString) {
                     stringNum = closestString.stringNum;
                     stringY = closestString.y;
@@ -316,8 +325,11 @@ async function parseMusicXML(xmlPath) {
 
     // Calculate song-specific tuning for analysis
     const songTuning = calculateSongTuning(noteElements);
-    // But use standard 17-string configuration for string mapping
-    const SONG_SPECIFIC_STRINGS = STRING_CONFIG;
+    // Generate 17-string configuration based on song's tuning
+    const startNote = songTuning.includes('E') ? 'E3' :
+                      songTuning.includes('D') ? 'D3' :
+                      songTuning.includes('F') ? 'F3' : `${songTuning[0]}3`;
+    const SONG_SPECIFIC_STRINGS = generateDanTranhStrings(songTuning, startNote, 17);
 
     let currentX = 120; // Starting X position
 
@@ -370,7 +382,7 @@ async function parseMusicXML(xmlPath) {
             isBent = false;
         } else {
             // Note requires bending - find closest open string below
-            const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS);
+            const closestString = findClosestOpenString(noteName, SONG_SPECIFIC_STRINGS, songTuning);
 
             if (closestString && closestString.semitoneDistance > 0) {
                 // This note should be bent from the closest open string
@@ -626,8 +638,29 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
     // Color: grey for non-played, black for played
     const playedStringNums = new Set(notes.map(n => n.string));
 
-    // Use the standard 17-string configuration
-    const standardStringConfig = STRING_CONFIG;
+    // Determine the starting note based on the song's tuning
+    let startNote = 'E3';  // Default starting note
+    let startPitch = 'E';
+    let startOctave = 3;
+
+    // Check if E is in the tuning
+    if (!tuning.includes('E')) {
+        // If no E, check for D or F
+        if (tuning.includes('D')) {
+            startPitch = 'D';
+            startNote = 'D3';
+        } else if (tuning.includes('F')) {
+            startPitch = 'F';
+            startNote = 'F3';
+        } else {
+            // Use first note in tuning
+            startPitch = tuning[0];
+            startNote = `${tuning[0]}3`;
+        }
+    }
+
+    // Generate 17-string configuration based on song's tuning
+    const standardStringConfig = generateDanTranhStrings(tuning, startNote, 17);
 
     // Always show all 17 strings
     let stringsToShow = [];

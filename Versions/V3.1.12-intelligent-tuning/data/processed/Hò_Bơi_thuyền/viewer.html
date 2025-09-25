@@ -1,0 +1,3209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hò Bơi Thuyền - Đàn Tranh V3 Viewer</title>
+    <style>
+        :root {
+            /* 12-color system from V1 */
+            --main-note: #008080;
+            --main-note-dark: #005959;
+            --grace-note: #FFD700;
+            --grace-note-dark: #CC9900;
+            --tone-mark: #9B59B6;
+            --tone-mark-dark: #7D3C98;
+            --melisma: #E74C3C;
+            --melisma-dark: #C0392B;
+            --kpic-1: #0066CC;
+            --kpic-2: #3498DB;
+            --kpic-3: #5DADE2;
+            --kpic-4: #85C1E9;
+            --kric-1: #27AE60;
+            --kric-2: #52BE80;
+            --kric-3: #76D7A4;
+            --kric-4: #A9DFBF;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            transition: background 0.3s ease;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        /* Theme System - 4 Standard Themes */
+        body {
+            background: #D0D0D0;
+            --text-primary: #2C3E50;
+            --text-secondary: #34495E;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-text: #2C3E50;
+        }
+
+        body.theme-white {
+            background: #FFFFFF;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --card-bg: white;
+            --card-text: #2C3E50;
+        }
+
+        body.theme-light-grey {
+            background: #D0D0D0;
+            --text-primary: #2C3E50;
+            --text-secondary: #34495E;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --card-text: #2C3E50;
+        }
+
+        body.theme-dark-grey {
+            background: #2C3E50;
+            --text-primary: #ECF0F1;
+            --text-secondary: #BDC3C7;
+            --card-bg: rgba(52, 73, 94, 0.9);
+            --card-text: #ECF0F1;
+        }
+
+        body.theme-black {
+            background: #000000;
+            --text-primary: white;
+            --text-secondary: #CCCCCC;
+            --card-bg: rgba(26, 26, 26, 0.9);
+            --card-text: white;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            padding: 0;
+        }
+
+        header {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 20px;
+            margin: 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--card-text);
+            margin: 0 0 5px 0;
+            font-size: 1.8em;
+        }
+
+        .metadata {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            color: var(--text-secondary);
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .metadata-label {
+            font-weight: bold;
+            color: var(--kpic-1);
+        }
+
+        .controls {
+            background: var(--card-bg);
+            padding: 15px 20px;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            max-width: 90%;
+        }
+
+        .controls label,
+        .controls span {
+            color: var(--card-text);
+        }
+
+        input[type="range"] {
+            accent-color: var(--kpic-2);
+        }
+
+        .back-link {
+            background: var(--kpic-2);
+            color: white;
+        }
+
+        .back-link:hover {
+            background: var(--kpic-1);
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .zoom-btn {
+            padding: 8px 16px;
+            background: var(--main-note);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .zoom-btn:hover {
+            background: var(--main-note-dark);
+            transform: scale(1.05);
+        }
+
+        .tablature-container {
+            margin-top: 150px; /* Space for fixed header */
+            padding: 20px;
+            min-height: calc(100vh - 150px);
+            overflow-x: auto;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        #tablature {
+            display: block;
+        }
+
+        .note-circle {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .note-circle:hover {
+            filter: drop-shadow(0 0 10px rgba(0, 128, 128, 0.6));
+            transform: scale(1.1);
+        }
+
+        .string-label {
+            font-size: 12px;
+            fill: #666;
+        }
+
+        .string-number {
+            font-size: 10px;
+            fill: white;
+            font-weight: bold;
+        }
+
+        /* Theme-adaptive string colors */
+        .string-line-played {
+            stroke: #2C3E50;
+            opacity: 0.6;
+        }
+        .string-line-unplayed {
+            stroke: #999999;
+            opacity: 0.4;
+        }
+        .string-label-played {
+            fill: #2C3E50;
+        }
+        .string-label-unplayed {
+            fill: #AAAAAA;
+        }
+
+        /* Dark themes: white for played strings */
+        body.theme-dark-grey .string-line-played,
+        body.theme-black .string-line-played {
+            stroke: #ECF0F1;
+            opacity: 0.8;
+        }
+        body.theme-dark-grey .string-label-played,
+        body.theme-black .string-label-played {
+            fill: #ECF0F1;
+        }
+
+        .back-link {
+            position: fixed;
+            top: 90px;
+            left: 20px;
+            padding: 10px 20px;
+            background: var(--kpic-2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            transition: all 0.3s;
+            z-index: 1001;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            background: var(--kpic-1);
+            transform: translateX(-5px);
+        }
+
+        .efficiency-badge {
+            background: var(--kric-1);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="padding-bottom: 15px;">
+            <h1 style="margin-bottom: 10px;">Hò Bơi Thuyền</h1>
+
+            <!-- Compact Metrics Row -->
+            <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
+                <!-- Tuning -->
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 14px; color: #95a5a6;">Tuning:</span>
+                    <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">C#-D#-F#-G-G#</span>
+                </div>
+
+                <!-- Total Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #e74c3c; font-weight: 600;">110</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Total Notes</span>
+                </div>
+
+                <!-- Open-String Notes -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #3498db; font-weight: 600;">92</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Open-String Notes</span>
+                </div>
+
+                <!-- Bent Notes (clickable button) -->
+                <button id="bentStringsMetric" onclick="toggleBentNotesHighlight()"
+                     style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 6px 12px; border-radius: 5px; border: 2px solid #27ae60; background: white; transition: all 0.2s; font-family: inherit;"
+                     title="Click to highlight bent notes in red">
+                    <span style="font-size: 16px; color: #27ae60; font-weight: 600;">
+                        <span id="bentStringsCount">3</span> Bent Strings / <span id="bentNotesCount">18</span> Bent Notes
+                    </span>
+                </button>
+
+                <!-- Learn Only -->
+                
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <span style="font-size: 16px; color: #9b59b6; font-weight: 600;">13</span>
+                    <span style="font-size: 14px; color: #95a5a6;">Patterns</span>
+                </div>
+                
+            </div>
+        </header>
+
+        <!-- Theme selector and Back button - top right corner -->
+        <div style="position: fixed; right: 20px; top: 20px; display: flex; gap: 15px; align-items: center; z-index: 1001;">
+            <a href="/" class="back-link" style="position: static; margin: 0; padding: 8px 16px; font-size: 14px;">← Back to Library</a>
+            <div class="theme-selector" style="display: flex; gap: 10px;">
+                <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
+                <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
+                <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
+                <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="zoom-controls">
+                <div style="display: flex; gap: 30px; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <label style="color: #666; min-width: 60px;">X-Zoom:</label>
+                        <input type="range" id="xZoomSlider" min="1" max="200" value="100"
+                               style="width: 200px;" oninput="updateXZoom()">
+                        <span style="color: #666; min-width: 45px;"><span id="zoomLevelX">100</span>%</span>
+                        <button class="zoom-btn" onclick="fitWidth()">Fit Width</button>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <label style="color: #666; min-width: 60px;">Y-Zoom:</label>
+                        <input type="range" id="yZoomSlider" min="1" max="200" value="100"
+                               style="width: 200px;" oninput="updateYZoom()">
+                        <span style="color: #666; min-width: 45px;"><span id="zoomLevelY">100</span>%</span>
+                        <button class="zoom-btn" onclick="fitHeight()">Fit Height</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tablature-container">
+            
+<svg id="tablatureSvg" xmlns="http://www.w3.org/2000/svg" width="19940" height="1320">
+    <defs>
+        <linearGradient id="resonanceBand" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#666666;stop-opacity:0.2" />
+            <stop offset="50%" style="stop-color:#666666;stop-opacity:0.4" />
+            <stop offset="100%" style="stop-color:#666666;stop-opacity:0.2" />
+        </linearGradient>
+    </defs>
+    <rect x="0" y="0" width="19940" height="1320" fill="transparent"/>
+    
+    <line x1="120" y1="130" x2="19940" y2="130"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="135" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 1: C#3
+    </text>
+    <line x1="120" y1="190" x2="19940" y2="190"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="195" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 2: D#3
+    </text>
+    <line x1="120" y1="280" x2="19940" y2="280"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="285" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 3: F#3
+    </text>
+    <line x1="120" y1="310" x2="19940" y2="310"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="315" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 4: G3
+    </text>
+    <line x1="120" y1="340" x2="19940" y2="340"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="345" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 5: G#3
+    </text>
+    <line x1="120" y1="490" x2="19940" y2="490"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="495" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 6: C#4
+    </text>
+    <line x1="120" y1="550" x2="19940" y2="550"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="555" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 7: D#4
+    </text>
+    <line x1="120" y1="640" x2="19940" y2="640"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="645" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 8: F#4
+    </text>
+    <line x1="120" y1="670" x2="19940" y2="670"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="675" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 9: G4
+    </text>
+    <line x1="120" y1="700" x2="19940" y2="700"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="705" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 10: G#4
+    </text>
+    <line x1="120" y1="850" x2="19940" y2="850"
+          stroke-width="3" class="string-line string-line-played"/>
+    <text x="20" y="855" font-size="12" font-weight="bold" class="string-label string-label-played">
+        String 11: C#5
+    </text>
+    <line x1="120" y1="910" x2="19940" y2="910"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="915" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 12: D#5
+    </text>
+    <line x1="120" y1="1000" x2="19940" y2="1000"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1005" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 13: F#5
+    </text>
+    <line x1="120" y1="1030" x2="19940" y2="1030"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1035" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 14: G5
+    </text>
+    <line x1="120" y1="1060" x2="19940" y2="1060"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1065" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 15: G#5
+    </text>
+    <line x1="120" y1="1210" x2="19940" y2="1210"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1215" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 16: C#6
+    </text>
+    <line x1="120" y1="1270" x2="19940" y2="1270"
+          stroke-width="3" class="string-line string-line-unplayed"/>
+    <text x="20" y="1275" font-size="12" font-weight="bold" class="string-label string-label-unplayed">
+        String 17: D#6
+    </text>
+    <rect x="120" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="0" class="resonance-band"/>
+    <circle cx="120" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="0" class="note-circle"/>
+    <text x="120" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="120" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #1
+    </text>
+    <text x="135" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 135, 740)" class="lyric-text"
+          data-note-index="0">
+        Xô:
+    </text>
+    <rect x="375" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="1" class="resonance-band"/>
+    <path d="M 355,700 Q 360,700 365,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="1"
+          class="bend-symbol"/>
+    <text x="350" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="1">
+        ↗
+    </text>
+    <circle cx="375" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="1" class="note-circle"/>
+    <text x="375" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="375" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #2
+    </text>
+    <rect x="460" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="2" class="resonance-band"/>
+    <circle cx="460" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="2" class="note-circle"/>
+    <text x="460" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="460" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #3
+    </text>
+    <text x="475" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 475, 890)" class="lyric-text"
+          data-note-index="2">
+        ơ
+    </text>
+    <rect x="715" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="3" class="resonance-band"/>
+    <path d="M 695,700 Q 700,700 705,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="3"
+          class="bend-symbol"/>
+    <text x="690" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="3">
+        ↗
+    </text>
+    <circle cx="715" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="3" class="note-circle"/>
+    <text x="715" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="715" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #4
+    </text>
+    <rect x="800" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="4" class="resonance-band"/>
+    <circle cx="800" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="4" class="note-circle"/>
+    <text x="800" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="800" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #5
+    </text>
+    <text x="815" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 815, 890)" class="lyric-text"
+          data-note-index="4">
+        ơ
+    </text>
+    <rect x="1055" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="5" class="resonance-band"/>
+    <path d="M 1035,700 Q 1040,700 1045,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="5"
+          class="bend-symbol"/>
+    <text x="1030" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="5">
+        ↗
+    </text>
+    <circle cx="1055" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="5" class="note-circle"/>
+    <text x="1055" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="1055" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #6
+    </text>
+    <rect x="1140" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="6" class="resonance-band"/>
+    <circle cx="1140" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="6" class="note-circle"/>
+    <text x="1140" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="1140" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #7
+    </text>
+    <text x="1155" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 1155, 890)" class="lyric-text"
+          data-note-index="6">
+        là
+    </text>
+    <rect x="1480" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="7" class="resonance-band"/>
+    <circle cx="1480" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="7" class="note-circle"/>
+    <text x="1480" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="1480" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #8
+    </text>
+    <text x="1495" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 1495, 740)" class="lyric-text"
+          data-note-index="7">
+        khoan
+    </text>
+    <rect x="1650" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="8" class="resonance-band"/>
+    <path d="M 1630,700 Q 1635,700 1640,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="8"
+          class="bend-symbol"/>
+    <text x="1625" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="8">
+        ↗
+    </text>
+    <circle cx="1650" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="8" class="note-circle"/>
+    <text x="1650" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        A#4
+    </text>
+    <text x="1650" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #9
+    </text>
+    <text x="1665" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 1665, 740)" class="lyric-text"
+          data-note-index="8">
+        dô
+    </text>
+    <rect x="1735" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="9" class="resonance-band"/>
+    <circle cx="1735" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="9" class="note-circle"/>
+    <text x="1735" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="1735" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #10
+    </text>
+    <rect x="1820" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="10" class="resonance-band"/>
+    <circle cx="1820" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="10" class="note-circle"/>
+    <text x="1820" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="1820" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #11
+    </text>
+    <text x="1835" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 1835, 680)" class="lyric-text"
+          data-note-index="10">
+        khoan
+    </text>
+    <rect x="2160" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="11" class="resonance-band"/>
+    <circle cx="2160" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="11" class="note-circle"/>
+    <text x="2160" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="2160" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #12
+    </text>
+    <text x="2175" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 2175, 530)" class="lyric-text"
+          data-note-index="11">
+        Kể:
+    </text>
+    <rect x="2185" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="12" class="resonance-band"/>
+    <circle cx="2185" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="12" class="note-circle"/>
+    <text x="2185" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="2185" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #13
+    </text>
+    <text x="2200" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 2200, 590)" class="lyric-text"
+          data-note-index="12">
+        Nước
+    </text>
+    <rect x="2355" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="13" class="resonance-band"/>
+    <circle cx="2355" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="13" class="note-circle"/>
+    <text x="2355" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="2355" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #14
+    </text>
+    <rect x="2380" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="14" class="resonance-band"/>
+    <circle cx="2380" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="14" class="note-circle"/>
+    <text x="2380" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="2380" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #15
+    </text>
+    <text x="2395" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 2395, 740)" class="lyric-text"
+          data-note-index="14">
+        sông
+    </text>
+    <rect x="2550" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="15" class="resonance-band"/>
+    <circle cx="2550" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="15" class="note-circle"/>
+    <text x="2550" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="2550" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #16
+    </text>
+    <rect x="2575" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="16" class="resonance-band"/>
+    <circle cx="2575" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="16" class="note-circle"/>
+    <text x="2575" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="2575" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #17
+    </text>
+    <text x="2590" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 2590, 740)" class="lyric-text"
+          data-note-index="16">
+        Lam
+    </text>
+    <rect x="2915" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="17" class="resonance-band"/>
+    <circle cx="2915" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="17" class="note-circle"/>
+    <text x="2915" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="2915" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #18
+    </text>
+    <rect x="2940" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="18" class="resonance-band"/>
+    <circle cx="2940" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="18" class="note-circle"/>
+    <text x="2940" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="2940" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #19
+    </text>
+    <text x="2955" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 2955, 740)" class="lyric-text"
+          data-note-index="18">
+        dào
+    </text>
+    <rect x="3280" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="19" class="resonance-band"/>
+    <circle cx="3280" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="19" class="note-circle"/>
+    <text x="3280" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="3280" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #20
+    </text>
+    <rect x="3305" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="20" class="resonance-band"/>
+    <circle cx="3305" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="20" class="note-circle"/>
+    <text x="3305" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="3305" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #21
+    </text>
+    <rect x="3330" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="21" class="resonance-band"/>
+    <circle cx="3330" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="21" class="note-circle"/>
+    <text x="3330" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="3330" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #22
+    </text>
+    <text x="3345" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 3345, 590)" class="lyric-text"
+          data-note-index="21">
+        dạt.
+    </text>
+    <rect x="3670" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="22" class="resonance-band"/>
+    <circle cx="3670" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="22" class="note-circle"/>
+    <text x="3670" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="3670" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #23
+    </text>
+    <rect x="3695" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="23" class="resonance-band"/>
+    <path d="M 3675,550 Q 3680,550 3685,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="23"
+          class="bend-symbol"/>
+    <text x="3670" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="23">
+        ↗
+    </text>
+    <circle cx="3695" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="23" class="note-circle"/>
+    <text x="3695" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="3695" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #24
+    </text>
+    <text x="3710" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 3710, 590)" class="lyric-text"
+          data-note-index="23">
+        Đây
+    </text>
+    <rect x="3865" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="24" class="resonance-band"/>
+    <circle cx="3865" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="24" class="note-circle"/>
+    <text x="3865" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="3865" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #25
+    </text>
+    <rect x="3890" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="25" class="resonance-band"/>
+    <circle cx="3890" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="25" class="note-circle"/>
+    <text x="3890" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="3890" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #26
+    </text>
+    <text x="3905" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 3905, 590)" class="lyric-text"
+          data-note-index="25">
+        cảnh
+    </text>
+    <rect x="4060" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="26" class="resonance-band"/>
+    <circle cx="4060" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="26" class="note-circle"/>
+    <text x="4060" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="4060" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #27
+    </text>
+    <rect x="4085" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="27" class="resonance-band"/>
+    <circle cx="4085" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="27" class="note-circle"/>
+    <text x="4085" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="4085" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #28
+    </text>
+    <text x="4100" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 4100, 590)" class="lyric-text"
+          data-note-index="27">
+        đẹp
+    </text>
+    <rect x="4425" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="28" class="resonance-band"/>
+    <circle cx="4425" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="28" class="note-circle"/>
+    <text x="4425" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="4425" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #29
+    </text>
+    <rect x="4595" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="29" class="resonance-band"/>
+    <path d="M 4575,700 Q 4580,700 4585,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="29"
+          class="bend-symbol"/>
+    <text x="4570" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="29">
+        ↗
+    </text>
+    <circle cx="4595" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="29" class="note-circle"/>
+    <text x="4595" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        A#4
+    </text>
+    <text x="4595" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #30
+    </text>
+    <text x="4610" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 4610, 740)" class="lyric-text"
+          data-note-index="29">
+        Nam
+    </text>
+    <rect x="4680" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="30" class="resonance-band"/>
+    <circle cx="4680" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="30" class="note-circle"/>
+    <text x="4680" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="4680" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #31
+    </text>
+    <rect x="4765" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="31" class="resonance-band"/>
+    <circle cx="4765" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="31" class="note-circle"/>
+    <text x="4765" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="4765" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #32
+    </text>
+    <text x="4780" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 4780, 680)" class="lyric-text"
+          data-note-index="31">
+        Xô:
+    </text>
+    <rect x="4935" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="32" class="resonance-band"/>
+    <circle cx="4935" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="32" class="note-circle"/>
+    <text x="4935" y="500"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="4935" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #33
+    </text>
+    <text x="4950" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 4950, 530)" class="lyric-text"
+          data-note-index="32">
+        là
+    </text>
+    <rect x="5105" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="33" class="resonance-band"/>
+    <circle cx="5105" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="33" class="note-circle"/>
+    <text x="5105" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="5105" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #34
+    </text>
+    <text x="5120" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5120, 680)" class="lyric-text"
+          data-note-index="33">
+        khoan
+    </text>
+    <rect x="5275" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="34" class="resonance-band"/>
+    <circle cx="5275" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="34" class="note-circle"/>
+    <text x="5275" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="5275" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #35
+    </text>
+    <text x="5290" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5290, 710)" class="lyric-text"
+          data-note-index="34">
+        dô
+    </text>
+    <rect x="5445" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="35" class="resonance-band"/>
+    <circle cx="5445" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="35" class="note-circle"/>
+    <text x="5445" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="5445" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #36
+    </text>
+    <text x="5460" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5460, 680)" class="lyric-text"
+          data-note-index="35">
+        khoan.
+    </text>
+    <rect x="5785" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="36" class="resonance-band"/>
+    <circle cx="5785" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="36" class="note-circle"/>
+    <text x="5785" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="5785" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #37
+    </text>
+    <text x="5800" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5800, 680)" class="lyric-text"
+          data-note-index="36">
+        Kể:
+    </text>
+    <rect x="5810" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="37" class="resonance-band"/>
+    <circle cx="5810" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="37" class="note-circle"/>
+    <text x="5810" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="5810" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #38
+    </text>
+    <text x="5825" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5825, 710)" class="lyric-text"
+          data-note-index="37">
+        Ai
+    </text>
+    <rect x="5980" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="38" class="resonance-band"/>
+    <circle cx="5980" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="38" class="note-circle"/>
+    <text x="5980" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="5980" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #39
+    </text>
+    <text x="5995" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 5995, 710)" class="lyric-text"
+          data-note-index="38">
+        đi
+    </text>
+    <rect x="6150" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="39" class="resonance-band"/>
+    <circle cx="6150" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="39" class="note-circle"/>
+    <text x="6150" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="6150" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #40
+    </text>
+    <rect x="6175" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="40" class="resonance-band"/>
+    <circle cx="6175" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="40" class="note-circle"/>
+    <text x="6175" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="6175" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #41
+    </text>
+    <text x="6190" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 6190, 590)" class="lyric-text"
+          data-note-index="40">
+        trợ
+    </text>
+    <rect x="6515" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="41" class="resonance-band"/>
+    <circle cx="6515" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="41" class="note-circle"/>
+    <text x="6515" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="6515" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #42
+    </text>
+    <rect x="6540" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="42" class="resonance-band"/>
+    <circle cx="6540" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="42" class="note-circle"/>
+    <text x="6540" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="6540" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #43
+    </text>
+    <text x="6555" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 6555, 740)" class="lyric-text"
+          data-note-index="42">
+        xa
+    </text>
+    <rect x="6880" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="43" class="resonance-band"/>
+    <circle cx="6880" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="43" class="note-circle"/>
+    <text x="6880" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="6880" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #44
+    </text>
+    <rect x="6905" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="44" class="resonance-band"/>
+    <circle cx="6905" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="44" class="note-circle"/>
+    <text x="6905" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="6905" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #45
+    </text>
+    <text x="6920" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 6920, 740)" class="lyric-text"
+          data-note-index="44">
+        Nam
+    </text>
+    <rect x="7245" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="45" class="resonance-band"/>
+    <circle cx="7245" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="45" class="note-circle"/>
+    <text x="7245" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="7245" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #46
+    </text>
+    <rect x="7270" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="46" class="resonance-band"/>
+    <circle cx="7270" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="46" class="note-circle"/>
+    <text x="7270" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="7270" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #47
+    </text>
+    <text x="7285" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 7285, 740)" class="lyric-text"
+          data-note-index="46">
+        mà
+    </text>
+    <rect x="7440" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="47" class="resonance-band"/>
+    <circle cx="7440" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="47" class="note-circle"/>
+    <text x="7440" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="7440" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #48
+    </text>
+    <text x="7455" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 7455, 740)" class="lyric-text"
+          data-note-index="47">
+        xem
+    </text>
+    <rect x="7610" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="48" class="resonance-band"/>
+    <path d="M 7590,550 Q 7595,550 7600,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="48"
+          class="bend-symbol"/>
+    <text x="7585" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="48">
+        ↗
+    </text>
+    <circle cx="7610" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="48" class="note-circle"/>
+    <text x="7610" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="7610" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #49
+    </text>
+    <text x="7625" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 7625, 590)" class="lyric-text"
+          data-note-index="48">
+        thuyền
+    </text>
+    <rect x="7950" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="49" class="resonance-band"/>
+    <path d="M 7930,700 Q 7935,700 7940,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="49"
+          class="bend-symbol"/>
+    <text x="7925" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="49">
+        ↗
+    </text>
+    <circle cx="7950" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="49" class="note-circle"/>
+    <text x="7950" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        A4
+    </text>
+    <text x="7950" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #50
+    </text>
+    <text x="7965" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 7965, 740)" class="lyric-text"
+          data-note-index="49">
+        xem
+    </text>
+    <rect x="8290" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="50" class="resonance-band"/>
+    <circle cx="8290" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="50" class="note-circle"/>
+    <text x="8290" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="8290" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #51
+    </text>
+    <rect x="8315" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="51" class="resonance-band"/>
+    <circle cx="8315" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="51" class="note-circle"/>
+    <text x="8315" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="8315" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #52
+    </text>
+    <text x="8330" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 8330, 590)" class="lyric-text"
+          data-note-index="51">
+        bến.
+    </text>
+    <rect x="8655" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="52" class="resonance-band"/>
+    <circle cx="8655" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="52" class="note-circle"/>
+    <text x="8655" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="8655" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #53
+    </text>
+    <text x="8670" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 8670, 740)" class="lyric-text"
+          data-note-index="52">
+        Xô:
+    </text>
+    <rect x="8910" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="53" class="resonance-band"/>
+    <path d="M 8890,700 Q 8895,700 8900,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="53"
+          class="bend-symbol"/>
+    <text x="8885" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="53">
+        ↗
+    </text>
+    <circle cx="8910" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="53" class="note-circle"/>
+    <text x="8910" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="8910" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #54
+    </text>
+    <rect x="8995" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="54" class="resonance-band"/>
+    <circle cx="8995" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="54" class="note-circle"/>
+    <text x="8995" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="8995" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #55
+    </text>
+    <text x="9010" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 9010, 890)" class="lyric-text"
+          data-note-index="54">
+        ơ
+    </text>
+    <rect x="9250" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="55" class="resonance-band"/>
+    <path d="M 9230,700 Q 9235,700 9240,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="55"
+          class="bend-symbol"/>
+    <text x="9225" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="55">
+        ↗
+    </text>
+    <circle cx="9250" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="55" class="note-circle"/>
+    <text x="9250" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="9250" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #56
+    </text>
+    <rect x="9335" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="56" class="resonance-band"/>
+    <circle cx="9335" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="56" class="note-circle"/>
+    <text x="9335" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="9335" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #57
+    </text>
+    <text x="9350" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 9350, 890)" class="lyric-text"
+          data-note-index="56">
+        ơ
+    </text>
+    <rect x="9590" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="57" class="resonance-band"/>
+    <path d="M 9570,700 Q 9575,700 9580,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="57"
+          class="bend-symbol"/>
+    <text x="9565" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="57">
+        ↗
+    </text>
+    <circle cx="9590" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="57" class="note-circle"/>
+    <text x="9590" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        B4
+    </text>
+    <text x="9590" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #58
+    </text>
+    <rect x="9675" y="845"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="58" class="resonance-band"/>
+    <circle cx="9675" cy="850" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="58" class="note-circle"/>
+    <text x="9675" y="860"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#5
+    </text>
+    <text x="9675" y="815"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #59
+    </text>
+    <text x="9690" y="890" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 9690, 890)" class="lyric-text"
+          data-note-index="58">
+        ơ.
+    </text>
+    <rect x="10015" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="59" class="resonance-band"/>
+    <circle cx="10015" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="59" class="note-circle"/>
+    <text x="10015" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="10015" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #60
+    </text>
+    <text x="10030" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 10030, 740)" class="lyric-text"
+          data-note-index="59">
+        Khoan
+    </text>
+    <rect x="10185" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="60" class="resonance-band"/>
+    <path d="M 10165,700 Q 10170,700 10175,700"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="60"
+          class="bend-symbol"/>
+    <text x="10160" y="700"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="60">
+        ↗
+    </text>
+    <circle cx="10185" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="60" class="note-circle"/>
+    <text x="10185" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        A4
+    </text>
+    <text x="10185" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #61
+    </text>
+    <text x="10200" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 10200, 740)" class="lyric-text"
+          data-note-index="60">
+        dô
+    </text>
+    <rect x="10270" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="61" class="resonance-band"/>
+    <circle cx="10270" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="61" class="note-circle"/>
+    <text x="10270" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="10270" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #62
+    </text>
+    <rect x="10355" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="62" class="resonance-band"/>
+    <circle cx="10355" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="62" class="note-circle"/>
+    <text x="10355" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="10355" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #63
+    </text>
+    <text x="10370" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 10370, 680)" class="lyric-text"
+          data-note-index="62">
+        khoan
+    </text>
+    <rect x="10695" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="63" class="resonance-band"/>
+    <path d="M 10675,550 Q 10680,550 10685,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="63"
+          class="bend-symbol"/>
+    <text x="10670" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="63">
+        ↗
+    </text>
+    <circle cx="10695" cy="550" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="63" class="note-circle"/>
+    <text x="10695" y="555"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="10695" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #64
+    </text>
+    <text x="10710" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 10710, 590)" class="lyric-text"
+          data-note-index="63">
+        Kể:
+    </text>
+    <rect x="10720" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="64" class="resonance-band"/>
+    <circle cx="10720" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="64" class="note-circle"/>
+    <text x="10720" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="10720" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #65
+    </text>
+    <text x="10735" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 10735, 710)" class="lyric-text"
+          data-note-index="64">
+        Thuyền
+    </text>
+    <rect x="11060" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="65" class="resonance-band"/>
+    <circle cx="11060" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="65" class="note-circle"/>
+    <text x="11060" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="11060" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #66
+    </text>
+    <text x="11075" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 11075, 740)" class="lyric-text"
+          data-note-index="65">
+        xưa
+    </text>
+    <rect x="11400" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="66" class="resonance-band"/>
+    <circle cx="11400" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="66" class="note-circle"/>
+    <text x="11400" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="11400" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #67
+    </text>
+    <text x="11415" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 11415, 740)" class="lyric-text"
+          data-note-index="66">
+        nay
+    </text>
+    <rect x="11570" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="67" class="resonance-band"/>
+    <circle cx="11570" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="67" class="note-circle"/>
+    <text x="11570" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="11570" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #68
+    </text>
+    <text x="11585" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 11585, 740)" class="lyric-text"
+          data-note-index="67">
+        còn
+    </text>
+    <rect x="11740" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="68" class="resonance-band"/>
+    <circle cx="11740" cy="550" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="68" class="note-circle"/>
+    <text x="11740" y="555"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        D#4
+    </text>
+    <text x="11740" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #69
+    </text>
+    <rect x="11765" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="69" class="resonance-band"/>
+    <circle cx="11765" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="69" class="note-circle"/>
+    <text x="11765" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="11765" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #70
+    </text>
+    <text x="11780" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 11780, 740)" class="lyric-text"
+          data-note-index="69">
+        nhớ
+    </text>
+    <rect x="12105" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="70" class="resonance-band"/>
+    <circle cx="12105" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="70" class="note-circle"/>
+    <text x="12105" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="12105" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #71
+    </text>
+    <text x="12120" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 12120, 710)" class="lyric-text"
+          data-note-index="70">
+        nơi
+    </text>
+    <rect x="12275" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="71" class="resonance-band"/>
+    <circle cx="12275" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="71" class="note-circle"/>
+    <text x="12275" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="12275" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #72
+    </text>
+    <text x="12290" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 12290, 710)" class="lyric-text"
+          data-note-index="71">
+        bến
+    </text>
+    <rect x="12445" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="72" class="resonance-band"/>
+    <circle cx="12445" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="72" class="note-circle"/>
+    <text x="12445" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="12445" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #73
+    </text>
+    <rect x="12470" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="73" class="resonance-band"/>
+    <circle cx="12470" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="73" class="note-circle"/>
+    <text x="12470" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="12470" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #74
+    </text>
+    <text x="12485" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 12485, 740)" class="lyric-text"
+          data-note-index="73">
+        cũ
+    </text>
+    <rect x="12810" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="74" class="resonance-band"/>
+    <circle cx="12810" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="74" class="note-circle"/>
+    <text x="12810" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="12810" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #75
+    </text>
+    <text x="12825" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 12825, 680)" class="lyric-text"
+          data-note-index="74">
+        sông
+    </text>
+    <rect x="13150" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="75" class="resonance-band"/>
+    <circle cx="13150" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="75" class="note-circle"/>
+    <text x="13150" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="13150" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #76
+    </text>
+    <text x="13165" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 13165, 680)" class="lyric-text"
+          data-note-index="75">
+        Lam
+    </text>
+    <rect x="13320" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="76" class="resonance-band"/>
+    <circle cx="13320" cy="490" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="76" class="note-circle"/>
+    <text x="13320" y="500"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="13320" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #77
+    </text>
+    <text x="13335" y="530" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 13335, 530)" class="lyric-text"
+          data-note-index="76">
+        Xô:
+    </text>
+    <rect x="13490" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="77" class="resonance-band"/>
+    <circle cx="13490" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="77" class="note-circle"/>
+    <text x="13490" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="13490" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #78
+    </text>
+    <text x="13505" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 13505, 680)" class="lyric-text"
+          data-note-index="77">
+        khoan
+    </text>
+    <rect x="13660" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="78" class="resonance-band"/>
+    <circle cx="13660" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="78" class="note-circle"/>
+    <text x="13660" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="13660" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #79
+    </text>
+    <text x="13675" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 13675, 740)" class="lyric-text"
+          data-note-index="78">
+        dô
+    </text>
+    <rect x="13830" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="79" class="resonance-band"/>
+    <circle cx="13830" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="79" class="note-circle"/>
+    <text x="13830" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="13830" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #80
+    </text>
+    <text x="13845" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 13845, 680)" class="lyric-text"
+          data-note-index="79">
+        khoan.
+    </text>
+    <rect x="14170" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="80" class="resonance-band"/>
+    <circle cx="14170" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="80" class="note-circle"/>
+    <text x="14170" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="14170" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #81
+    </text>
+    <text x="14185" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 14185, 710)" class="lyric-text"
+          data-note-index="80">
+        Kể:
+    </text>
+    <rect x="14340" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="81" class="resonance-band"/>
+    <circle cx="14340" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="81" class="note-circle"/>
+    <text x="14340" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="14340" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #82
+    </text>
+    <text x="14355" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 14355, 680)" class="lyric-text"
+          data-note-index="81">
+        thuyền
+    </text>
+    <rect x="14510" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="82" class="resonance-band"/>
+    <circle cx="14510" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="82" class="note-circle"/>
+    <text x="14510" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="14510" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #83
+    </text>
+    <rect x="14535" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="83" class="resonance-band"/>
+    <circle cx="14535" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="83" class="note-circle"/>
+    <text x="14535" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="14535" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #84
+    </text>
+    <text x="14550" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 14550, 680)" class="lyric-text"
+          data-note-index="83">
+        có
+    </text>
+    <rect x="14875" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="84" class="resonance-band"/>
+    <circle cx="14875" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="84" class="note-circle"/>
+    <text x="14875" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="14875" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #85
+    </text>
+    <rect x="14900" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="85" class="resonance-band"/>
+    <circle cx="14900" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="85" class="note-circle"/>
+    <text x="14900" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="14900" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #86
+    </text>
+    <text x="14915" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 14915, 740)" class="lyric-text"
+          data-note-index="85">
+        đi
+    </text>
+    <rect x="15240" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="86" class="resonance-band"/>
+    <circle cx="15240" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="86" class="note-circle"/>
+    <text x="15240" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="15240" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #87
+    </text>
+    <text x="15255" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 15255, 740)" class="lyric-text"
+          data-note-index="86">
+        xa.
+    </text>
+    <rect x="15580" y="335"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="87" class="resonance-band"/>
+    <path d="M 15560,340 Q 15565,340 15570,340"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="87"
+          class="bend-symbol"/>
+    <text x="15555" y="340"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="87">
+        ↗
+    </text>
+    <circle cx="15580" cy="340" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="87" class="note-circle"/>
+    <text x="15580" y="345"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C4
+    </text>
+    <text x="15580" y="305"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #88
+    </text>
+    <rect x="15605" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="88" class="resonance-band"/>
+    <path d="M 15585,550 Q 15590,550 15595,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="88"
+          class="bend-symbol"/>
+    <text x="15580" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="88">
+        ↗
+    </text>
+    <circle cx="15605" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="88" class="note-circle"/>
+    <text x="15605" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="15605" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #89
+    </text>
+    <text x="15620" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 15620, 590)" class="lyric-text"
+          data-note-index="88">
+        Dù
+    </text>
+    <rect x="15775" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="89" class="resonance-band"/>
+    <path d="M 15755,550 Q 15760,550 15765,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="89"
+          class="bend-symbol"/>
+    <text x="15750" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="89">
+        ↗
+    </text>
+    <circle cx="15775" cy="550" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="89" class="note-circle"/>
+    <text x="15775" y="555"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="15775" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #90
+    </text>
+    <rect x="15800" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="90" class="resonance-band"/>
+    <circle cx="15800" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="90" class="note-circle"/>
+    <text x="15800" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="15800" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #91
+    </text>
+    <text x="15815" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 15815, 740)" class="lyric-text"
+          data-note-index="90">
+        thuyền
+    </text>
+    <rect x="15970" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="91" class="resonance-band"/>
+    <circle cx="15970" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="91" class="note-circle"/>
+    <text x="15970" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="15970" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #92
+    </text>
+    <rect x="15995" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="92" class="resonance-band"/>
+    <circle cx="15995" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="92" class="note-circle"/>
+    <text x="15995" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="15995" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #93
+    </text>
+    <text x="16010" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 16010, 680)" class="lyric-text"
+          data-note-index="92">
+        có
+    </text>
+    <rect x="16335" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="93" class="resonance-band"/>
+    <circle cx="16335" cy="640" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="93" class="note-circle"/>
+    <text x="16335" y="645"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="16335" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #94
+    </text>
+    <rect x="16360" y="665"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="94" class="resonance-band"/>
+    <circle cx="16360" cy="670" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="94" class="note-circle"/>
+    <text x="16360" y="680"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G4
+    </text>
+    <text x="16360" y="635"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #95
+    </text>
+    <text x="16375" y="710" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 16375, 710)" class="lyric-text"
+          data-note-index="94">
+        đi
+    </text>
+    <rect x="16700" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="95" class="resonance-band"/>
+    <circle cx="16700" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="95" class="note-circle"/>
+    <text x="16700" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="16700" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #96
+    </text>
+    <text x="16715" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 16715, 740)" class="lyric-text"
+          data-note-index="95">
+        xa.
+    </text>
+    <rect x="17040" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="96" class="resonance-band"/>
+    <circle cx="17040" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="96" class="note-circle"/>
+    <text x="17040" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="17040" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #97
+    </text>
+    <rect x="17065" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="97" class="resonance-band"/>
+    <path d="M 17045,550 Q 17050,550 17055,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="97"
+          class="bend-symbol"/>
+    <text x="17040" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="97">
+        ↗
+    </text>
+    <circle cx="17065" cy="550" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="97" class="note-circle"/>
+    <text x="17065" y="560"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="17065" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #98
+    </text>
+    <text x="17080" y="590" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 17080, 590)" class="lyric-text"
+          data-note-index="97">
+        Bến
+    </text>
+    <rect x="17235" y="545"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="98" class="resonance-band"/>
+    <path d="M 17215,550 Q 17220,550 17225,550"
+          stroke="#E74C3C" stroke-width="2" stroke-dasharray="4,3"
+          fill="none" opacity="0.7"
+          data-note-index="98"
+          class="bend-symbol"/>
+    <text x="17210" y="550"
+          text-anchor="end"
+          style="font-size: 9px; fill: #E74C3C; font-weight: bold;"
+          data-note-index="98">
+        ↗
+    </text>
+    <circle cx="17235" cy="550" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="98" class="note-circle"/>
+    <text x="17235" y="555"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F4
+    </text>
+    <text x="17235" y="515"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #99
+    </text>
+    <rect x="17260" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="99" class="resonance-band"/>
+    <circle cx="17260" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="99" class="note-circle"/>
+    <text x="17260" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="17260" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #100
+    </text>
+    <text x="17275" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 17275, 740)" class="lyric-text"
+          data-note-index="99">
+        vẫn
+    </text>
+    <rect x="17430" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="100" class="resonance-band"/>
+    <circle cx="17430" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="100" class="note-circle"/>
+    <text x="17430" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="17430" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #101
+    </text>
+    <text x="17445" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 17445, 680)" class="lyric-text"
+          data-note-index="100">
+        chờ
+    </text>
+    <rect x="17770" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="101" class="resonance-band"/>
+    <circle cx="17770" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="101" class="note-circle"/>
+    <text x="17770" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="17770" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #102
+    </text>
+    <text x="17785" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 17785, 740)" class="lyric-text"
+          data-note-index="101">
+        vẫn
+    </text>
+    <rect x="18110" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="102" class="resonance-band"/>
+    <circle cx="18110" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="102" class="note-circle"/>
+    <text x="18110" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="18110" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #103
+    </text>
+    <rect x="18135" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="103" class="resonance-band"/>
+    <circle cx="18135" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="103" class="note-circle"/>
+    <text x="18135" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="18135" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #104
+    </text>
+    <text x="18150" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 18150, 680)" class="lyric-text"
+          data-note-index="103">
+        đợi,
+    </text>
+    <rect x="18475" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="104" class="resonance-band"/>
+    <circle cx="18475" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="104" class="note-circle"/>
+    <text x="18475" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="18475" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #105
+    </text>
+    <text x="18490" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 18490, 740)" class="lyric-text"
+          data-note-index="104">
+        bến
+    </text>
+    <rect x="18645" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="105" class="resonance-band"/>
+    <circle cx="18645" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="105" class="note-circle"/>
+    <text x="18645" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="18645" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #106
+    </text>
+    <text x="18660" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 18660, 740)" class="lyric-text"
+          data-note-index="105">
+        hôm
+    </text>
+    <rect x="18815" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="106" class="resonance-band"/>
+    <circle cx="18815" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="106" class="note-circle"/>
+    <text x="18815" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="18815" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #107
+    </text>
+    <text x="18830" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 18830, 680)" class="lyric-text"
+          data-note-index="106">
+        nay
+    </text>
+    <rect x="19155" y="695"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="107" class="resonance-band"/>
+    <circle cx="19155" cy="700" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="107" class="note-circle"/>
+    <text x="19155" y="710"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        G#4
+    </text>
+    <text x="19155" y="665"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #108
+    </text>
+    <text x="19170" y="740" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 19170, 740)" class="lyric-text"
+          data-note-index="107">
+        vẫn
+    </text>
+    <rect x="19495" y="485"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="108" class="resonance-band"/>
+    <circle cx="19495" cy="490" r="6"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="108" class="note-circle"/>
+    <text x="19495" y="495"
+          text-anchor="middle" font-size="10" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        C#4
+    </text>
+    <text x="19495" y="455"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #109
+    </text>
+    <rect x="19520" y="635"
+          width="320" height="10"
+          fill="url(#resonanceBand)" stroke="none" rx="2" opacity="0.9"
+          data-note-index="109" class="resonance-band"/>
+    <circle cx="19520" cy="640" r="12"
+            fill="#666666" stroke="#2C3E50" stroke-width="2"
+            data-note-index="109" class="note-circle"/>
+    <text x="19520" y="650"
+          text-anchor="middle" font-size="16" fill="white" font-weight="bold"
+          class="note-name" pointer-events="none">
+        F#4
+    </text>
+    <text x="19520" y="605"
+          text-anchor="middle" font-size="9px" fill="#666" font-weight="bold" opacity="0.3">
+        #110
+    </text>
+    <text x="19535" y="680" text-anchor="start"
+          style="font-family: Arial; font-size: 14px; fill: #2C3E50; font-weight: bold;"
+          transform="rotate(-90, 19535, 680)" class="lyric-text"
+          data-note-index="109">
+        đợi...
+    </text>
+</svg>
+        </div>
+    </div>
+
+    <script>
+        // Vietnamese-aware Title Case function (same as library)
+        function toTitleCase(str) {
+            const lowercaseWords = ['và', 'của', 'cho', 'với', 'từ', 'trong', 'trên', 'dưới', 'về', 'đến', 'tại', 'bên', 'theo', 'cùng', 'như', 'hay', 'hoặc', 'nhưng', 'mà', 'để', 'khi', 'nếu', 'vì', 'do', 'bởi', 'qua', 'ra', 'vào', 'lên', 'xuống', 'em', 'con', 'là', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín', 'mười', 'quan', 'họ', 'ru', 'hò'];
+            const words = str.split(/\s+/);
+            return words.map(function(word, index) {
+                if (index === 0) {
+                    return word.charAt(0).toUpperCase() + word.substr(1).toLowerCase();
+                }
+                if (lowercaseWords.includes(word.toLowerCase())) {
+                    return word.toLowerCase();
+                }
+                return word.charAt(0).toUpperCase() + word.substr(1).toLowerCase();
+            }).join(' ');
+        }
+
+        let currentZoomX = 1;
+        let currentZoomY = 1;
+        let initialized = false;
+        let containerWidth = 0;
+        let containerHeight = 0;
+
+        function initializeZoom() {
+            if (initialized) {
+                console.log('Already initialized, skipping...');
+                return;
+            }
+            console.log('Starting zoom initialization...');
+
+            const svg = document.getElementById('tablatureSvg');
+
+            // Store base positions for all elements
+            const notes = svg.querySelectorAll('.note-circle');
+            notes.forEach(note => {
+                note.setAttribute('data-base-x', note.getAttribute('cx'));
+                note.setAttribute('data-base-y', note.getAttribute('cy'));
+            });
+
+            const bands = svg.querySelectorAll('.resonance-band');
+            bands.forEach(band => {
+                band.setAttribute('data-base-x', band.getAttribute('x'));
+                band.setAttribute('data-base-y', band.getAttribute('y'));
+                band.setAttribute('data-base-width', band.getAttribute('width'));
+            });
+
+            const strings = svg.querySelectorAll('.string-line');
+            strings.forEach(line => {
+                line.setAttribute('data-base-y1', line.getAttribute('y1'));
+                line.setAttribute('data-base-y2', line.getAttribute('y2'));
+            });
+
+            const texts = svg.querySelectorAll('text');
+            texts.forEach(text => {
+                text.setAttribute('data-base-x', text.getAttribute('x'));
+                text.setAttribute('data-base-y', text.getAttribute('y'));
+                const transform = text.getAttribute('transform');
+                if (transform) {
+                    text.setAttribute('data-base-transform', transform);
+                }
+            });
+
+            // Store SVG base dimensions
+            svg.setAttribute('data-base-width', svg.getAttribute('width'));
+            svg.setAttribute('data-base-height', svg.getAttribute('height'));
+            const viewBox = svg.getAttribute('viewBox');
+            if (viewBox) {
+                svg.setAttribute('data-base-viewbox', viewBox);
+            }
+
+            initialized = true;
+            console.log('Zoom initialization complete');
+        }
+
+        function updateZoom() {
+            console.log('updateZoom called - X:', currentZoomX, 'Y:', currentZoomY);
+            const svg = document.getElementById('tablatureSvg');
+
+            // Initialize if needed
+            if (!initialized) {
+                console.log('Initializing zoom...');
+                initializeZoom();
+            }
+
+            // Update note positions only
+            const notes = svg.querySelectorAll('.note-circle');
+            console.log('Found', notes.length, 'notes to update');
+            notes.forEach((note, i) => {
+                const baseX = parseFloat(note.getAttribute('data-base-x'));
+                const baseY = parseFloat(note.getAttribute('data-base-y'));
+
+                const scaledX = 120 + (baseX - 120) * currentZoomX;
+                const scaledY = baseY * currentZoomY;
+
+                if (i === 0 || i === 1 || i === notes.length - 1) {
+                    console.log('Note ' + i + ': baseX=', baseX, 'baseY=', baseY, '-> scaledX=', scaledX, 'scaledY=', scaledY);
+                }
+
+                note.setAttribute('cx', scaledX);
+                note.setAttribute('cy', scaledY);
+            });
+
+            // Update resonance bands - use same scaling as string lines
+            const bands = svg.querySelectorAll('.resonance-band');
+            bands.forEach(band => {
+                const baseX = parseFloat(band.getAttribute('data-base-x'));
+                const baseY = parseFloat(band.getAttribute('data-base-y'));
+                const baseWidth = parseFloat(band.getAttribute('data-base-width'));
+
+                const scaledX = 120 + (baseX - 120) * currentZoomX;
+                const scaledY = baseY * currentZoomY; // Use identical scaling to string lines
+                const scaledWidth = baseWidth * currentZoomX;
+
+                band.setAttribute('x', scaledX - 10);
+                band.setAttribute('y', scaledY);
+                band.setAttribute('width', scaledWidth);
+            });
+
+            // Update string lines - Y position and X length
+            const strings = svg.querySelectorAll('.string-line');
+            const baseWidthForStrings = parseFloat(svg.getAttribute('data-base-width'));
+            const newWidthForStrings = 120 + (baseWidthForStrings - 120) * currentZoomX;
+
+            // Ensure string lines cover all resonance bands (320px wide) + 10px extra
+            // Resonance bands extend 160px each direction from note center, so +170px from last note
+            const minStringLength = newWidthForStrings + 170;
+
+            strings.forEach(line => {
+                const baseY = parseFloat(line.getAttribute('data-base-y1'));
+                const scaledY = baseY * currentZoomY;
+
+                line.setAttribute('y1', scaledY);
+                line.setAttribute('y2', scaledY);
+                // Keep x1 at label-safe position, extend x2 to cover all resonance bands
+                line.setAttribute('x1', 100); // Respect the SVG generation setting
+                line.setAttribute('x2', minStringLength); // Ensure coverage of resonance bands
+            });
+
+            // Update text positions
+            const texts = svg.querySelectorAll('text');
+            texts.forEach(text => {
+                const baseX = parseFloat(text.getAttribute('data-base-x'));
+                const baseY = parseFloat(text.getAttribute('data-base-y'));
+
+                if (text.classList.contains('string-label')) {
+                    // String labels - only Y changes
+                    text.setAttribute('y', baseY * currentZoomY);
+                } else if (text.classList.contains('lyric-text')) {
+                    // Lyrics - position relative to their note
+                    const noteIndex = text.getAttribute('data-note-index');
+                    const associatedNote = svg.querySelector(`.note-circle[data-note-index="${noteIndex}"]`);
+
+                    if (associatedNote) {
+                        const noteX = parseFloat(associatedNote.getAttribute('cx'));
+                        const noteY = parseFloat(associatedNote.getAttribute('cy'));
+
+                        // Keep lyrics at constant offset from note
+                        const lyricX = noteX + 4;
+                        const lyricY = noteY + 40;
+
+                        text.setAttribute('x', lyricX);
+                        text.setAttribute('y', lyricY);
+
+                        // Update rotation around the new position
+                        text.setAttribute('transform', `rotate(-90, ${lyricX}, ${lyricY})`);
+                    }
+                } else if (text.classList.contains('note-index')) {
+                    // Note index numbers - position above their note
+                    const noteIndex = text.getAttribute('data-note-index');
+                    const associatedNote = svg.querySelector(`.note-circle[data-note-index="${noteIndex}"]`);
+
+                    if (associatedNote) {
+                        const noteX = parseFloat(associatedNote.getAttribute('cx'));
+                        const noteY = parseFloat(associatedNote.getAttribute('cy'));
+                        const isGrace = associatedNote.getAttribute('data-is-grace') === 'true';
+                        const radius = isGrace ? 6 : 12;
+
+                        // Keep index at constant offset above note
+                        text.setAttribute('x', noteX);
+                        text.setAttribute('y', noteY - radius - 15);
+                    }
+                } else if (text.classList.contains('string-number')) {
+                    // String numbers - position inside their note
+                    const noteIndex = text.getAttribute('data-note-index');
+                    const associatedNote = svg.querySelector(`.note-circle[data-note-index="${noteIndex}"]`);
+
+                    if (associatedNote) {
+                        const noteX = parseFloat(associatedNote.getAttribute('cx'));
+                        const noteY = parseFloat(associatedNote.getAttribute('cy'));
+
+                        // Keep string number centered in note
+                        text.setAttribute('x', noteX);
+                        text.setAttribute('y', noteY + 4);
+                    }
+                } else {
+                    // Other text - scale with tablature
+                    const scaledX = 120 + (baseX - 120) * currentZoomX;
+                    const scaledY = baseY * currentZoomY;
+
+                    text.setAttribute('x', scaledX);
+                    text.setAttribute('y', scaledY);
+                }
+            });
+
+            // Update SVG dimensions - without viewBox
+            const baseWidth = parseFloat(svg.getAttribute('data-base-width'));
+            const baseHeight = parseFloat(svg.getAttribute('data-base-height'));
+
+            // Calculate new dimensions
+            const newWidth = 120 + (baseWidth - 120) * currentZoomX;
+            const newHeight = baseHeight * currentZoomY;
+
+            console.log('SVG dimensions: base', baseWidth, 'x', baseHeight, '-> new', newWidth, 'x', newHeight);
+
+            svg.setAttribute('width', newWidth);
+            svg.setAttribute('height', newHeight);
+
+            document.getElementById('zoomLevelX').textContent = Math.round(currentZoomX * 100);
+            document.getElementById('zoomLevelY').textContent = Math.round(currentZoomY * 100);
+        }
+
+        function updateXZoom() {
+            const slider = document.getElementById('xZoomSlider');
+            currentZoomX = parseFloat(slider.value) / 100;
+            console.log('X-Zoom slider changed to:', slider.value, '%, zoom factor:', currentZoomX);
+            updateZoom();
+        }
+
+        function updateYZoom() {
+            const slider = document.getElementById('yZoomSlider');
+            currentZoomY = parseFloat(slider.value) / 100;
+            console.log('Y-Zoom slider changed to:', slider.value, '%, zoom factor:', currentZoomY);
+            updateZoom();
+        }
+
+        function fitWidth() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('tablatureSvg');
+            const baseWidth = parseFloat(svg.getAttribute('data-base-width'));
+
+            // Account for resonance band extension (340px) to show complete tablature
+            const fullTablatureWidth = baseWidth + 340;
+
+            containerWidth = container.clientWidth - 40; // Account for padding
+            currentZoomX = containerWidth / fullTablatureWidth;
+
+            console.log('Fit Width: container=', containerWidth, 'base=', baseWidth, 'zoom=', currentZoomX);
+
+            // Update slider
+            const slider = document.getElementById('xZoomSlider');
+            slider.value = Math.round(currentZoomX * 100);
+
+            updateZoom();
+        }
+
+        function fitHeight() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('tablatureSvg');
+            const baseHeight = parseFloat(svg.getAttribute('data-base-height'));
+
+            containerHeight = window.innerHeight * 0.6; // Use 60% of viewport height
+            currentZoomY = containerHeight / baseHeight;
+
+            console.log('Fit Height: container=', containerHeight, 'base=', baseHeight, 'zoom=', currentZoomY);
+
+            // Update slider
+            const slider = document.getElementById('yZoomSlider');
+            slider.value = Math.round(currentZoomY * 100);
+
+            updateZoom();
+        }
+
+        // Note click handler
+        document.querySelectorAll('.note-circle').forEach(note => {
+            note.addEventListener('click', function() {
+                const index = this.dataset.noteIndex;
+                const isGrace = this.dataset.isGrace === 'true';
+                console.log(`Note #${index} clicked (Grace: ${isGrace})`);
+            });
+        });
+
+        // Bent notes highlight toggle
+        let bentNotesHighlighted = false;
+
+        function toggleBentNotesHighlight() {
+            const svg = document.getElementById('tablatureSvg');
+            const metric = document.getElementById('bentStringsMetric');
+            if (!svg || !metric) return;
+
+            const bentNoteCircles = [];
+            const allNotes = svg.querySelectorAll('.note-circle');
+
+            allNotes.forEach(noteCircle => {
+                const noteIndex = noteCircle.getAttribute('data-note-index');
+                const bendSymbol = svg.querySelector(`.bend-symbol[data-note-index="${noteIndex}"]`);
+                if (bendSymbol) {
+                    bentNoteCircles.push(noteCircle);
+                }
+            });
+
+            if (!bentNotesHighlighted) {
+                // Highlight ON
+                bentNoteCircles.forEach(circle => {
+                    circle.setAttribute('data-original-fill', circle.getAttribute('fill'));
+                    circle.setAttribute('fill', '#E74C3C');
+                });
+                bentNotesHighlighted = true;
+                metric.style.background = '#E74C3C';
+                metric.style.borderColor = '#E74C3C';
+                metric.querySelector('span').style.color = 'white';
+            } else {
+                // Highlight OFF
+                bentNoteCircles.forEach(circle => {
+                    const originalFill = circle.getAttribute('data-original-fill') || '#666666';
+                    circle.setAttribute('fill', originalFill);
+                });
+                bentNotesHighlighted = false;
+                metric.style.background = 'white';
+                metric.style.borderColor = '#27ae60';
+                metric.querySelector('span').style.color = '#27ae60';
+            }
+        }
+
+        // Theme management
+        function setTheme(theme) {
+            document.body.className = '';
+            if (theme === 'white') {
+                document.body.classList.add('theme-white');
+            } else if (theme === 'light-grey') {
+                document.body.classList.add('theme-light-grey');
+            } else if (theme === 'dark-grey') {
+                document.body.classList.add('theme-dark-grey');
+            } else if (theme === 'black') {
+                document.body.classList.add('theme-black');
+            }
+            // Default is light-grey theme (no class needed)
+            localStorage.setItem('tablatureTheme', theme);
+        }
+
+        // Initialize zoom on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded - initializing zoom system');
+            initializeZoom();
+
+            // Load saved theme or default to light-grey
+            const savedTheme = localStorage.getItem('tablatureTheme') || 'light-grey';
+            setTheme(savedTheme);
+
+            // Set default to fit width and height
+            setTimeout(() => {
+                console.log('Setting default zoom to fit width and height');
+                fitWidth();
+                fitHeight();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

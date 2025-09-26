@@ -1601,7 +1601,7 @@ function generateViewer(songData, metadata) {
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         <span style="font-size: 14px; color: #95a5a6;">Optimal:</span>
                         <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">${songData.tuning ? songData.tuning.join('-') : 'C-D-E-G-A'}</span>
-                        <span style="font-size: 14px; color: #666;">(${metadata.bendingMetrics ? metadata.bendingMetrics.bentStrings + ' bent strings, ' + metadata.bendingMetrics.bentNotes + ' bent notes' : '0 bent notes'})</span>
+                        <span style="font-size: 14px; color: #666;">(${metadata.bendingMetrics ? metadata.bendingMetrics.uniqueBentStrings + ' bent strings, ' + metadata.bendingMetrics.bentNotes + ' bent notes' : '0 bent notes'})</span>
                         <span style="font-size: 13px; color: #7f8c8d;">${songData.notes.length} Total Notes</span>
                         <span id="optimalOpenNotes" style="font-size: 13px; color: #27ae60;">${songData.notes.length - (metadata.bendingMetrics ? metadata.bendingMetrics.bentNotes : 0)} Open-String Notes</span>
                     </div>

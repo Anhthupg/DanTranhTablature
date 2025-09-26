@@ -3346,9 +3346,24 @@
 
             allNotes.forEach(noteCircle => {
                 const noteIndex = noteCircle.getAttribute('data-note-index');
-                // Look for bent-note-group instead of bend-symbol
-                const bentGroup = svg.querySelector(`.bent-note-group[data-note-index="${noteIndex}"]`);
-                if (bentGroup) {
+                // Look for bent arrow tail elements that indicate this is a bent note
+                const bentIndicator = svg.querySelector(`.bent-arrow-tail[data-note-index="${noteIndex}"], .bent-arrow-tail[data-base-x][data-base-y]`);
+
+                // Also check if there's a bent arrow tail near this note position
+                if (!bentIndicator && noteCircle.getAttribute('cx')) {
+                    const noteX = parseFloat(noteCircle.getAttribute('cx'));
+                    const noteY = parseFloat(noteCircle.getAttribute('cy'));
+                    const bentTails = svg.querySelectorAll('.bent-arrow-tail');
+                    for (let tail of bentTails) {
+                        const tailX = parseFloat(tail.getAttribute('data-base-x') || tail.getAttribute('x'));
+                        const tailY = parseFloat(tail.getAttribute('data-base-y') || tail.getAttribute('y'));
+                        // Check if bent tail is near this note (within 50px horizontally)
+                        if (Math.abs(tailX - noteX) < 50 && Math.abs(tailY - noteY) < 100) {
+                            bentNoteCircles.push(noteCircle);
+                            break;
+                        }
+                    }
+                } else if (bentIndicator) {
                     bentNoteCircles.push(noteCircle);
                 }
             });

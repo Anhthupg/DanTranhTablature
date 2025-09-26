@@ -3060,77 +3060,82 @@
         function redrawStringsWithNewTuning(newTuning) {
             const svg = document.getElementById('tablatureSvg');
 
+            // First, remove ALL existing bent indicators (both original and any added)
+            const allBentGroups = svg.querySelectorAll('.bent-note-group');
+            allBentGroups.forEach(group => group.remove());
+
+            const allBentArrows = svg.querySelectorAll('.bent-arrow-tail');
+            allBentArrows.forEach(arrow => arrow.remove());
+
+            const allBentTexts = svg.querySelectorAll('.bent-line-char');
+            allBentTexts.forEach(text => text.remove());
+
             // Generate new string configuration based on new tuning
-            const startNote = newTuning.includes('E') ? 'E' :
-                             newTuning.includes('D') ? 'D' :
-                             newTuning.includes('F') ? 'F' :
-                             newTuning.includes('C') ? 'C' : newTuning[0];
+            // Use the same string generation logic as the original
+            const startNote = newTuning[0]; // Start with first note of tuning
             const lowestOctave = 3; // Keep starting octave consistent
 
-            // Generate 17 strings with new tuning
+            // Generate 17 strings with new tuning using pentatonic pattern
             const newStrings = {};
             let stringNum = 1;
-            let octave = lowestOctave;
 
-            for (let i = 0; i < 17; i++) {
-                const noteIndex = i % newTuning.length;
-                if (i > 0 && noteIndex === 0) octave++; // Increment octave after each full cycle
+            // Generate strings in the same way as original Dan Tranh configuration
+            for (let octave = lowestOctave; stringNum <= 17; octave++) {
+                for (let i = 0; i < newTuning.length && stringNum <= 17; i++) {
+                    const note = newTuning[i];
+                    const fullNote = note + octave;
 
-                const note = newTuning[noteIndex];
-                const fullNote = note + octave;
+                    // Calculate Y position using the same formula as original
+                    const semitoneMap = {'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300, 'E': 400, 'F': 500, 'F#': 600, 'Gb': 600, 'G': 700, 'G#': 800, 'Ab': 800, 'A': 900, 'A#': 1000, 'Bb': 1000, 'B': 1100};
+                    const centsFromC = semitoneMap[note] || 0;
+                    const totalCents = (octave - 3) * 1200 + centsFromC;
+                    const pixelsPerCent = 0.3;
+                    const baseY = 110 + (totalCents * pixelsPerCent);
 
-                // Calculate Y position (keeping same spacing system)
-                const baseY = 110; // Starting Y position
-                const semitoneSpacing = 30; // Pixels per semitone
-                const noteToSemitones = {'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11};
-                const semitones = (octave - lowestOctave) * 12 + (noteToSemitones[note] || 0);
-                const yPos = baseY + (semitones * semitoneSpacing / 12) * 3; // Adjusted spacing
-
-                newStrings[stringNum] = { note: fullNote, y: yPos };
-                stringNum++;
+                    newStrings[stringNum] = { note: fullNote, y: baseY, pitchClass: note };
+                    stringNum++;
+                }
             }
 
-            // Update string lines
+            // Update string lines with current zoom applied
             const stringLines = svg.querySelectorAll('.string-line');
             stringLines.forEach((line, index) => {
                 const stringConfig = newStrings[index + 1];
                 if (stringConfig) {
-                    // Update string position if needed
+                    // Update base position
                     const baseY = stringConfig.y;
                     line.setAttribute('data-base-y1', baseY);
                     line.setAttribute('data-base-y2', baseY);
 
-                    // Apply current zoom
+                    // Apply CURRENT zoom level (not reset to 1)
                     const scaledY = baseY * currentZoomY;
                     line.setAttribute('y1', scaledY);
                     line.setAttribute('y2', scaledY);
                 }
             });
 
-            // Update string labels
+            // Update string labels with current zoom
             const stringLabels = svg.querySelectorAll('.string-label');
             stringLabels.forEach((label, index) => {
                 const stringConfig = newStrings[index + 1];
                 if (stringConfig) {
                     label.textContent = `String ${index + 1}: ${stringConfig.note}`;
 
-                    // Update Y position
-                    const scaledY = stringConfig.y * currentZoomY;
-                    label.setAttribute('y', scaledY + 5);
+                    // Update Y position with CURRENT zoom
+                    const scaledY = stringConfig.y * currentZoomY + 5;
+                    label.setAttribute('y', scaledY);
                     label.setAttribute('data-base-y', stringConfig.y);
                 }
             });
 
-            // Update or remove bent indicators based on new tuning
+            // Update bent indicators based on new tuning
             updateBentIndicators(newTuning);
         }
 
         function updateBentIndicators(newTuning) {
             const svg = document.getElementById('tablatureSvg');
 
-            // Remove all existing bent indicators
-            const existingBentIndicators = svg.querySelectorAll('.bent-note-group');
-            existingBentIndicators.forEach(indicator => indicator.remove());
+            // No need to remove here - already done in redrawStringsWithNewTuning
 
             // Check each note and add bent indicators for notes not in the new tuning
             const allNotes = svg.querySelectorAll('.note-circle');
@@ -3141,31 +3146,38 @@
                     const isBent = !newTuning.includes(pitchClass);
 
                     if (isBent) {
-                        // Add bent indicator
+                        // Add bent indicator using current positions (already zoomed)
                         const noteIndex = noteCircle.getAttribute('data-note-index');
                         const cx = parseFloat(noteCircle.getAttribute('cx'));
                         const cy = parseFloat(noteCircle.getAttribute('cy'));
+                        const isGrace = noteCircle.getAttribute('r') === '6';
+                        const noteRadius = isGrace ? 6 : 12;
 
-                        // Create bent indicator (simplified version)
+                        // Create bent indicator group
                         const bentIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                         bentIndicator.setAttribute('class', 'bent-note-group');
                         bentIndicator.setAttribute('data-note-index', noteIndex);
 
-                        // Add arrow
+                        // Add arrow at note position (adjusted for note radius)
                         const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        arrow.setAttribute('x', cx);
+                        arrow.setAttribute('x', cx - noteRadius);
                         arrow.setAttribute('y', cy - 5);
                         arrow.setAttribute('text-anchor', 'middle');
-                        arrow.setAttribute('style', 'font-size: 35px; fill: #FF0000; font-weight: bold;');
+                        arrow.setAttribute('style', 'font-size: 35px; fill: #FF0000; font-weight: bold; stroke: #FF0000; stroke-width: 1px;');
+                        arrow.setAttribute('class', 'bent-arrow-tail');
+                        arrow.setAttribute('data-note-index', noteIndex);
                         arrow.textContent = '↘';
                         bentIndicator.appendChild(arrow);
 
-                        // Add BEND text
+                        // Add BEND text (offset from note)
                         const bendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        bendText.setAttribute('x', cx - 50);
+                        const eighthNoteDistance = 50; // Consistent offset
+                        bendText.setAttribute('x', cx - eighthNoteDistance);
                         bendText.setAttribute('y', cy + 5);
                         bendText.setAttribute('text-anchor', 'middle');
-                        bendText.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold;');
+                        bendText.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold; stroke: #FF0000; stroke-width: 0.5px;');
+                        bendText.setAttribute('class', 'bent-line-char');
+                        bendText.setAttribute('data-note-index', noteIndex);
                         bendText.textContent = 'BEND';
                         bentIndicator.appendChild(bendText);
 

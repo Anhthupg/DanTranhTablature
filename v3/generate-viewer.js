@@ -871,7 +871,8 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         svg += `
     <circle cx="${note.x}" cy="${adjustedY}" r="${noteRadius}"
             fill="${noteColor}" stroke="#2C3E50" stroke-width="2"
-            data-note-index="${index}" data-base-x="${note.x}" data-base-y="${adjustedY}" class="note-circle"/>
+            data-note-index="${index}" data-base-x="${note.x}" data-base-y="${adjustedY}"
+            data-is-bent="${note.isBent ? 'true' : 'false'}" class="note-circle"/>
     <text x="${note.x}" y="${adjustedY}"
           text-anchor="middle" font-size="${noteFontSize}" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -2024,51 +2025,11 @@ function generateViewer(songData, metadata) {
             const bentNoteCircles = [];
             const allNotes = svg.querySelectorAll('.note-circle');
 
-            // First, collect all bent arrow tail positions
-            const bentTailPositions = [];
-            const bentTails = svg.querySelectorAll('.bent-arrow-tail');
-
-            console.log('Found bent tails:', bentTails.length);
-
-            bentTails.forEach(tail => {
-                const x = parseFloat(tail.getAttribute('data-base-x') || tail.getAttribute('x'));
-                const y = parseFloat(tail.getAttribute('data-base-y') || tail.getAttribute('y'));
-                if (!isNaN(x) && !isNaN(y)) {
-                    bentTailPositions.push({ x, y });
-                }
-            });
-
-            console.log('Bent tail positions:', bentTailPositions);
-
-            // Now check each note to see if it has a bent indicator near it
+            // Find bent notes based on the data-is-bent attribute
+            // These are notes that aren't in the pentatonic tuning (the 5 most common pitch classes)
             allNotes.forEach(noteCircle => {
-                const noteX = parseFloat(noteCircle.getAttribute('cx'));
-                const noteY = parseFloat(noteCircle.getAttribute('cy'));
-
-                // Also get base positions for comparison
-                const baseX = parseFloat(noteCircle.getAttribute('data-base-x') || noteCircle.getAttribute('cx'));
-                const baseY = parseFloat(noteCircle.getAttribute('data-base-y') || noteCircle.getAttribute('cy'));
-
-                // Check if any bent tail is positioned to the left of this note (bent indicator)
-                for (let pos of bentTailPositions) {
-                    // Check both scaled and base positions
-                    // Bent tails are typically 50px to the left and at similar Y position
-                    const xDiff = baseX - pos.x;
-                    const yDiff = Math.abs(baseY - pos.y);
-
-                    // Debug logging for first few notes
-                    if (allNotes[0] === noteCircle || allNotes[1] === noteCircle) {
-                        console.log(\`Note at baseX=\${baseX}, baseY=\${baseY}, scaledX=\${noteX}, scaledY=\${noteY}\`);
-                        console.log(\`  Checking against tail at x=\${pos.x}, y=\${pos.y}\`);
-                        console.log(\`  xDiff=\${xDiff}, yDiff=\${yDiff}\`);
-                    }
-
-                    // Check if bent tail is near this note (using base positions)
-                    if (xDiff > 0 && xDiff < 100 && yDiff < 80) {
-                        console.log(\`Found bent note at baseX=\${baseX}, baseY=\${baseY} with tail at x=\${pos.x}, y=\${pos.y}\`);
-                        bentNoteCircles.push(noteCircle);
-                        break;
-                    }
+                if (noteCircle.getAttribute('data-is-bent') === 'true') {
+                    bentNoteCircles.push(noteCircle);
                 }
             });
 

@@ -867,7 +867,7 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         const noteFontSize = isGrace ? 10 : 16;
 
         // Note circle (red for bent notes for debugging, grey for normal)
-        const noteColor = note.isBent ? '#E74C3C' : '#666666';
+        const noteColor = '#666666'; // All notes grey by default (bent notes controlled by toggle)
         svg += `
     <circle cx="${note.x}" cy="${adjustedY}" r="${noteRadius}"
             fill="${noteColor}" stroke="#2C3E50" stroke-width="2"
@@ -999,12 +999,10 @@ function generateTablatureSVG_ORIGINAL(songData) {
         const isGrace = note.grace;
         const radius = isGrace ? 6 : 12;
 
-        // Use red for bent notes (debugging), theme colors for normal notes
-        const noteColor = note.isBent ?
-            { fill: '#E74C3C', stroke: '#C0392B' } :  // Red for bent notes (debugging)
-            isGrace ?
-            { fill: '#808080', stroke: '#666666' } :  // Grey for grace notes
-            { fill: '#666666', stroke: '#444444' };   // Dark grey for main notes
+        // Use grey for all notes by default (bent notes will be toggled red via button)
+        const noteColor = isGrace ?
+            { fill: '#808080', stroke: '#666666' } :  // Light grey for grace notes
+            { fill: '#666666', stroke: '#444444' };   // Dark grey for main notes (including bent)
 
         // Enhanced resonance band with gradient
         const bandWidth = isGrace ? 80 : 320;
@@ -2029,6 +2027,9 @@ function generateViewer(songData, metadata) {
             // First, collect all bent arrow tail positions
             const bentTailPositions = [];
             const bentTails = svg.querySelectorAll('.bent-arrow-tail');
+
+            console.log('Found bent tails:', bentTails.length);
+
             bentTails.forEach(tail => {
                 const x = parseFloat(tail.getAttribute('data-base-x') || tail.getAttribute('x'));
                 const y = parseFloat(tail.getAttribute('data-base-y') || tail.getAttribute('y'));
@@ -2036,6 +2037,8 @@ function generateViewer(songData, metadata) {
                     bentTailPositions.push({ x, y });
                 }
             });
+
+            console.log('Bent tail positions:', bentTailPositions);
 
             // Now check each note to see if it has a bent indicator near it
             allNotes.forEach(noteCircle => {
@@ -2046,11 +2049,14 @@ function generateViewer(songData, metadata) {
                 for (let pos of bentTailPositions) {
                     // Bent tails are typically 50px to the left and at similar Y position
                     if (pos.x < noteX && pos.x > (noteX - 100) && Math.abs(pos.y - noteY) < 80) {
+                        console.log(\`Found bent note at x=\${noteX}, y=\${noteY} with tail at x=\${pos.x}, y=\${pos.y}\`);
                         bentNoteCircles.push(noteCircle);
                         break;
                     }
                 }
             });
+
+            console.log('Total bent notes found:', bentNoteCircles.length);
 
             if (!bentNotesHighlighted) {
                 // Highlight ON

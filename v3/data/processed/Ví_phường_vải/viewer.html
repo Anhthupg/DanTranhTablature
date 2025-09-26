@@ -2492,27 +2492,29 @@
             const bentNoteCircles = [];
             const allNotes = svg.querySelectorAll('.note-circle');
 
-            allNotes.forEach(noteCircle => {
-                const noteIndex = noteCircle.getAttribute('data-note-index');
-                // Look for bent arrow tail elements that indicate this is a bent note
-                const bentIndicator = svg.querySelector(`.bent-arrow-tail[data-note-index="${noteIndex}"], .bent-arrow-tail[data-base-x][data-base-y]`);
+            // First, collect all bent arrow tail positions
+            const bentTailPositions = [];
+            const bentTails = svg.querySelectorAll('.bent-arrow-tail');
+            bentTails.forEach(tail => {
+                const x = parseFloat(tail.getAttribute('data-base-x') || tail.getAttribute('x'));
+                const y = parseFloat(tail.getAttribute('data-base-y') || tail.getAttribute('y'));
+                if (!isNaN(x) && !isNaN(y)) {
+                    bentTailPositions.push({ x, y });
+                }
+            });
 
-                // Also check if there's a bent arrow tail near this note position
-                if (!bentIndicator && noteCircle.getAttribute('cx')) {
-                    const noteX = parseFloat(noteCircle.getAttribute('cx'));
-                    const noteY = parseFloat(noteCircle.getAttribute('cy'));
-                    const bentTails = svg.querySelectorAll('.bent-arrow-tail');
-                    for (let tail of bentTails) {
-                        const tailX = parseFloat(tail.getAttribute('data-base-x') || tail.getAttribute('x'));
-                        const tailY = parseFloat(tail.getAttribute('data-base-y') || tail.getAttribute('y'));
-                        // Check if bent tail is near this note (within 50px horizontally)
-                        if (Math.abs(tailX - noteX) < 50 && Math.abs(tailY - noteY) < 100) {
-                            bentNoteCircles.push(noteCircle);
-                            break;
-                        }
+            // Now check each note to see if it has a bent indicator near it
+            allNotes.forEach(noteCircle => {
+                const noteX = parseFloat(noteCircle.getAttribute('cx'));
+                const noteY = parseFloat(noteCircle.getAttribute('cy'));
+
+                // Check if any bent tail is positioned to the left of this note (bent indicator)
+                for (let pos of bentTailPositions) {
+                    // Bent tails are typically 50px to the left and at similar Y position
+                    if (pos.x < noteX && pos.x > (noteX - 100) && Math.abs(pos.y - noteY) < 80) {
+                        bentNoteCircles.push(noteCircle);
+                        break;
                     }
-                } else if (bentIndicator) {
-                    bentNoteCircles.push(noteCircle);
                 }
             });
 

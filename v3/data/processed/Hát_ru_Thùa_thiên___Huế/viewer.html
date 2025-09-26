@@ -272,10 +272,21 @@
 
             <!-- Compact Metrics Row -->
             <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-bottom: 8px;">
-                <!-- Tuning -->
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="font-size: 14px; color: #95a5a6;">Tuning:</span>
-                    <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">D-F-G-A-B</span>
+                <!-- Tuning Comparison -->
+                <div id="tuningComparison" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <!-- Optimal Tuning -->
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 14px; color: #95a5a6;">Optimal:</span>
+                        <span style="font-size: 16px; font-family: monospace; color: #27ae60; font-weight: 600;">D-F-G-A-B</span>
+                        <span style="font-size: 14px; color: #666;">(undefined bent strings, 0 bent notes)</span>
+                    </div>
+                    <!-- Current Tuning (shown when changed) -->
+                    <div id="currentTuningDisplay" style="display: none; align-items: center; gap: 6px;">
+                        <span style="font-size: 14px; color: #95a5a6;">vs.</span>
+                        <span id="currentTuningName" style="font-size: 14px; color: #3498db;">Current:</span>
+                        <span id="currentTuningNotes" style="font-size: 16px; font-family: monospace; color: #3498db; font-weight: 600;"></span>
+                        <span id="currentTuningBents" style="font-size: 14px; color: #e74c3c;"></span>
+                    </div>
                 </div>
 
                 <!-- Total Notes -->
@@ -310,13 +321,51 @@
         </header>
 
         <!-- Theme selector and Back button - top right corner -->
-        <div style="position: fixed; right: 20px; top: 20px; display: flex; gap: 15px; align-items: center; z-index: 1001;">
-            <a href="/" class="back-link" style="position: static; margin: 0; padding: 8px 16px; font-size: 14px;">← Back to Library</a>
-            <div class="theme-selector" style="display: flex; gap: 10px;">
-                <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
-                <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
-                <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
-                <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
+        <div style="position: fixed; right: 20px; top: 20px; display: flex; flex-direction: column; gap: 15px; align-items: flex-end; z-index: 1001;">
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <a href="/" class="back-link" style="position: static; margin: 0; padding: 8px 16px; font-size: 14px;">← Back to Library</a>
+                <div class="theme-selector" style="display: flex; gap: 10px;">
+                    <button class="theme-btn" onclick="setTheme('white')" style="background: white; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="White"></button>
+                    <button class="theme-btn" onclick="setTheme('light-grey')" style="background: #D0D0D0; border: 2px solid #ccc; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Light Grey"></button>
+                    <button class="theme-btn" onclick="setTheme('dark-grey')" style="background: #2C3E50; border: 2px solid #34495E; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Dark Grey"></button>
+                    <button class="theme-btn" onclick="setTheme('black')" style="background: black; border: 2px solid #333; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;" title="Black"></button>
+                </div>
+            </div>
+            <!-- Tuning Selector -->
+            <div class="tuning-selector" style="position: relative;">
+                <button id="tuningButton" onclick="toggleTuningMenu()" style="
+                    padding: 8px 16px;
+                    background: #008080;
+                    color: white;
+                    border: 2px solid #005959;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    min-width: 180px;
+                    text-align: left;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
+                    <span id="currentTuningLabel">Tuning: D-F-G-A-B</span>
+                    <span style="margin-left: 10px;">▼</span>
+                </button>
+                <div id="tuningDropdown" style="
+                    display: none;
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    margin-top: 5px;
+                    background: white;
+                    border: 2px solid #008080;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    min-width: 250px;
+                    max-height: 400px;
+                    overflow-y: auto;
+                    z-index: 1002;
+                "></div>
             </div>
         </div>
 
@@ -450,7 +499,8 @@
     <circle cx="120" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="0" data-base-x="120" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="120" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -474,7 +524,8 @@
     <circle cx="460" cy="700" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="1" data-base-x="460" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="460" y="700"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -498,7 +549,8 @@
     <circle cx="800" cy="760" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="2" data-base-x="800" data-base-y="760"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="B4" class="note-circle"/>
     <text x="800" y="760"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -516,7 +568,8 @@
     <circle cx="825" cy="700" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="3" data-base-x="825" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="825" y="700"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -534,7 +587,8 @@
     <circle cx="850" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="4" data-base-x="850" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="850" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -558,7 +612,8 @@
     <circle cx="1530" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="5" data-base-x="1530" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="1530" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -582,7 +637,8 @@
     <circle cx="1700" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="6" data-base-x="1700" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="1700" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -606,7 +662,8 @@
     <circle cx="2720" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="7" data-base-x="2720" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="2720" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -624,7 +681,8 @@
     <circle cx="2745" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="8" data-base-x="2745" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="2745" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -642,7 +700,8 @@
     <circle cx="2770" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="9" data-base-x="2770" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="2770" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -666,7 +725,8 @@
     <circle cx="2795" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="10" data-base-x="2795" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="2795" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -690,7 +750,8 @@
     <circle cx="2965" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="11" data-base-x="2965" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="2965" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -714,7 +775,8 @@
     <circle cx="3305" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="12" data-base-x="3305" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="3305" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -738,7 +800,8 @@
     <circle cx="3475" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="13" data-base-x="3475" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="3475" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -756,7 +819,8 @@
     <circle cx="3500" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="14" data-base-x="3500" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="3500" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -780,7 +844,8 @@
     <circle cx="3840" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="15" data-base-x="3840" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="3840" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -804,7 +869,8 @@
     <circle cx="4180" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="16" data-base-x="4180" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="4180" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -822,7 +888,8 @@
     <circle cx="4205" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="17" data-base-x="4205" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="4205" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -846,7 +913,8 @@
     <circle cx="4545" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="18" data-base-x="4545" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="4545" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -870,7 +938,8 @@
     <circle cx="4715" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="19" data-base-x="4715" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="4715" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -894,7 +963,8 @@
     <circle cx="5055" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="20" data-base-x="5055" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="5055" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -918,7 +988,8 @@
     <circle cx="5395" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="21" data-base-x="5395" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="5395" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -936,7 +1007,8 @@
     <circle cx="5420" cy="580" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="22" data-base-x="5420" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="5420" y="580"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -960,7 +1032,8 @@
     <circle cx="5760" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="23" data-base-x="5760" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="5760" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -984,7 +1057,8 @@
     <circle cx="5930" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="24" data-base-x="5930" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="5930" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1008,7 +1082,8 @@
     <circle cx="6100" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="25" data-base-x="6100" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="6100" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1032,7 +1107,8 @@
     <circle cx="6440" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="26" data-base-x="6440" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="6440" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1056,7 +1132,8 @@
     <circle cx="6780" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="27" data-base-x="6780" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="6780" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1080,7 +1157,8 @@
     <circle cx="6805" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="28" data-base-x="6805" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="6805" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1104,7 +1182,8 @@
     <circle cx="7825" cy="700" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="29" data-base-x="7825" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="7825" y="700"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1128,7 +1207,8 @@
     <circle cx="8165" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="30" data-base-x="8165" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="8165" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1146,7 +1226,8 @@
     <circle cx="8190" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="31" data-base-x="8190" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="8190" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1164,7 +1245,8 @@
     <circle cx="8215" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="32" data-base-x="8215" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="8215" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1188,7 +1270,8 @@
     <circle cx="8895" cy="580" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="33" data-base-x="8895" data-base-y="580"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="F4" class="note-circle"/>
     <text x="8895" y="580"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1206,7 +1289,8 @@
     <circle cx="8920" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="34" data-base-x="8920" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="8920" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1230,7 +1314,8 @@
     <circle cx="9090" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="35" data-base-x="9090" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="9090" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1254,7 +1339,8 @@
     <circle cx="9430" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="36" data-base-x="9430" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="9430" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1272,7 +1358,8 @@
     <circle cx="9455" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="37" data-base-x="9455" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="9455" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1296,7 +1383,8 @@
     <circle cx="9795" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="38" data-base-x="9795" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="9795" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1314,7 +1402,8 @@
     <circle cx="9820" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="39" data-base-x="9820" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="9820" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1338,7 +1427,8 @@
     <circle cx="10160" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="40" data-base-x="10160" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="10160" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1356,7 +1446,8 @@
     <circle cx="10185" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="41" data-base-x="10185" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="10185" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1380,7 +1471,8 @@
     <circle cx="10525" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="42" data-base-x="10525" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="10525" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1398,7 +1490,8 @@
     <circle cx="10550" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="43" data-base-x="10550" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="10550" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1422,7 +1515,8 @@
     <circle cx="10890" cy="490" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="44" data-base-x="10890" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="10890" y="490"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1440,7 +1534,8 @@
     <circle cx="10915" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="45" data-base-x="10915" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="10915" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1464,7 +1559,8 @@
     <circle cx="11085" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="46" data-base-x="11085" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="11085" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1488,7 +1584,8 @@
     <circle cx="11425" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="47" data-base-x="11425" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="11425" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1512,7 +1609,8 @@
     <circle cx="11765" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="48" data-base-x="11765" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="11765" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1530,7 +1628,8 @@
     <circle cx="11790" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="49" data-base-x="11790" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="11790" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1554,7 +1653,8 @@
     <circle cx="12130" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="50" data-base-x="12130" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="12130" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1572,7 +1672,8 @@
     <circle cx="12155" cy="700" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="51" data-base-x="12155" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="12155" y="700"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1590,7 +1691,8 @@
     <circle cx="12180" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="52" data-base-x="12180" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="12180" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1608,7 +1710,8 @@
     <circle cx="12205" cy="490" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="53" data-base-x="12205" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="12205" y="490"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1626,7 +1729,8 @@
     <circle cx="12230" cy="640" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="54" data-base-x="12230" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="12230" y="640"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1650,7 +1754,8 @@
     <circle cx="12570" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="55" data-base-x="12570" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="12570" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1668,7 +1773,8 @@
     <circle cx="12595" cy="700" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="56" data-base-x="12595" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="12595" y="700"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1686,7 +1792,8 @@
     <circle cx="12620" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="57" data-base-x="12620" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="12620" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1704,7 +1811,8 @@
     <circle cx="12645" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="58" data-base-x="12645" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="12645" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1728,7 +1836,8 @@
     <circle cx="12985" cy="280" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="59" data-base-x="12985" data-base-y="280"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G3" class="note-circle"/>
     <text x="12985" y="280"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1746,7 +1855,8 @@
     <circle cx="13010" cy="490" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="60" data-base-x="13010" data-base-y="490"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="D4" class="note-circle"/>
     <text x="13010" y="490"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1770,7 +1880,8 @@
     <circle cx="13350" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="61" data-base-x="13350" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="13350" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1788,7 +1899,8 @@
     <circle cx="13375" cy="700" r="12"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="62" data-base-x="13375" data-base-y="700"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="A4" class="note-circle"/>
     <text x="13375" y="700"
           text-anchor="middle" font-size="16" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -1812,7 +1924,8 @@
     <circle cx="14055" cy="640" r="6"
             fill="#666666" stroke="#2C3E50" stroke-width="2"
             data-note-index="63" data-base-x="14055" data-base-y="640"
-            data-is-bent="false" class="note-circle"/>
+            data-is-bent="false"
+            data-note-name="G4" class="note-circle"/>
     <text x="14055" y="640"
           text-anchor="middle" font-size="10" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -2251,6 +2364,716 @@
             }
             // Default is light-grey theme (no class needed)
             localStorage.setItem('tablatureTheme', theme);
+        }
+
+        // Tuning system management
+        const tuningDatabase = {
+  "description": "Comprehensive tuning system database for Dan Tranh tablature",
+  "version": "1.0.0",
+  "scales": {
+    "Vietnamese": {
+      "Dan Tranh Standard": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "Dan Tranh Northern": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "Dan Tranh Southern": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "Dan Tranh Central": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "B"
+      ],
+      "Ru Con": [
+        "C",
+        "Eb",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "Nam Ai": [
+        "D",
+        "F",
+        "G",
+        "A",
+        "C"
+      ],
+      "Nam Xuân": [
+        "D",
+        "E",
+        "F#",
+        "A",
+        "B"
+      ],
+      "Bắc": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "Oán": [
+        "C",
+        "Eb",
+        "F",
+        "G",
+        "Ab"
+      ]
+    },
+    "Pentatonic": {
+      "Major": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "Minor": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "G"
+      ],
+      "Egyptian": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "Chinese Gong": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "Chinese Shang": [
+        "D",
+        "E",
+        "G",
+        "A",
+        "C"
+      ],
+      "Chinese Jue": [
+        "E",
+        "G",
+        "A",
+        "C",
+        "D"
+      ],
+      "Chinese Zhi": [
+        "G",
+        "A",
+        "C",
+        "D",
+        "E"
+      ],
+      "Chinese Yu": [
+        "A",
+        "C",
+        "D",
+        "E",
+        "G"
+      ],
+      "Japanese Hirajoshi": [
+        "C",
+        "D",
+        "Eb",
+        "G",
+        "Ab"
+      ],
+      "Japanese Iwato": [
+        "C",
+        "Db",
+        "F",
+        "Gb",
+        "Bb"
+      ],
+      "Japanese In-sen": [
+        "C",
+        "Db",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "Japanese Kumoi": [
+        "C",
+        "D",
+        "Eb",
+        "G",
+        "A"
+      ],
+      "Japanese Ritusen": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ]
+    },
+    "Hexatonic": {
+      "Blues Major": [
+        "C",
+        "D",
+        "Eb",
+        "E",
+        "G",
+        "A"
+      ],
+      "Blues Minor": [
+        "C",
+        "Eb",
+        "F",
+        "Gb",
+        "G",
+        "Bb"
+      ],
+      "Whole Tone": [
+        "C",
+        "D",
+        "E",
+        "F#",
+        "G#",
+        "A#"
+      ],
+      "Augmented": [
+        "C",
+        "D#",
+        "E",
+        "G",
+        "Ab",
+        "B"
+      ]
+    },
+    "Heptatonic": {
+      "Major": [
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "A",
+        "B"
+      ],
+      "Natural Minor": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G"
+      ],
+      "Dorian": [
+        "D",
+        "E",
+        "F",
+        "G",
+        "A",
+        "B",
+        "C"
+      ],
+      "Phrygian": [
+        "E",
+        "F",
+        "G",
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "Lydian": [
+        "F",
+        "G",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "Mixolydian": [
+        "G",
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "Harmonic Minor": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G#"
+      ]
+    }
+  },
+  "patternCompletions": {
+    "comment": "When a song has fewer than 5 notes, these patterns define how to complete them",
+    "3-note": {
+      "C,F,G": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "C,E,G": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "D,F,A": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "D,G,A": [
+        "D",
+        "E",
+        "G",
+        "A",
+        "B"
+      ],
+      "C,D,G": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "C,G,A": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "F,G,C": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "E,G,B": [
+        "C",
+        "E",
+        "G",
+        "A",
+        "B"
+      ],
+      "D,E,A": [
+        "D",
+        "E",
+        "F#",
+        "A",
+        "B"
+      ],
+      "C,Eb,G": [
+        "C",
+        "Eb",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "F,G,Bb": [
+        "F",
+        "G",
+        "A",
+        "Bb",
+        "C"
+      ],
+      "D,F,G": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ]
+    },
+    "4-note": {
+      "C,D,F,G": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "C,D,E,G": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "C,D,G,A": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "D,E,G,A": [
+        "D",
+        "E",
+        "G",
+        "A",
+        "B"
+      ],
+      "C,E,G,A": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "D,F,G,A": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "C,Eb,F,G": [
+        "C",
+        "Eb",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "C,D,F,A": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ],
+      "E,G,A,B": [
+        "D",
+        "E",
+        "G",
+        "A",
+        "B"
+      ],
+      "C,E,A,B": [
+        "C",
+        "D",
+        "E",
+        "A",
+        "B"
+      ],
+      "C,D,E,A": [
+        "C",
+        "D",
+        "E",
+        "G",
+        "A"
+      ],
+      "D,E,F,A": [
+        "D",
+        "E",
+        "F",
+        "A",
+        "B"
+      ],
+      "C,Eb,G,Bb": [
+        "C",
+        "Eb",
+        "F",
+        "G",
+        "Bb"
+      ],
+      "D,E,F#,A": [
+        "D",
+        "E",
+        "F#",
+        "A",
+        "B"
+      ],
+      "F,G,A,C": [
+        "C",
+        "D",
+        "F",
+        "G",
+        "A"
+      ]
+    }
+  },
+  "defaultCompletions": {
+    "comment": "Default notes to add when pattern not found",
+    "priority": [
+      "D",
+      "A",
+      "E",
+      "G",
+      "C",
+      "F",
+      "B",
+      "Bb",
+      "Eb",
+      "F#",
+      "Ab"
+    ]
+  },
+  "startingNotes": {
+    "comment": "Priority for lowest string selection",
+    "primary": "E",
+    "secondary": [
+      "D",
+      "F"
+    ],
+    "tertiary": [
+      "C",
+      "G",
+      "A"
+    ],
+    "defaultOctave": 3
+  },
+  "stringConfigurations": {
+    "16": {
+      "name": "Traditional 16-string",
+      "description": "Traditional Vietnamese configuration",
+      "octaveRange": [
+        3,
+        6
+      ]
+    },
+    "17": {
+      "name": "Standard 17-string",
+      "description": "Standard Vietnamese Dan Tranh configuration",
+      "octaveRange": [
+        3,
+        6
+      ]
+    },
+    "19": {
+      "name": "Extended 19-string",
+      "description": "Extended range configuration",
+      "octaveRange": [
+        3,
+        7
+      ]
+    },
+    "21": {
+      "name": "Professional 21-string",
+      "description": "Professional extended range",
+      "octaveRange": [
+        2,
+        7
+      ]
+    },
+    "25": {
+      "name": "Concert 25-string",
+      "description": "Concert instrument configuration",
+      "octaveRange": [
+        2,
+        7
+      ]
+    }
+  },
+  "centsDatabase": {
+    "comment": "Cents values for intervals from root",
+    "intervals": {
+      "C": 0,
+      "C#": 100,
+      "Db": 100,
+      "D": 200,
+      "D#": 300,
+      "Eb": 300,
+      "E": 400,
+      "F": 500,
+      "F#": 600,
+      "Gb": 600,
+      "G": 700,
+      "G#": 800,
+      "Ab": 800,
+      "A": 900,
+      "A#": 1000,
+      "Bb": 1000,
+      "B": 1100
+    },
+    "microtonalAdjustments": {
+      "Vietnamese Quarter-tone": 50,
+      "Arabic Quarter-tone": 50,
+      "Turkish Comma": 23,
+      "Indian Shruti": 22
+    }
+  }
+};
+        let currentTuning = ["D","F","G","A","B"];
+        let originalSongData = {
+            notes: [{"index":1,"x":120,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"À","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":2,"x":460,"y":740,"string":9,"noteName":"A4","duration":4,"grace":false,"lyric":"a","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":3,"x":800,"y":800,"string":10,"noteName":"B4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":4,"x":825,"y":740,"string":9,"noteName":"A4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":5,"x":850,"y":680,"string":8,"noteName":"G4","duration":8,"grace":false,"lyric":"ơi","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":6,"x":1530,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"Em","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":7,"x":1700,"y":680,"string":8,"noteName":"G4","duration":12,"grace":false,"lyric":"ơi...","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":8,"x":2720,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":9,"x":2745,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":10,"x":2770,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"ơi","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":11,"x":2795,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"em","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":12,"x":2965,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"ơi","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":13,"x":3305,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"em","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":14,"x":3475,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":15,"x":3500,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"ngủ","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":16,"x":3840,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"cho","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":17,"x":4180,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":18,"x":4205,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"muồi","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":19,"x":4545,"y":530,"string":6,"noteName":"D4","duration":2,"grace":false,"lyric":"Để","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":20,"x":4715,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"mẹ","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":21,"x":5055,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"đi","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":22,"x":5395,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":23,"x":5420,"y":620,"string":7,"noteName":"F4","duration":4,"grace":false,"lyric":"chợ","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":24,"x":5760,"y":530,"string":6,"noteName":"D4","duration":2,"grace":false,"lyric":"(mà)","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":25,"x":5930,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"mua","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":26,"x":6100,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"vôi","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":27,"x":6440,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"ăn","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":28,"x":6780,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"trầu","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":29,"x":6805,"y":530,"string":6,"noteName":"D4","duration":12,"grace":false,"lyric":"À","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":30,"x":7825,"y":740,"string":9,"noteName":"A4","duration":4,"grace":false,"lyric":"a","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":31,"x":8165,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":32,"x":8190,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":33,"x":8215,"y":680,"string":8,"noteName":"G4","duration":8,"grace":false,"lyric":"ơi...","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":34,"x":8895,"y":620,"string":7,"noteName":"F4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":35,"x":8920,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"Mua","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":36,"x":9090,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"vôi","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":37,"x":9430,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":38,"x":9455,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"chợ","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":39,"x":9795,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":40,"x":9820,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"Quán","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":41,"x":10160,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":42,"x":10185,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"chợ","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":43,"x":10525,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":44,"x":10550,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"Cầu","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":45,"x":10890,"y":530,"string":6,"noteName":"D4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":46,"x":10915,"y":680,"string":8,"noteName":"G4","duration":2,"grace":false,"lyric":"Mua","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":47,"x":11085,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"cau","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":48,"x":11425,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"Nam","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":49,"x":11765,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":50,"x":11790,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"Phổ,","slur":"both","isBent":false,"bendFromString":null,"bendRatio":0},{"index":51,"x":12130,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":52,"x":12155,"y":740,"string":9,"noteName":"A4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":53,"x":12180,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":54,"x":12205,"y":530,"string":6,"noteName":"D4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":55,"x":12230,"y":680,"string":8,"noteName":"G4","duration":4,"grace":false,"lyric":"mua","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":56,"x":12570,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":57,"x":12595,"y":740,"string":9,"noteName":"A4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":58,"x":12620,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":null,"isBent":false,"bendFromString":null,"bendRatio":0},{"index":59,"x":12645,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"trầu","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":60,"x":12985,"y":320,"string":3,"noteName":"G3","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":61,"x":13010,"y":530,"string":6,"noteName":"D4","duration":4,"grace":false,"lyric":"chợ","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0},{"index":62,"x":13350,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"start","isBent":false,"bendFromString":null,"bendRatio":0},{"index":63,"x":13375,"y":740,"string":9,"noteName":"A4","duration":8,"grace":false,"lyric":"Dinh","slur":"both","isBent":false,"bendFromString":null,"bendRatio":0},{"index":64,"x":14055,"y":680,"string":8,"noteName":"G4","duration":1,"grace":true,"lyric":"","slur":"stop","isBent":false,"bendFromString":null,"bendRatio":0}],
+            songTuning: ["D","F","G","A","B"]
+        };
+
+        function toggleTuningMenu() {
+            const dropdown = document.getElementById('tuningDropdown');
+            if (dropdown.style.display === 'none') {
+                buildTuningMenu();
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        }
+
+        function buildTuningMenu() {
+            const dropdown = document.getElementById('tuningDropdown');
+            dropdown.innerHTML = '';
+
+            // Add song's optimal tuning at top
+            const optimalDiv = document.createElement('div');
+            optimalDiv.innerHTML = `
+                <div style="padding: 10px; border-bottom: 2px solid #008080; background: #f0f8f8;">
+                    <strong style="color: #005959;">Song's Optimal Tuning</strong>
+                </div>
+                <div style="padding: 8px 15px; cursor: pointer;"
+                     onmouseover="this.style.background='#f0f0f0'"
+                     onmouseout="this.style.background='white'"
+                     onclick="selectTuning('${originalSongData.songTuning.join('-')}', '${originalSongData.songTuning.join(',')}')">
+                    ${originalSongData.songTuning.join('-')} <span style="color: green;">✓ Original</span>
+                </div>
+            `;
+            dropdown.appendChild(optimalDiv);
+
+            // Add categories
+            Object.keys(tuningDatabase.scales).forEach(category => {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.innerHTML = `
+                    <div style="padding: 10px; border-top: 1px solid #ddd; background: #f8f8f8;">
+                        <strong style="color: #666;">${category}</strong>
+                    </div>
+                `;
+                dropdown.appendChild(categoryDiv);
+
+                Object.entries(tuningDatabase.scales[category]).forEach(([name, notes]) => {
+                    const tuningDiv = document.createElement('div');
+                    tuningDiv.style.cssText = 'padding: 8px 15px; cursor: pointer; background: white;';
+                    tuningDiv.innerHTML = `${name}: ${notes.join('-')}`;
+                    tuningDiv.onmouseover = () => tuningDiv.style.background = '#f0f0f0';
+                    tuningDiv.onmouseout = () => tuningDiv.style.background = 'white';
+                    tuningDiv.onclick = () => selectTuning(name, notes.join(','));
+                    dropdown.appendChild(tuningDiv);
+                });
+            });
+        }
+
+        function selectTuning(name, tuningString) {
+            const newTuning = tuningString.split(',');
+            currentTuning = newTuning;
+
+            // Update button label
+            document.getElementById('currentTuningLabel').textContent = 'Tuning: ' + newTuning.join('-');
+
+            // Close dropdown
+            document.getElementById('tuningDropdown').style.display = 'none';
+
+            // Update bent notes with new tuning
+            const bentInfo = updateBentNotesForTuning(newTuning);
+
+            // Update comparison display in header
+            const currentDisplay = document.getElementById('currentTuningDisplay');
+            const currentName = document.getElementById('currentTuningName');
+            const currentNotes = document.getElementById('currentTuningNotes');
+            const currentBents = document.getElementById('currentTuningBents');
+
+            if (name === originalSongData.songTuning.join('-')) {
+                // Hide comparison when using optimal tuning
+                currentDisplay.style.display = 'none';
+            } else {
+                // Show comparison
+                currentDisplay.style.display = 'flex';
+                currentName.textContent = name + ':';
+                currentNotes.textContent = newTuning.join('-');
+                currentBents.textContent = '(' + bentInfo.bentStrings + ' bent strings, ' + bentInfo.bentNotes + ' bent notes)';
+            }
+        }
+
+        function updateBentNotesForTuning(newTuning) {
+            const svg = document.getElementById('tablatureSvg');
+            const allNotes = svg.querySelectorAll('.note-circle');
+            const uniqueBentStrings = new Set();
+
+            // Store note name in data attribute if not already there
+            allNotes.forEach(noteCircle => {
+                const noteText = noteCircle.nextElementSibling;
+                if (noteText && noteText.classList.contains('note-name')) {
+                    const noteName = noteText.textContent.trim();
+                    if (noteName) {
+                        noteCircle.setAttribute('data-note-name', noteName);
+                    }
+                }
+            });
+
+            // Update bent note status based on new tuning
+            allNotes.forEach(noteCircle => {
+                const noteName = noteCircle.getAttribute('data-note-name');
+                if (noteName) {
+                    const pitchClass = noteName.replace(/[0-9]/g, '');
+                    const isBent = !newTuning.includes(pitchClass);
+                    noteCircle.setAttribute('data-is-bent', isBent ? 'true' : 'false');
+
+                    // Track unique bent strings (pitch classes)
+                    if (isBent) {
+                        uniqueBentStrings.add(pitchClass);
+                    }
+                }
+            });
+
+            // Update bent note count in button
+            const bentNotes = svg.querySelectorAll('.note-circle[data-is-bent="true"]');
+            const metric = document.getElementById('bentStringsMetric');
+            const bentCount = bentNotes.length;
+
+            if (metric) {
+                const totalNotes = allNotes.length;
+                const percentage = totalNotes > 0 ? ((bentCount / totalNotes) * 100).toFixed(1) : 0;
+
+                // Update button text
+                const spanElement = metric.querySelector('span');
+                if (spanElement) {
+                    if (bentCount > 0) {
+                        spanElement.textContent = `Bent Notes: ${bentCount} (${percentage}%)`;
+                    } else {
+                        spanElement.textContent = 'No Bent Notes';
+                    }
+                }
+            }
+
+            // If bent notes are currently highlighted, refresh the highlighting
+            if (typeof bentNotesHighlighted !== 'undefined' && bentNotesHighlighted) {
+                bentNotesHighlighted = false;
+                toggleBentNotesHighlight();
+            }
+
+            console.log('Tuning changed to:', newTuning.join('-'), '- Bent notes updated');
+
+            return { bentStrings: uniqueBentStrings.size, bentNotes: bentCount };
         }
 
         // Initialize zoom on page load

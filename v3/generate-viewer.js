@@ -871,7 +871,7 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         svg += `
     <circle cx="${note.x}" cy="${adjustedY}" r="${noteRadius}"
             fill="${noteColor}" stroke="#2C3E50" stroke-width="2"
-            data-note-index="${index}" class="note-circle"/>
+            data-note-index="${index}" data-base-x="${note.x}" data-base-y="${adjustedY}" class="note-circle"/>
     <text x="${note.x}" y="${adjustedY}"
           text-anchor="middle" font-size="${noteFontSize}" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -2045,11 +2045,27 @@ function generateViewer(songData, metadata) {
                 const noteX = parseFloat(noteCircle.getAttribute('cx'));
                 const noteY = parseFloat(noteCircle.getAttribute('cy'));
 
+                // Also get base positions for comparison
+                const baseX = parseFloat(noteCircle.getAttribute('data-base-x') || noteCircle.getAttribute('cx'));
+                const baseY = parseFloat(noteCircle.getAttribute('data-base-y') || noteCircle.getAttribute('cy'));
+
                 // Check if any bent tail is positioned to the left of this note (bent indicator)
                 for (let pos of bentTailPositions) {
+                    // Check both scaled and base positions
                     // Bent tails are typically 50px to the left and at similar Y position
-                    if (pos.x < noteX && pos.x > (noteX - 100) && Math.abs(pos.y - noteY) < 80) {
-                        console.log(\`Found bent note at x=\${noteX}, y=\${noteY} with tail at x=\${pos.x}, y=\${pos.y}\`);
+                    const xDiff = baseX - pos.x;
+                    const yDiff = Math.abs(baseY - pos.y);
+
+                    // Debug logging for first few notes
+                    if (allNotes[0] === noteCircle || allNotes[1] === noteCircle) {
+                        console.log(\`Note at baseX=\${baseX}, baseY=\${baseY}, scaledX=\${noteX}, scaledY=\${noteY}\`);
+                        console.log(\`  Checking against tail at x=\${pos.x}, y=\${pos.y}\`);
+                        console.log(\`  xDiff=\${xDiff}, yDiff=\${yDiff}\`);
+                    }
+
+                    // Check if bent tail is near this note (using base positions)
+                    if (xDiff > 0 && xDiff < 100 && yDiff < 80) {
+                        console.log(\`Found bent note at baseX=\${baseX}, baseY=\${baseY} with tail at x=\${pos.x}, y=\${pos.y}\`);
                         bentNoteCircles.push(noteCircle);
                         break;
                     }

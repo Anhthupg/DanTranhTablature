@@ -5171,7 +5171,8 @@
             // Close dropdown
             document.getElementById('tuningDropdown').style.display = 'none';
 
-            // Update bent notes with new tuning
+            // Redraw strings and update bent notes
+            redrawStringsWithNewTuning(newTuning);
             const bentInfo = updateBentNotesForTuning(newTuning);
 
             // Update comparison display in header
@@ -5190,6 +5191,124 @@
                 currentNotes.textContent = newTuning.join('-');
                 currentBents.textContent = '(' + bentInfo.bentStrings + ' bent strings, ' + bentInfo.bentNotes + ' bent notes)';
             }
+        }
+
+        function redrawStringsWithNewTuning(newTuning) {
+            const svg = document.getElementById('tablatureSvg');
+
+            // Generate new string configuration based on new tuning
+            const startNote = newTuning.includes('E') ? 'E' :
+                             newTuning.includes('D') ? 'D' :
+                             newTuning.includes('F') ? 'F' :
+                             newTuning.includes('C') ? 'C' : newTuning[0];
+            const lowestOctave = 3; // Keep starting octave consistent
+
+            // Generate 17 strings with new tuning
+            const newStrings = {};
+            let stringNum = 1;
+            let octave = lowestOctave;
+
+            for (let i = 0; i < 17; i++) {
+                const noteIndex = i % newTuning.length;
+                if (i > 0 && noteIndex === 0) octave++; // Increment octave after each full cycle
+
+                const note = newTuning[noteIndex];
+                const fullNote = note + octave;
+
+                // Calculate Y position (keeping same spacing system)
+                const baseY = 110; // Starting Y position
+                const semitoneSpacing = 30; // Pixels per semitone
+                const noteToSemitones = {'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11};
+                const semitones = (octave - lowestOctave) * 12 + (noteToSemitones[note] || 0);
+                const yPos = baseY + (semitones * semitoneSpacing / 12) * 3; // Adjusted spacing
+
+                newStrings[stringNum] = { note: fullNote, y: yPos };
+                stringNum++;
+            }
+
+            // Update string lines
+            const stringLines = svg.querySelectorAll('.string-line');
+            stringLines.forEach((line, index) => {
+                const stringConfig = newStrings[index + 1];
+                if (stringConfig) {
+                    // Update string position if needed
+                    const baseY = stringConfig.y;
+                    line.setAttribute('data-base-y1', baseY);
+                    line.setAttribute('data-base-y2', baseY);
+
+                    // Apply current zoom
+                    const scaledY = baseY * currentZoomY;
+                    line.setAttribute('y1', scaledY);
+                    line.setAttribute('y2', scaledY);
+                }
+            });
+
+            // Update string labels
+            const stringLabels = svg.querySelectorAll('.string-label');
+            stringLabels.forEach((label, index) => {
+                const stringConfig = newStrings[index + 1];
+                if (stringConfig) {
+                    label.textContent = `String ${index + 1}: ${stringConfig.note}`;
+
+                    // Update Y position
+                    const scaledY = stringConfig.y * currentZoomY;
+                    label.setAttribute('y', scaledY + 5);
+                    label.setAttribute('data-base-y', stringConfig.y);
+                }
+            });
+
+            // Update or remove bent indicators based on new tuning
+            updateBentIndicators(newTuning);
+        }
+
+        function updateBentIndicators(newTuning) {
+            const svg = document.getElementById('tablatureSvg');
+
+            // Remove all existing bent indicators
+            const existingBentIndicators = svg.querySelectorAll('.bent-note-group');
+            existingBentIndicators.forEach(indicator => indicator.remove());
+
+            // Check each note and add bent indicators for notes not in the new tuning
+            const allNotes = svg.querySelectorAll('.note-circle');
+            allNotes.forEach(noteCircle => {
+                const noteName = noteCircle.getAttribute('data-note-name');
+                if (noteName) {
+                    const pitchClass = noteName.replace(/[0-9]/g, '');
+                    const isBent = !newTuning.includes(pitchClass);
+
+                    if (isBent) {
+                        // Add bent indicator
+                        const noteIndex = noteCircle.getAttribute('data-note-index');
+                        const cx = parseFloat(noteCircle.getAttribute('cx'));
+                        const cy = parseFloat(noteCircle.getAttribute('cy'));
+
+                        // Create bent indicator (simplified version)
+                        const bentIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                        bentIndicator.setAttribute('class', 'bent-note-group');
+                        bentIndicator.setAttribute('data-note-index', noteIndex);
+
+                        // Add arrow
+                        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        arrow.setAttribute('x', cx);
+                        arrow.setAttribute('y', cy - 5);
+                        arrow.setAttribute('text-anchor', 'middle');
+                        arrow.setAttribute('style', 'font-size: 35px; fill: #FF0000; font-weight: bold;');
+                        arrow.textContent = '↘';
+                        bentIndicator.appendChild(arrow);
+
+                        // Add BEND text
+                        const bendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        bendText.setAttribute('x', cx - 50);
+                        bendText.setAttribute('y', cy + 5);
+                        bendText.setAttribute('text-anchor', 'middle');
+                        bendText.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold;');
+                        bendText.textContent = 'BEND';
+                        bentIndicator.appendChild(bendText);
+
+                        svg.appendChild(bentIndicator);
+                    }
+                }
+            });
         }
 
         function updateBentNotesForTuning(newTuning) {

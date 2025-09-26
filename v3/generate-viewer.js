@@ -866,12 +866,12 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         }
         const noteFontSize = isGrace ? 10 : 16;
 
-        // Note circle (red for bent notes for debugging, grey for normal)
-        const noteColor = note.isBent ? '#E74C3C' : '#666666';
+        // Note circle (grey for all notes by default, bent notes marked with data attribute)
+        const noteColor = '#666666';
         svg += `
     <circle cx="${note.x}" cy="${adjustedY}" r="${noteRadius}"
             fill="${noteColor}" stroke="#2C3E50" stroke-width="2"
-            data-note-index="${index}" class="note-circle"/>
+            data-note-index="${index}" class="note-circle"${note.isBent ? ' data-is-bent="true"' : ''}/>
     <text x="${note.x}" y="${adjustedY}"
           text-anchor="middle" font-size="${noteFontSize}" fill="white" font-weight="bold"
           dominant-baseline="middle"
@@ -999,9 +999,9 @@ function generateTablatureSVG_ORIGINAL(songData) {
         const isGrace = note.grace;
         const radius = isGrace ? 6 : 12;
 
-        // Use red for bent notes (debugging), theme colors for normal notes
+        // Use grey for all notes by default, bent notes marked with data attribute
         const noteColor = note.isBent ?
-            { fill: '#E74C3C', stroke: '#C0392B' } :  // Red for bent notes (debugging)
+            { fill: '#666666', stroke: '#444444' } :  // Grey for bent notes (will be toggled to red)
             isGrace ?
             { fill: '#808080', stroke: '#666666' } :  // Grey for grace notes
             { fill: '#666666', stroke: '#444444' };   // Dark grey for main notes

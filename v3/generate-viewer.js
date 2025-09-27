@@ -1620,7 +1620,7 @@ function generateViewer(songData, metadata) {
                      style="display: flex; align-items: center; gap: 5px; cursor: pointer; padding: 6px 12px; border-radius: 5px; border: 2px solid #27ae60; background: white; transition: all 0.2s; font-family: inherit;"
                      title="Click to highlight bent notes in red">
                     <span style="font-size: 16px; color: #27ae60; font-weight: 600;">
-                        <span id="bentStringsCount">${metadata?.bendingMetrics?.uniqueBentStrings || 0}</span> Bent Strings / <span id="bentNotesCount">${metadata?.bendingMetrics?.bentNotes || 0}</span> Bent Notes
+                        <span id="bentStringsCount">${metadata?.bendingMetrics?.uniqueBentStrings || 0}</span> Bent Strings / <span id="bentNotesCount">${metadata?.bendingMetrics?.bentNotes || 0}</span> Bent Notes (${metadata?.bendingMetrics?.bentNotePercentage || 0}%)
                     </span>
                 </button>
 
@@ -2504,13 +2504,13 @@ function generateViewer(songData, metadata) {
                 const totalNotes = allNotes.length;
                 const percentage = totalNotes > 0 ? ((bentCount / totalNotes) * 100).toFixed(1) : 0;
 
-                // Update button text
+                // Update button text to match initial format
                 const spanElement = metric.querySelector('span');
                 if (spanElement) {
                     if (bentCount > 0) {
-                        spanElement.textContent = \`Bent Notes: \${bentCount} (\${percentage}%)\`;
+                        spanElement.textContent = \`\${uniqueBentStrings.size} Bent Strings / \${bentCount} Bent Notes (\${percentage}%)\`;
                     } else {
-                        spanElement.textContent = 'No Bent Notes';
+                        spanElement.textContent = '0 Bent Strings / 0 Bent Notes (0%)';
                     }
                 }
             }

@@ -4125,6 +4125,7 @@
 
             // Redraw strings and update bent notes
             redrawStringsWithNewTuning(newTuning);
+            addBentDots(newTuning);
             const bentInfo = updateBentNotesForTuning(newTuning);
 
             // Update comparison display in header
@@ -4224,11 +4225,62 @@
                 }
             });
 
-            // Update bent indicators based on new tuning
-            updateBentIndicators(newTuning);
         }
 
-        function updateBentIndicators(newTuning) {
+        function addBentDots(newTuning) {
+            const svg = document.getElementById('tablatureSvg');
+
+            // Find all notes that are bent in the new tuning
+            const allNotes = svg.querySelectorAll('.note-circle');
+            allNotes.forEach(noteCircle => {
+                const noteName = noteCircle.getAttribute('data-note-name');
+                if (noteName) {
+                    const pitchClass = noteName.replace(/[0-9]/g, '');
+                    const isBent = !newTuning.includes(pitchClass);
+
+                    if (isBent) {
+                        const noteIndex = noteCircle.getAttribute('data-note-index');
+                        const noteX = parseFloat(noteCircle.getAttribute('cx'));
+                        const noteY = parseFloat(noteCircle.getAttribute('cy'));
+
+                        // Find the nearest lower string (higher on screen - smaller Y value)
+                        const stringLines = svg.querySelectorAll('.string-line');
+                        let lowerStringY = noteY;
+
+                        stringLines.forEach(line => {
+                            const stringY = parseFloat(line.getAttribute('y1'));
+                            if (stringY < noteY && (lowerStringY === noteY || stringY > lowerStringY)) {
+                                lowerStringY = stringY;
+                            }
+                        });
+
+                        // Calculate dot position with proper zoom awareness
+                        const baseNoteX = parseFloat(noteCircle.getAttribute('data-base-x'));
+                        const eighthNoteDistance = 50; // Standard distance at base zoom
+                        const baseDotX = baseNoteX - eighthNoteDistance;
+                        const currentDotX = 120 + (baseDotX - 120) * currentZoomX;
+
+                        // Create red dot
+                        const redDot = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        redDot.setAttribute('x', currentDotX);
+                        redDot.setAttribute('y', lowerStringY);
+                        redDot.setAttribute('text-anchor', 'middle');
+                        redDot.setAttribute('dominant-baseline', 'middle');
+                        redDot.setAttribute('class', 'bent-arrow-tail');
+                        redDot.setAttribute('data-base-x', baseDotX);
+                        redDot.setAttribute('data-base-y', lowerStringY / currentZoomY);
+                        redDot.setAttribute('data-note-index', noteIndex);
+                        redDot.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold;');
+                        redDot.textContent = '●';
+                        svg.appendChild(redDot);
+
+                        console.log('Added bent dot for note', noteName, 'at', currentDotX, lowerStringY);
+                    }
+                }
+            });
+        }
+
+        function updateBentIndicators_OLD(newTuning) {
             const svg = document.getElementById('tablatureSvg');
 
             // No need to remove here - already done in redrawStringsWithNewTuning

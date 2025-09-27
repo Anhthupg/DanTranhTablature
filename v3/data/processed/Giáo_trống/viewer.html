@@ -2956,7 +2956,55 @@
                         redDot.textContent = '●';
                         svg.appendChild(redDot);
 
-                        console.log('Added bent dot for note', noteName, 'at', currentDotX, lowerStringY);
+                        // CREATE RED LINE connecting dot to bent note center (exactly like optimal tuning)
+                        const lineStartX = currentDotX;
+                        const lineStartY = lowerStringY;
+                        const lineEndX = noteX; // Center of bent note (like optimal tuning)
+                        const lineEndY = noteY; // Center of bent note
+
+                        const lineDx = lineEndX - lineStartX;
+                        const lineDy = lineEndY - lineStartY;
+                        const connectionLength = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
+                        const lineAngle = Math.atan2(lineDy, lineDx) * 180 / Math.PI;
+
+                        // Create line using multiple rotated characters (exactly like optimal tuning)
+                        const charSpacing = 8;
+                        const charCount = Math.floor(connectionLength / charSpacing);
+
+                        for (let i = 1; i < charCount; i++) {
+                            const ratio = i / charCount;
+                            const charX = lineStartX + lineDx * ratio;
+                            const charY = lineStartY + lineDy * ratio;
+
+                            // Convert to base positions for zoom awareness
+                            const baseCharX = 120 + (charX - 120) / currentZoomX;
+                            const baseCharY = charY / currentZoomY;
+                            const baseLineStartX = baseDotX;
+                            const baseLineStartY = lowerStringY / currentZoomY;
+                            const baseLineEndX = baseNoteX;
+                            const baseLineEndY = parseFloat(noteCircle.getAttribute('data-base-y'));
+
+                            const lineCharElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            lineCharElement.setAttribute('x', charX);
+                            lineCharElement.setAttribute('y', charY);
+                            lineCharElement.setAttribute('text-anchor', 'middle');
+                            lineCharElement.setAttribute('dominant-baseline', 'middle');
+                            lineCharElement.setAttribute('class', 'bent-line-char');
+                            lineCharElement.setAttribute('data-base-x', baseCharX);
+                            lineCharElement.setAttribute('data-base-y', baseCharY);
+                            lineCharElement.setAttribute('data-ratio', ratio);
+                            lineCharElement.setAttribute('data-start-x', baseLineStartX);
+                            lineCharElement.setAttribute('data-start-y', baseLineStartY);
+                            lineCharElement.setAttribute('data-end-x', baseLineEndX);
+                            lineCharElement.setAttribute('data-end-y', baseLineEndY);
+                            lineCharElement.setAttribute('data-note-index', noteIndex);
+                            lineCharElement.setAttribute('transform', `rotate(${lineAngle} ${charX} ${charY})`);
+                            lineCharElement.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold; opacity: 0.8; stroke: #FF0000; stroke-width: 3px;');
+                            lineCharElement.textContent = '━';
+                            svg.appendChild(lineCharElement);
+                        }
+
+                        console.log('Added bent dot and line for note', noteName, 'at', currentDotX, lowerStringY);
                     }
                 }
             });

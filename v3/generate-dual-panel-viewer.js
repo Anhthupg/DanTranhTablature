@@ -16,6 +16,9 @@ class DualPanelGenerator {
         // Load tuning systems from database
         this.tuningSystems = this.loadTuningSystems();
 
+        // Load HTML template
+        this.htmlTemplate = this.loadTemplate();
+
         // Note to cents mapping (including double sharps/flats)
         this.noteToCents = {
             'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300,
@@ -127,6 +130,28 @@ class DualPanelGenerator {
                     { value: 'C-D-Eb-F#-G', label: 'Maqam' }
                 ]
             };
+        }
+    }
+
+    loadTemplate() {
+        try {
+            const templatePath = path.join(__dirname, 'templates', 'dual-panel-viewer-template.html');
+            return fs.readFileSync(templatePath, 'utf8');
+        } catch (error) {
+            console.error('Error loading template:', error);
+            // Return a minimal fallback template
+            return `<!DOCTYPE html>
+<html>
+<head>
+    <title>{{SONG_NAME}} - Đàn Tranh Tablature</title>
+</head>
+<body>
+    <div class="container">
+        {{OPTIMAL_SVG}}
+        {{TRADITIONAL_SVG}}
+    </div>
+</body>
+</html>`;
         }
     }
 
@@ -483,7 +508,8 @@ class DualPanelGenerator {
         const traditionalSVG = traditionalSVGs[defaultTraditionalTuning] ||
                               traditionalSVGs[tuningSystems[Object.keys(tuningSystems)[0]][0].value];
 
-        const html = `<!DOCTYPE html>
+        // Use template with placeholders
+        let html = this.htmlTemplate
 <html lang="en">
 <head>
     <meta charset="UTF-8">

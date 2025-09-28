@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đò Dưa - Tuning Analysis with New Sections Demo</title>
+    <style>
+        /* DanTranhTuningAnalyzer v3.5.8 Framework Styles */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        header h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 1.1em;
+        }
+
+        /* Theme System - 4 themes compliance */
+        body.theme-white {
+            background: #FFFFFF;
+            --panel-bg: #FFFFFF;
+            --panel-border: #E0E0E0;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+        }
+
+        body.theme-light-grey {
+            background: #D0D0D0;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-border: #B0B0B0;
+            --text-primary: #2C3E50;
+            --text-secondary: #5A5A5A;
+        }
+
+        body.theme-dark-grey {
+            background: #2C3E50;
+            --panel-bg: rgba(52, 73, 94, 0.9);
+            --panel-border: #34495E;
+            --text-primary: #ECF0F1;
+            --text-secondary: #BDC3C7;
+        }
+
+        body.theme-black {
+            background: #000000;
+            --panel-bg: rgba(26, 26, 26, 0.9);
+            --panel-border: #333333;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CCCCCC;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--panel-bg, white);
+            border: 1px solid var(--panel-border, #ddd);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .theme-selector select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary, #2c3e50);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Dual-Panel Collapsible System */
+        .tuning-analyzer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Ensure Optimal panel stays at top */
+        #optimalPanel {
+            order: -999;
+        }
+
+        /* Section-specific colors */
+        .lyrics-panel .panel-header {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .info-panel .panel-header {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .analysis-panel .panel-header {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        /* Lyrics section styles */
+        .lyrics-content {
+            padding: 20px;
+            background: #f9f9f9;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #333;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .lyrics-line {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+
+        .lyrics-line:hover {
+            background: #fff;
+            border-left-color: #9b59b6;
+        }
+
+        /* Placeholder content for future sections */
+        .placeholder-content {
+            padding: 40px;
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+
+        .tuning-panel {
+            background: var(--panel-bg, white);
+            border: 2px solid var(--panel-border, #e0e0e0);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+            position: relative;
+        }
+
+        .panel-header:hover {
+            background: linear-gradient(135deg, #2980b9, #1f5f99);
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+
+        /* Move up/down arrows */
+        .move-controls {
+            display: flex;
+            gap: 5px;
+            margin-right: 10px;
+        }
+
+        .move-arrow {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            padding: 2px 8px;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .move-arrow:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .move-arrow:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .collapse-indicator {
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .panel-header.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0;
+        }
+
+        .panel-content.expanded {
+            max-height: 1000px;
+        }
+
+        .tuning-info {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tuning-display {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #008080; /* 12-color system teal */
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .bent-notes-count {
+            font-size: 14px;
+            color: #e74c3c; /* 12-color system red */
+            font-weight: 600;
+            background: #fff5f5;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #fecaca;
+        }
+
+        /* Tablature Container Styles */
+        .tablature-container {
+            padding: 20px;
+            overflow-x: auto;
+            background: #fafafa;
+        }
+
+        .optimal-tablature {
+            border-top: 3px solid #27ae60; /* Green for optimal */
+        }
+
+        .comparison-tablature {
+            border-top: 3px solid #e74c3c; /* Red for comparison */
+        }
+
+        /* Tuning Dropdown */
+        .tuning-dropdown {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+        }
+
+        .tuning-dropdown label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            margin-right: 10px;
+        }
+
+        .tuning-dropdown select {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 14px;
+            color: var(--text-primary, #2c3e50);
+            cursor: pointer;
+        }
+
+        /* SVG and Note Styling - v3.5.8 compliance */
+        .note-circle {
+            fill: #666666; /* Neutral grey - identical across all tunings */
+            stroke: #333333;
+            stroke-width: 1;
+            transition: all 0.2s ease;
+        }
+
+        .bent-indicator {
+            fill: #FF0000;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .bent-line {
+            stroke: #FF0000;
+            stroke-width: 1.5;
+            stroke-dasharray: 3,2;
+            fill: none;
+        }
+
+        .string-line {
+            stroke: #000000;
+            stroke-width: 3;
+            opacity: 1;
+        }
+
+        .string-line.unused {
+            stroke: #999999;
+            opacity: 0.3;
+        }
+
+        /* Control styles */
+        .controls {
+            background: var(--panel-bg, white);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-control label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            min-width: 80px;
+        }
+
+        .zoom-slider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db; /* 12-color system blue */
+            cursor: pointer;
+        }
+
+        .zoom-value {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--text-primary, #2c3e50);
+            min-width: 50px;
+        }
+
+        button {
+            background: #3498db; /* 12-color system blue */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.toggle-active {
+            background: #e74c3c; /* 12-color system red */
+        }
+
+        button.toggle-active:hover {
+            background: #c0392b;
+        }
+
+        /* Back to Library button */
+        .back-button {
+            background: #27ae60; /* 12-color system green */
+            margin-left: auto;
+        }
+
+        .back-button:hover {
+            background: #219a52;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .zoom-control {
+                justify-content: space-between;
+            }
+        }
+
+    </style>
+</head>
+<body class="theme-white">
+    <div class="container">
+        <!-- Theme Selector -->
+        <div class="theme-selector">
+            <select id="themeSelector" onchange="changeTheme(this.value)">
+                <option value="white">White</option>
+                <option value="light-grey">Light Grey</option>
+                <option value="dark-grey">Dark Grey</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+
+        <!-- Header -->
+        <header>
+            <h1>Đò Dưa</h1>
+            <h2>Tuning Analysis Comparison</h2>
+        </header>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="zoom-control">
+                <label>X-Zoom:</label>
+                <input type="range" id="xZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateXZoom(this.value)">
+                <span class="zoom-value" id="xZoomValue">100%</span>
+                <button onclick="fitWidth()">Fit Width</button>
+            </div>
+
+            <div class="zoom-control">
+                <label>Y-Zoom:</label>
+                <input type="range" id="yZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateYZoom(this.value)">
+                <span class="zoom-value" id="yZoomValue">100%</span>
+                <button onclick="fitHeight()">Fit Height</button>
+            </div>
+
+            <button id="bentNotesToggle" onclick="toggleBentNotes()">Show Bent Notes</button>
+
+            <button class="back-button" onclick="window.location.href='/library'">← Back to Library</button>
+        </div>
+
+        <!-- Dual-Panel Tuning Analyzer System -->
+        <div class="tuning-analyzer-container">
+
+            <!-- Top Panel: Optimal Tuning (Always stays at top) -->
+            <div class="tuning-panel" id="optimalPanel" data-order="0">
+                <div class="panel-header" onclick="togglePanel('optimal')">
+                    <h3>🎵 Optimal Tuning (Song-Specific)</h3>
+                    <span class="collapse-indicator" id="optimalCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="optimalContent">
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="optimalTuning">C-D-E-G-A</span>
+                        <span class="bent-notes-count" id="optimalBentCount">0 bent</span>
+                    </div>
+                    <div class="tablature-container optimal-tablature">
+                        <svg width="169622" height="600" xmlns="http://www.w3.org/2000/svg"
+                             id="optimalTablatureSvg" data-base-width="169622">
+                            <line x1="50" y1="100" x2="800" y2="100" stroke="#000000" stroke-width="3"/>
+                            <text x="20" y="104" font-size="10" fill="#000000">C3</text>
+                            <circle cx="100" cy="100" r="12" fill="#666" stroke="#333" stroke-width="1"/>
+                            <text x="96" y="105" font-size="14" fill="white">1</text>
+                            <circle cx="200" cy="100" r="12" fill="#666" stroke="#333" stroke-width="1"/>
+                            <text x="196" y="105" font-size="14" fill="white">2</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Tuning Panel -->
+            <div class="tuning-panel" id="comparisonPanel" data-order="1">
+                <div class="panel-header" onclick="togglePanel('comparison')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('comparisonPanel', 'up'); event.stopPropagation();">▲</button>
+                        <button class="move-arrow" onclick="moveSection('comparisonPanel', 'down'); event.stopPropagation();">▼</button>
+                    </div>
+                    <h3>🔍 Alternative Tuning</h3>
+                    <span class="collapse-indicator" id="comparisonCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="comparisonContent">
+                    <div class="tuning-dropdown">
+                        <label for="comparisonTuningSelect">Select Tuning:</label>
+                        <select id="comparisonTuningSelect" onchange="updateComparisonTuning(this.value)">
+                            <option value="traditional">Traditional (C-D-E-G-A)</option>
+                            <option value="natural">Natural Major (C-D-E-F-G)</option>
+                            <option value="pentatonic">Pentatonic (A-C-D-E-G)</option>
+                            <option value="exotic1">Exotic 1 (Eb-G-Ab-Bb-Cb)</option>
+                            <option value="exotic2">Exotic 2 (C#-D#-F#-G-G#)</option>
+                        </select>
+                    </div>
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="comparisonTuning">C-D-E-G-A</span>
+                        <span class="bent-notes-count" id="comparisonBentCount">Loading...</span>
+                    </div>
+                    <div class="tablature-container comparison-tablature">
+                        <svg width="800" height="600" xmlns="http://www.w3.org/2000/svg"
+                             id="comparisonTablatureSvg" data-base-width="800">
+                            <line x1="50" y1="100" x2="800" y2="100" stroke="#000000" stroke-width="3"/>
+                            <text x="20" y="104" font-size="10" fill="#000000">C3</text>
+                            <circle cx="120" cy="100" r="12" fill="#999" stroke="#666" stroke-width="1"/>
+                            <text x="116" y="105" font-size="14" fill="white">1</text>
+                            <circle cx="220" cy="100" r="12" fill="#999" stroke="#666" stroke-width="1"/>
+                            <text x="216" y="105" font-size="14" fill="white">2</text>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lyrics Section -->
+            <div class="tuning-panel lyrics-panel" id="lyricsPanel" data-order="2">
+                <div class="panel-header" onclick="togglePanel('lyrics')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('lyricsPanel', 'up'); event.stopPropagation();">▲</button>
+                        <button class="move-arrow" onclick="moveSection('lyricsPanel', 'down'); event.stopPropagation();">▼</button>
+                    </div>
+                    <h3>📝 Lyrics</h3>
+                    <span class="collapse-indicator" id="lyricsCollapse">▼</span>
+                </div>
+                <div class="panel-content collapsed" id="lyricsContent">
+                    <div class="lyrics-content">
+                        <div id="lyricsDisplay">
+                            <!-- Lyrics will be populated here -->
+                            <p style="color: #999; font-style: italic;">Lyrics data will be displayed here when available.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Info Section -->
+            <div class="tuning-panel info-panel" id="infoPanel" data-order="3">
+                <div class="panel-header" onclick="togglePanel('info')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('infoPanel', 'up'); event.stopPropagation();">▲</button>
+                        <button class="move-arrow" onclick="moveSection('infoPanel', 'down'); event.stopPropagation();">▼</button>
+                    </div>
+                    <h3>ℹ️ Additional Information</h3>
+                    <span class="collapse-indicator" id="infoCollapse">▼</span>
+                </div>
+                <div class="panel-content collapsed" id="infoContent">
+                    <div class="placeholder-content">
+                        <p>Additional song information and metadata will appear here.</p>
+                        <p>This section is ready for future content integration.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Section -->
+            <div class="tuning-panel analysis-panel" id="analysisPanel" data-order="4">
+                <div class="panel-header" onclick="togglePanel('analysis')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('analysisPanel', 'up'); event.stopPropagation();">▲</button>
+                        <button class="move-arrow" onclick="moveSection('analysisPanel', 'down'); event.stopPropagation();">▼</button>
+                    </div>
+                    <h3>📊 Pattern Analysis</h3>
+                    <span class="collapse-indicator" id="analysisCollapse">▼</span>
+                </div>
+                <div class="panel-content collapsed" id="analysisContent">
+                    <div class="placeholder-content">
+                        <p>Advanced pattern analysis and musical insights will appear here.</p>
+                        <p>This section is ready for future analytical features.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DanTranhTuningAnalyzer v3.5.8 Framework JavaScript
+
+        // Global spacing consistency: 0.125px per cent (optimized for C1-B8 range)
+        const PIXELS_PER_CENT = 0.125;
+        const GLOBAL_SPACING_BASE = 20; // Base Y position
+
+        // Song data (to be populated by generator)
+        const songData = {
+            notes: {{SONG_NOTES}},
+            metadata: {{SONG_METADATA}},
+            optimalTuning: {{OPTIMAL_TUNING_ARRAY}},
+            comparisonTunings: {{COMPARISON_TUNINGS}}
+        };
+
+        // Theme management
+        function changeTheme(theme) {
+            document.body.className = `theme-${theme}`;
+            localStorage.setItem('danTranh_theme', theme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('danTranh_theme') || 'white';
+        document.body.className = `theme-${savedTheme}`;
+        document.getElementById('themeSelector').value = savedTheme;
+
+        // Panel collapse/expand functionality
+        function togglePanel(panelType) {
+            const content = document.getElementById(`${panelType}Content`);
+            const indicator = document.getElementById(`${panelType}Collapse`);
+            const header = document.querySelector(`#${panelType}Panel .panel-header`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                indicator.textContent = '▼';
+                header.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                indicator.textContent = '▶';
+                header.classList.add('collapsed');
+            }
+        }
+
+        // Section movement functionality
+        function moveSection(panelId, direction) {
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            // Get all moveable panels (exclude optimal panel)
+            const container = panel.parentElement;
+            const allPanels = Array.from(container.querySelectorAll('.tuning-panel:not(#optimalPanel)'));
+            const currentIndex = allPanels.indexOf(panel);
+
+            if (direction === 'up' && currentIndex > 0) {
+                // Swap order values with previous panel
+                const prevPanel = allPanels[currentIndex - 1];
+                const currentOrder = parseInt(panel.dataset.order);
+                const prevOrder = parseInt(prevPanel.dataset.order);
+
+                panel.dataset.order = prevOrder;
+                prevPanel.dataset.order = currentOrder;
+
+                panel.style.order = prevOrder;
+                prevPanel.style.order = currentOrder;
+            } else if (direction === 'down' && currentIndex < allPanels.length - 1) {
+                // Swap order values with next panel
+                const nextPanel = allPanels[currentIndex + 1];
+                const currentOrder = parseInt(panel.dataset.order);
+                const nextOrder = parseInt(nextPanel.dataset.order);
+
+                panel.dataset.order = nextOrder;
+                nextPanel.dataset.order = currentOrder;
+
+                panel.style.order = nextOrder;
+                nextPanel.style.order = currentOrder;
+            }
+
+            // Update button states after move
+            updateMoveButtons();
+        }
+
+        function updateMoveButtons() {
+            // Get all moveable panels
+            const allPanels = Array.from(document.querySelectorAll('.tuning-panel:not(#optimalPanel)'));
+
+            // Sort panels by their current order
+            allPanels.sort((a, b) => parseInt(a.dataset.order) - parseInt(b.dataset.order));
+
+            allPanels.forEach((panel, index) => {
+                const upButton = panel.querySelector('.move-arrow:first-child');
+                const downButton = panel.querySelector('.move-arrow:last-child');
+
+                if (upButton) {
+                    upButton.disabled = index === 0;
+                    upButton.style.opacity = index === 0 ? '0.3' : '1';
+                    upButton.style.cursor = index === 0 ? 'not-allowed' : 'pointer';
+                }
+
+                if (downButton) {
+                    downButton.disabled = index === allPanels.length - 1;
+                    downButton.style.opacity = index === allPanels.length - 1 ? '0.3' : '1';
+                    downButton.style.cursor = index === allPanels.length - 1 ? 'not-allowed' : 'pointer';
+                }
+            });
+        }
+
+        // Zoom functionality
+        let currentXZoom = 1.0;
+        let currentYZoom = 1.0;
+
+        function updateXZoom(value) {
+            currentXZoom = value / 100;
+            document.getElementById('xZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function updateYZoom(value) {
+            currentYZoom = value / 100;
+            document.getElementById('yZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const svgs = ['optimalTablatureSvg', 'comparisonTablatureSvg'];
+
+            svgs.forEach(svgId => {
+                const svg = document.getElementById(svgId);
+                if (!svg) return;
+
+                // Apply zoom transformation
+                svg.style.transform = `scaleX(${currentXZoom}) scaleY(${currentYZoom})`;
+                svg.style.transformOrigin = '0 0';
+
+                // Update container scroll if needed
+                const container = svg.closest('.tablature-container');
+                if (container && currentXZoom > 1) {
+                    container.style.overflowX = 'auto';
+                }
+            });
+        }
+
+        function fitWidth() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerWidth = container.clientWidth - 40; // Account for padding
+            const svgWidth = parseInt(svg.getAttribute('data-base-width'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerWidth / svgWidth));
+
+            document.getElementById('xZoomSlider').value = Math.round(fitZoom * 100);
+            updateXZoom(Math.round(fitZoom * 100));
+        }
+
+        function fitHeight() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerHeight = window.innerHeight * 0.4; // 40% of viewport
+            const svgHeight = parseInt(svg.getAttribute('height'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerHeight / svgHeight));
+
+            document.getElementById('yZoomSlider').value = Math.round(fitZoom * 100);
+            updateYZoom(Math.round(fitZoom * 100));
+        }
+
+        // Bent notes toggle
+        let bentNotesVisible = false;
+
+        function toggleBentNotes() {
+            bentNotesVisible = !bentNotesVisible;
+            const button = document.getElementById('bentNotesToggle');
+
+            if (bentNotesVisible) {
+                button.textContent = 'Hide Bent Notes';
+                button.classList.add('toggle-active');
+                showBentNotes();
+            } else {
+                button.textContent = 'Show Bent Notes';
+                button.classList.remove('toggle-active');
+                hideBentNotes();
+            }
+        }
+
+        function showBentNotes() {
+            document.querySelectorAll('.bent-indicator, .bent-line').forEach(element => {
+                element.style.opacity = '1';
+            });
+        }
+
+        function hideBentNotes() {
+            document.querySelectorAll('.bent-indicator, .bent-line').forEach(element => {
+                element.style.opacity = '0';
+            });
+        }
+
+        // Tuning comparison functionality
+        function updateComparisonTuning(tuningKey) {
+            const tuningData = songData.comparisonTunings[tuningKey];
+            if (!tuningData) return;
+
+            // Update tuning display
+            document.getElementById('comparisonTuning').textContent = tuningData.notes.join('-');
+            document.getElementById('comparisonBentCount').textContent =
+                `${tuningData.bentNotes} bent notes (${tuningData.bentPercentage}%)`;
+
+            // Generate new SVG for comparison tuning
+            generateComparisonTablature(tuningData);
+        }
+
+        // Generate 17-string pattern for any tuning
+        function generate17StringPattern(tuningPattern) {
+            const strings = [];
+            let stringNumber = 1;
+            let octave = 3;
+            let patternIndex = 0;
+
+            while (stringNumber <= 17) {
+                const note = tuningPattern[patternIndex % tuningPattern.length];
+                const fullNote = note + octave;
+                const cents = calculateCents(fullNote);
+
+                strings.push({
+                    number: stringNumber,
+                    note: fullNote,
+                    y: GLOBAL_SPACING_BASE + (cents / 100) * PIXELS_PER_CENT * 100 // Convert to pixels
+                });
+
+                stringNumber++;
+                patternIndex++;
+                if (patternIndex % tuningPattern.length === 0) octave++;
+            }
+            return strings;
+        }
+
+        // Calculate cents from note (simplified for demo)
+        function calculateCents(note) {
+            const noteMap = {
+                'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300,
+                'E': 400, 'F': 500, 'F#': 600, 'Gb': 600, 'G': 700, 'G#': 800,
+                'Ab': 800, 'A': 900, 'A#': 1000, 'Bb': 1000, 'B': 1100
+            };
+
+            const noteName = note.replace(/[0-9]/g, '');
+            const octave = parseInt(note.replace(/[^0-9]/g, '')) || 4;
+
+            return (octave - 4) * 1200 + (noteMap[noteName] || 0);
+        }
+
+        // Generate comparison tablature (placeholder - to be implemented by generator)
+        function generateComparisonTablature(tuningData) {
+            // This will be implemented by the generate-viewer.js to create
+            // systematic bent note analysis for the comparison tuning
+            console.log('Generating comparison tablature for:', tuningData);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial zoom
+            applyZoom();
+
+            // Hide bent notes initially
+            hideBentNotes();
+
+            // Initialize comparison tuning
+            updateComparisonTuning('traditional');
+
+            // Initialize move button states
+            updateMoveButtons();
+
+            console.log('DanTranhTuningAnalyzer v3.5.8 Framework initialized');
+        });
+    </script>
+</body>
+</html>

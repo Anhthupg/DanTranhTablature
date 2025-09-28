@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{SONG_NAME}} - Tuning Analysis</title>
+    <style>
+        /* DanTranhTuningAnalyzer v3.5.8 Framework Styles */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        header h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 1.1em;
+        }
+
+        /* Theme System - 4 themes compliance */
+        body.theme-white {
+            background: #FFFFFF;
+            --panel-bg: #FFFFFF;
+            --panel-border: #E0E0E0;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+        }
+
+        body.theme-light-grey {
+            background: #D0D0D0;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-border: #B0B0B0;
+            --text-primary: #2C3E50;
+            --text-secondary: #5A5A5A;
+        }
+
+        body.theme-dark-grey {
+            background: #2C3E50;
+            --panel-bg: rgba(52, 73, 94, 0.9);
+            --panel-border: #34495E;
+            --text-primary: #ECF0F1;
+            --text-secondary: #BDC3C7;
+        }
+
+        body.theme-black {
+            background: #000000;
+            --panel-bg: rgba(26, 26, 26, 0.9);
+            --panel-border: #333333;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CCCCCC;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--panel-bg, white);
+            border: 1px solid var(--panel-border, #ddd);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .theme-selector select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary, #2c3e50);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Dual-Panel Collapsible System */
+        .tuning-analyzer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tuning-panel {
+            background: var(--panel-bg, white);
+            border: 2px solid var(--panel-border, #e0e0e0);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* Lyrics Panel System */
+        .lyrics-panel {
+            background: var(--panel-bg, white);
+            border: 2px solid var(--panel-border, #e0e0e0);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .lyrics-buttons-container {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .lyrics-button {
+            background: #27ae60; /* 12-color system green */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .lyrics-button:hover {
+            background: #219a52;
+            transform: translateY(-1px);
+        }
+
+        .lyrics-button.active {
+            background: #3498db; /* Blue when active */
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+        }
+
+        .lyrics-content {
+            padding: 20px;
+            min-height: 60px;
+            background: var(--panel-bg, white);
+            color: var(--text-primary, #2c3e50);
+            line-height: 1.6;
+            font-size: 16px;
+            border-top: 1px solid var(--panel-border, #e0e0e0);
+            display: none;
+        }
+
+        .lyrics-content.visible {
+            display: block;
+        }
+
+        .lyrics-content h4 {
+            margin: 0 0 10px 0;
+            color: #3498db; /* 12-color system blue */
+            font-size: 18px;
+        }
+
+        .lyrics-content .verse {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(52, 152, 219, 0.05);
+            border-left: 3px solid #3498db;
+            border-radius: 4px;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .panel-header:hover {
+            background: linear-gradient(135deg, #2980b9, #1f5f99);
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .collapse-indicator {
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .panel-header.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0;
+        }
+
+        .panel-content.expanded {
+            max-height: 1000px;
+        }
+
+        .tuning-info {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tuning-display {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #008080; /* 12-color system teal */
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .bent-notes-count {
+            font-size: 14px;
+            color: #e74c3c; /* 12-color system red */
+            font-weight: 600;
+            background: #fff5f5;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #fecaca;
+        }
+
+        /* Tablature Container Styles */
+        .tablature-container {
+            padding: 20px;
+            overflow-x: auto;
+            background: #fafafa;
+        }
+
+        .optimal-tablature {
+            border-top: 3px solid #27ae60; /* Green for optimal */
+        }
+
+        .comparison-tablature {
+            border-top: 3px solid #e74c3c; /* Red for comparison */
+        }
+
+        /* Tuning Dropdown */
+        .tuning-dropdown {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+        }
+
+        .tuning-dropdown label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            margin-right: 10px;
+        }
+
+        .tuning-dropdown select {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 14px;
+            color: var(--text-primary, #2c3e50);
+            cursor: pointer;
+        }
+
+        /* SVG and Note Styling - v3.5.8 compliance */
+        .note-circle {
+            fill: #666666; /* Neutral grey - identical across all tunings */
+            stroke: #333333;
+            stroke-width: 1;
+            transition: all 0.2s ease;
+        }
+
+        .bent-indicator {
+            fill: #FF0000;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .bent-line {
+            stroke: #FF0000;
+            stroke-width: 1.5;
+            stroke-dasharray: 3,2;
+            fill: none;
+        }
+
+        .string-line {
+            stroke: #000000;
+            stroke-width: 3;
+            opacity: 1;
+        }
+
+        .string-line.unused {
+            stroke: #999999;
+            opacity: 0.3;
+        }
+
+        /* Control styles */
+        .controls {
+            background: var(--panel-bg, white);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-control label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            min-width: 80px;
+        }
+
+        .zoom-slider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db; /* 12-color system blue */
+            cursor: pointer;
+        }
+
+        .zoom-value {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--text-primary, #2c3e50);
+            min-width: 50px;
+        }
+
+        button {
+            background: #3498db; /* 12-color system blue */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.toggle-active {
+            background: #e74c3c; /* 12-color system red */
+        }
+
+        button.toggle-active:hover {
+            background: #c0392b;
+        }
+
+        /* Back to Library button */
+        .back-button {
+            background: #27ae60; /* 12-color system green */
+            margin-left: auto;
+        }
+
+        .back-button:hover {
+            background: #219a52;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .zoom-control {
+                justify-content: space-between;
+            }
+        }
+
+    </style>
+</head>
+<body class="theme-white">
+    <div class="container">
+        <!-- Theme Selector -->
+        <div class="theme-selector">
+            <select id="themeSelector" onchange="changeTheme(this.value)">
+                <option value="white">White</option>
+                <option value="light-grey">Light Grey</option>
+                <option value="dark-grey">Dark Grey</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+
+        <!-- Header -->
+        <header>
+            <h1>{{SONG_NAME}}</h1>
+            <h2>Tuning Analysis Comparison</h2>
+        </header>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="zoom-control">
+                <label>X-Zoom:</label>
+                <input type="range" id="xZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateXZoom(this.value)">
+                <span class="zoom-value" id="xZoomValue">100%</span>
+                <button onclick="fitWidth()">Fit Width</button>
+            </div>
+
+            <div class="zoom-control">
+                <label>Y-Zoom:</label>
+                <input type="range" id="yZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateYZoom(this.value)">
+                <span class="zoom-value" id="yZoomValue">100%</span>
+                <button onclick="fitHeight()">Fit Height</button>
+            </div>
+
+            <button class="back-button" onclick="window.location.href='/library'">← Back to Library</button>
+        </div>
+
+        <!-- Dual-Panel Tuning Analyzer System -->
+        <div class="tuning-analyzer-container">
+
+            <!-- Top Panel: Optimal Tuning -->
+            <div class="tuning-panel" id="optimalPanel">
+                <div class="panel-header" onclick="togglePanel('optimal')">
+                    <h3>🎵 Optimal Tuning (Song-Specific)</h3>
+                    <span class="collapse-indicator" id="optimalCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="optimalContent">
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="optimalTuning">{{TUNING}}</span>
+                        <span class="bent-notes-count" id="optimalBentCount">{{BENT_METRICS}}</span>
+                        <button id="optimalBentToggle" onclick="toggleBentNotesPanel('optimal')" style="margin-left: 20px;">🎯 Bent Notes</button>
+                    </div>
+                    <div class="tablature-container optimal-tablature">
+                        <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg"
+                             id="optimalTablatureSvg" data-base-width="{{SVG_WIDTH}}">
+                            {{OPTIMAL_SVG_CONTENT}}
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panel: Comparison Tuning -->
+            <div class="tuning-panel" id="comparisonPanel">
+                <div class="panel-header" onclick="togglePanel('comparison')">
+                    <h3>🔍 Comparison Tuning</h3>
+                    <span class="collapse-indicator" id="comparisonCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="comparisonContent">
+                    <div class="tuning-dropdown">
+                        <label for="comparisonTuningSelect">Select Tuning:</label>
+                        <select id="comparisonTuningSelect" onchange="updateComparisonTuning(this.value)">
+                            <option value="traditional">Traditional (C-D-E-G-A)</option>
+                            <option value="natural">Natural Major (C-D-E-F-G)</option>
+                            <option value="pentatonic">Pentatonic (A-C-D-E-G)</option>
+                            <option value="exotic1">Exotic 1 (Eb-G-Ab-Bb-Cb)</option>
+                            <option value="exotic2">Exotic 2 (C#-D#-F#-G-G#)</option>
+                        </select>
+                    </div>
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="comparisonTuning">C-D-E-G-A</span>
+                        <span class="bent-notes-count" id="comparisonBentCount">Loading...</span>
+                        <button id="comparisonBentToggle" onclick="toggleBentNotesPanel('comparison')" style="margin-left: 20px;">🎯 Bent Notes</button>
+                    </div>
+                    <div class="tablature-container comparison-tablature">
+                        <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg"
+                             id="comparisonTablatureSvg" data-base-width="{{SVG_WIDTH}}">
+                            {{COMPARISON_SVG_CONTENT}}
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Information Panel -->
+            <div class="lyrics-panel" id="contentPanel">
+                <div class="panel-header" onclick="togglePanel('content')">
+                    <h3>📚 Song Information & Analysis</h3>
+                    <span class="collapse-indicator" id="contentCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="contentPanelContent">
+                    <div class="lyrics-buttons-container">
+                        <button class="lyrics-button active" onclick="showContentSection('lyrics')">Lyrics</button>
+                        <button class="lyrics-button" onclick="showContentSection('analysis')">Musical Analysis</button>
+                        <button class="lyrics-button" onclick="showContentSection('performance')">Performance Notes</button>
+                        <button class="lyrics-button" onclick="showContentSection('cultural')">Cultural Context</button>
+                        <button class="lyrics-button" onclick="showContentSection('history')">Historical Background</button>
+                        <button class="lyrics-button" onclick="showContentSection('variations')">Regional Variations</button>
+                    </div>
+
+                    <!-- Lyrics Content -->
+                    <div class="lyrics-content visible" id="lyricsContentSection">
+                        <h4>Vietnamese Lyrics</h4>
+                        <div class="verse">{{ORIGINAL_LYRICS}}</div>
+                        <h4>Romanized Vietnamese</h4>
+                        <div class="verse">{{ROMANIZED_LYRICS}}</div>
+                        <h4>English Translation</h4>
+                        <div class="verse">{{ENGLISH_TRANSLATION}}</div>
+                    </div>
+
+                    <!-- Musical Analysis Content -->
+                    <div class="lyrics-content" id="analysisContentSection">
+                        <h4>Musical Structure Analysis</h4>
+                        <div class="verse">{{MUSICAL_ANALYSIS}}</div>
+                    </div>
+
+                    <!-- Performance Notes Content -->
+                    <div class="lyrics-content" id="performanceContentSection">
+                        <h4>Performance Techniques & Notes</h4>
+                        <div class="verse">{{PERFORMANCE_NOTES}}</div>
+                    </div>
+
+                    <!-- Cultural Context Content -->
+                    <div class="lyrics-content" id="culturalContentSection">
+                        <h4>Cultural Context & Meaning</h4>
+                        <div class="verse">{{CULTURAL_CONTEXT}}</div>
+                    </div>
+
+                    <!-- Historical Background Content -->
+                    <div class="lyrics-content" id="historyContentSection">
+                        <h4>Historical Background</h4>
+                        <div class="verse">{{HISTORICAL_BACKGROUND}}</div>
+                    </div>
+
+                    <!-- Regional Variations Content -->
+                    <div class="lyrics-content" id="variationsContentSection">
+                        <h4>Regional Variations</h4>
+                        <div class="verse">{{REGIONAL_VARIATIONS}}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DanTranhTuningAnalyzer v3.5.8 Framework JavaScript
+
+        // Global spacing consistency: 0.125px per cent (optimized for C1-B8 range)
+        const PIXELS_PER_CENT = 0.125;
+        const GLOBAL_SPACING_BASE = 20; // Base Y position
+
+        // Song data (to be populated by generator)
+        const songData = {
+            notes: {{SONG_NOTES}},
+            metadata: {{SONG_METADATA}},
+            optimalTuning: {{OPTIMAL_TUNING_ARRAY}},
+            comparisonTunings: {{COMPARISON_TUNINGS}}
+        };
+
+        // Theme management
+        function changeTheme(theme) {
+            document.body.className = `theme-${theme}`;
+            localStorage.setItem('danTranh_theme', theme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('danTranh_theme') || 'white';
+        document.body.className = `theme-${savedTheme}`;
+        document.getElementById('themeSelector').value = savedTheme;
+
+        // Panel collapse/expand functionality
+        function togglePanel(panelType) {
+            const content = document.getElementById(`${panelType}Content`) ||
+                           document.getElementById(`${panelType}PanelContent`);
+            const indicator = document.getElementById(`${panelType}Collapse`);
+            const header = document.querySelector(`#${panelType}Panel .panel-header`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                indicator.textContent = '▼';
+                header.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                indicator.textContent = '▶';
+                header.classList.add('collapsed');
+            }
+        }
+
+        // Content section switching functionality
+        function showContentSection(sectionType) {
+            // Hide all content sections
+            const contentSections = document.querySelectorAll('.lyrics-content');
+            contentSections.forEach(section => {
+                section.classList.remove('visible');
+            });
+
+            // Remove active class from all buttons
+            const buttons = document.querySelectorAll('.lyrics-button');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected content section
+            const targetSection = document.getElementById(`${sectionType}ContentSection`);
+            if (targetSection) {
+                targetSection.classList.add('visible');
+            }
+
+            // Mark clicked button as active
+            event.target.classList.add('active');
+        }
+
+        // Zoom functionality
+        let currentXZoom = 1.0;
+        let currentYZoom = 1.0;
+
+        function updateXZoom(value) {
+            currentXZoom = value / 100;
+            document.getElementById('xZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function updateYZoom(value) {
+            currentYZoom = value / 100;
+            document.getElementById('yZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const svgs = ['optimalTablatureSvg', 'comparisonTablatureSvg'];
+
+            svgs.forEach(svgId => {
+                const svg = document.getElementById(svgId);
+                if (!svg) return;
+
+                // Apply zoom transformation
+                svg.style.transform = `scaleX(${currentXZoom}) scaleY(${currentYZoom})`;
+                svg.style.transformOrigin = '0 0';
+
+                // Update container scroll if needed
+                const container = svg.closest('.tablature-container');
+                if (container && currentXZoom > 1) {
+                    container.style.overflowX = 'auto';
+                }
+            });
+        }
+
+        function fitWidth() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerWidth = container.clientWidth - 40; // Account for padding
+            const svgWidth = parseInt(svg.getAttribute('data-base-width'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerWidth / svgWidth));
+
+            document.getElementById('xZoomSlider').value = Math.round(fitZoom * 100);
+            updateXZoom(Math.round(fitZoom * 100));
+        }
+
+        function fitHeight() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerHeight = window.innerHeight * 0.4; // 40% of viewport
+            const svgHeight = parseInt(svg.getAttribute('height'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerHeight / svgHeight));
+
+            document.getElementById('yZoomSlider').value = Math.round(fitZoom * 100);
+            updateYZoom(Math.round(fitZoom * 100));
+        }
+
+        // Bent notes toggle - separate state for each panel
+        let optimalBentVisible = false;
+        let comparisonBentVisible = false;
+
+        function toggleBentNotesPanel(panelType) {
+            if (panelType === 'optimal') {
+                optimalBentVisible = !optimalBentVisible;
+                const button = document.getElementById('optimalBentToggle');
+                const svgId = 'optimalTablatureSvg';  // Use the actual SVG ID
+
+                if (optimalBentVisible) {
+                    button.style.background = '#E74C3C';
+                    button.style.color = 'white';
+                    console.log('Highlighting bent notes in optimal panel');
+                    highlightBentNotesInSVG(svgId);
+                } else {
+                    button.style.background = '#3498db';  // Reset to original blue
+                    button.style.color = 'white';
+                    console.log('Unhighlighting bent notes in optimal panel');
+                    unhighlightBentNotesInSVG(svgId);
+                }
+            } else if (panelType === 'comparison') {
+                comparisonBentVisible = !comparisonBentVisible;
+                const button = document.getElementById('comparisonBentToggle');
+                const svgId = 'comparisonTablatureSvg';  // Use the actual SVG ID
+
+                if (comparisonBentVisible) {
+                    button.style.background = '#E74C3C';
+                    button.style.color = 'white';
+                    console.log('Highlighting bent notes in comparison panel');
+                    highlightBentNotesInSVG(svgId);
+                } else {
+                    button.style.background = '#3498db';  // Reset to original blue
+                    button.style.color = 'white';
+                    console.log('Unhighlighting bent notes in comparison panel');
+                    unhighlightBentNotesInSVG(svgId);
+                }
+            }
+        }
+
+        function highlightBentNotes() {
+            // Find all panels with SVGs
+            ['optimalPanel', 'traditionalPanel'].forEach(panelId => {
+                const panel = document.getElementById(panelId);
+                if (!panel) return;
+
+                const svg = panel.querySelector('svg');
+                if (!svg) return;
+
+                // First, identify bent notes by finding bent lines and their target notes
+                const bentNotePositions = new Set();
+
+                // Find all bent lines and get their end coordinates
+                svg.querySelectorAll('.bent-line').forEach(bentLine => {
+                    // Bent lines have x2/y2 attributes pointing to the bent note
+                    const x2 = parseFloat(bentLine.getAttribute('x2'));
+                    const y2 = parseFloat(bentLine.getAttribute('y2'));
+                    if (!isNaN(x2) && !isNaN(y2)) {
+                        bentNotePositions.add(`${x2},${y2}`);
+                    }
+                });
+
+                // Now highlight only the notes that match bent positions
+                const allNotes = svg.querySelectorAll('circle.note-circle, circle[fill="#FFD700"]');
+                allNotes.forEach(noteCircle => {
+                    const cx = parseFloat(noteCircle.getAttribute('cx'));
+                    const cy = parseFloat(noteCircle.getAttribute('cy'));
+                    const notePos = `${cx},${cy}`;
+
+                    if (bentNotePositions.has(notePos)) {
+                        // Save original colors and mark as bent
+                        noteCircle.setAttribute('data-original-fill', noteCircle.getAttribute('fill'));
+                        noteCircle.setAttribute('data-original-stroke', noteCircle.getAttribute('stroke'));
+                        noteCircle.setAttribute('data-is-bent', 'true');
+
+                        // Apply red fill with black outline
+                        noteCircle.setAttribute('fill', '#E74C3C');
+                        noteCircle.setAttribute('stroke', '#000000');
+
+                        // Find and highlight the associated resonance triangle
+                        // Triangles are positioned after their notes and have matching Y position
+                        const triangles = svg.querySelectorAll('polygon.resonance-triangle');
+                        triangles.forEach(triangle => {
+                            const triangleY = parseFloat(triangle.getAttribute('data-note-y'));
+                            const triangleX = parseFloat(triangle.getAttribute('data-note-x'));
+                            // Check if this triangle belongs to the bent note
+                            if (Math.abs(triangleY - cy) < 1 && Math.abs(triangleX - cx) < 1) {
+                                triangle.setAttribute('data-original-fill', triangle.getAttribute('fill'));
+                                triangle.setAttribute('data-is-bent', 'true');
+                                triangle.setAttribute('fill', '#E74C3C');
+                            }
+                        });
+                    }
+                });
+
+                // Make bent lines more visible (keep smooth)
+                svg.querySelectorAll('.bent-line').forEach(element => {
+                    element.style.opacity = '1';
+                    element.style.strokeWidth = '2';
+                });
+            });
+        }
+
+        function highlightBentNotesInSVG(svgId) {
+            // Highlight bent notes in the specified SVG
+            const svg = document.getElementById(svgId);
+            if (!svg) {
+                console.log('SVG not found:', svgId);
+                return;
+            }
+
+            // First, identify bent notes by finding bent lines and their target notes
+            const bentNotePositions = new Set();
+
+            // Find all bent lines and get their end coordinates
+            svg.querySelectorAll('.bent-line').forEach(bentLine => {
+                // Bent lines have x2/y2 attributes pointing to the bent note
+                const x2 = parseFloat(bentLine.getAttribute('x2'));
+                const y2 = parseFloat(bentLine.getAttribute('y2'));
+                if (!isNaN(x2) && !isNaN(y2)) {
+                    bentNotePositions.add(`${x2},${y2}`);
+                }
+            });
+
+            console.log(`Found ${bentNotePositions.size} bent note positions in SVG ${svgId}`);
+
+            // Now highlight only the notes that match bent positions
+            // Use a broader selector to catch all circles that might be notes
+            const allNotes = svg.querySelectorAll('circle');
+            let highlightedCount = 0;
+
+            allNotes.forEach(noteCircle => {
+                // Skip circles that are not notes (check if they have reasonable radius)
+                const r = parseFloat(noteCircle.getAttribute('r'));
+                if (r !== 12 && r !== 6) return; // Only process regular notes (r=12) and grace notes (r=6)
+
+                const cx = parseFloat(noteCircle.getAttribute('cx'));
+                const cy = parseFloat(noteCircle.getAttribute('cy'));
+                const notePos = `${cx},${cy}`;
+
+                if (bentNotePositions.has(notePos)) {
+                    // Save original colors only if not already saved
+                    if (!noteCircle.hasAttribute('data-original-fill')) {
+                        noteCircle.setAttribute('data-original-fill', noteCircle.getAttribute('fill') || '#666666');
+                        noteCircle.setAttribute('data-original-stroke', noteCircle.getAttribute('stroke') || '#333333');
+                    }
+                    noteCircle.setAttribute('data-is-bent', 'true');
+
+                    // Apply red fill with black outline
+                    noteCircle.setAttribute('fill', '#E74C3C');
+                    noteCircle.setAttribute('stroke', '#000000');
+                    highlightedCount++;
+
+                    // Find and highlight the associated resonance triangle
+                    // Triangles are positioned after their notes and have matching Y position
+                    const triangles = svg.querySelectorAll('polygon');
+                    triangles.forEach(triangle => {
+                        const triangleY = parseFloat(triangle.getAttribute('data-note-y'));
+                        const triangleX = parseFloat(triangle.getAttribute('data-note-x'));
+                        // Check if this triangle belongs to the bent note
+                        if (Math.abs(triangleY - cy) < 1 && Math.abs(triangleX - cx) < 1) {
+                            if (!triangle.hasAttribute('data-original-fill')) {
+                                triangle.setAttribute('data-original-fill', triangle.getAttribute('fill') || '#000000');
+                            }
+                            triangle.setAttribute('data-is-bent', 'true');
+                            triangle.setAttribute('fill', '#E74C3C');
+                        }
+                    });
+                }
+            });
+
+            console.log(`Highlighted ${highlightedCount} bent notes in SVG ${svgId}`);
+
+            // Make bent lines more visible (keep smooth)
+            svg.querySelectorAll('.bent-line').forEach(element => {
+                element.style.opacity = '1';
+                element.style.strokeWidth = '2';
+            });
+        }
+
+        function unhighlightBentNotesInSVG(svgId) {
+            // Unhighlight bent notes in the specified SVG
+            const svg = document.getElementById(svgId);
+            if (!svg) {
+                console.log('SVG not found:', svgId);
+                return;
+            }
+
+            // Restore ONLY bent notes to original colors
+            const bentNotes = svg.querySelectorAll('circle[data-is-bent="true"]');
+            console.log(`Found ${bentNotes.length} bent notes to unhighlight in SVG ${svgId}`);
+
+            bentNotes.forEach(noteCircle => {
+                const originalFill = noteCircle.getAttribute('data-original-fill');
+                const originalStroke = noteCircle.getAttribute('data-original-stroke');
+
+                // If we have stored original colors, restore them
+                // Otherwise set to default black/grey colors
+                if (originalFill) {
+                    noteCircle.setAttribute('fill', originalFill);
+                } else {
+                    // Default fill for notes is #666666 (grey) or #FFD700 (gold for grace notes)
+                    const isGraceNote = noteCircle.getAttribute('r') === '6';
+                    noteCircle.setAttribute('fill', isGraceNote ? '#FFD700' : '#666666');
+                }
+
+                if (originalStroke) {
+                    noteCircle.setAttribute('stroke', originalStroke);
+                } else {
+                    // Default stroke is #333333
+                    noteCircle.setAttribute('stroke', '#333333');
+                }
+
+                // Clean up attributes
+                noteCircle.removeAttribute('data-is-bent');
+                noteCircle.removeAttribute('data-original-fill');
+                noteCircle.removeAttribute('data-original-stroke');
+            });
+
+            // Restore resonance triangles for bent notes
+            svg.querySelectorAll('polygon[data-is-bent="true"]').forEach(triangle => {
+                const originalFill = triangle.getAttribute('data-original-fill');
+                if (originalFill) {
+                    triangle.setAttribute('fill', originalFill);
+                } else {
+                    // Default fill for triangles
+                    triangle.setAttribute('fill', '#000000');
+                }
+
+                // Clean up attributes
+                triangle.removeAttribute('data-is-bent');
+                triangle.removeAttribute('data-original-fill');
+            });
+
+            // Reset bent lines
+            svg.querySelectorAll('.bent-line').forEach(element => {
+                element.style.opacity = '0.5';
+                element.style.strokeWidth = '1';
+            });
+        }
+
+        function highlightBentNotesInPanel(panelId) {
+            // Highlight bent notes only in the specified panel
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            const svg = panel.querySelector('svg');
+            if (!svg) return;
+
+            // First, identify bent notes by finding bent lines and their target notes
+            const bentNotePositions = new Set();
+
+            // Find all bent lines and get their end coordinates
+            svg.querySelectorAll('.bent-line').forEach(bentLine => {
+                // Bent lines have x2/y2 attributes pointing to the bent note
+                const x2 = parseFloat(bentLine.getAttribute('x2'));
+                const y2 = parseFloat(bentLine.getAttribute('y2'));
+                if (!isNaN(x2) && !isNaN(y2)) {
+                    bentNotePositions.add(`${x2},${y2}`);
+                }
+            });
+
+            // Now highlight only the notes that match bent positions
+            // Use a broader selector to catch all circles that might be notes
+            const allNotes = svg.querySelectorAll('circle');
+            allNotes.forEach(noteCircle => {
+                // Skip circles that are not notes (check if they have reasonable radius)
+                const r = parseFloat(noteCircle.getAttribute('r'));
+                if (r !== 12 && r !== 6) return; // Only process regular notes (r=12) and grace notes (r=6)
+
+                const cx = parseFloat(noteCircle.getAttribute('cx'));
+                const cy = parseFloat(noteCircle.getAttribute('cy'));
+                const notePos = `${cx},${cy}`;
+
+                if (bentNotePositions.has(notePos)) {
+                    // Save original colors only if not already saved
+                    if (!noteCircle.hasAttribute('data-original-fill')) {
+                        noteCircle.setAttribute('data-original-fill', noteCircle.getAttribute('fill') || '#666666');
+                        noteCircle.setAttribute('data-original-stroke', noteCircle.getAttribute('stroke') || '#333333');
+                    }
+                    noteCircle.setAttribute('data-is-bent', 'true');
+
+                    // Apply red fill with black outline
+                    noteCircle.setAttribute('fill', '#E74C3C');
+                    noteCircle.setAttribute('stroke', '#000000');
+
+                    // Find and highlight the associated resonance triangle
+                    // Triangles are positioned after their notes and have matching Y position
+                    const triangles = svg.querySelectorAll('polygon');
+                    triangles.forEach(triangle => {
+                        const triangleY = parseFloat(triangle.getAttribute('data-note-y'));
+                        const triangleX = parseFloat(triangle.getAttribute('data-note-x'));
+                        // Check if this triangle belongs to the bent note
+                        if (Math.abs(triangleY - cy) < 1 && Math.abs(triangleX - cx) < 1) {
+                            if (!triangle.hasAttribute('data-original-fill')) {
+                                triangle.setAttribute('data-original-fill', triangle.getAttribute('fill') || '#000000');
+                            }
+                            triangle.setAttribute('data-is-bent', 'true');
+                            triangle.setAttribute('fill', '#E74C3C');
+                        }
+                    });
+                }
+            });
+
+            // Make bent lines more visible (keep smooth)
+            svg.querySelectorAll('.bent-line').forEach(element => {
+                element.style.opacity = '1';
+                element.style.strokeWidth = '2';
+            });
+        }
+
+        function unhighlightBentNotesInPanel(panelId) {
+            // Unhighlight bent notes only in the specified panel
+            const panel = document.getElementById(panelId);
+            if (!panel) {
+                console.log('Panel not found:', panelId);
+                return;
+            }
+
+            const svg = panel.querySelector('svg');
+            if (!svg) {
+                console.log('SVG not found in panel:', panelId);
+                return;
+            }
+
+            // Restore ONLY bent notes to original colors
+            const bentNotes = svg.querySelectorAll('circle[data-is-bent="true"]');
+            console.log(`Found ${bentNotes.length} bent notes to unhighlight in panel ${panelId}`);
+
+            bentNotes.forEach(noteCircle => {
+                const originalFill = noteCircle.getAttribute('data-original-fill');
+                const originalStroke = noteCircle.getAttribute('data-original-stroke');
+
+                // If we have stored original colors, restore them
+                // Otherwise set to default black/grey colors
+                if (originalFill) {
+                    noteCircle.setAttribute('fill', originalFill);
+                } else {
+                    // Default fill for notes is #666666 (grey) or #FFD700 (gold for grace notes)
+                    const isGraceNote = noteCircle.getAttribute('r') === '6';
+                    noteCircle.setAttribute('fill', isGraceNote ? '#FFD700' : '#666666');
+                }
+
+                if (originalStroke) {
+                    noteCircle.setAttribute('stroke', originalStroke);
+                } else {
+                    // Default stroke is #333333
+                    noteCircle.setAttribute('stroke', '#333333');
+                }
+
+                // Clean up attributes
+                noteCircle.removeAttribute('data-is-bent');
+                noteCircle.removeAttribute('data-original-fill');
+                noteCircle.removeAttribute('data-original-stroke');
+            });
+
+            // Restore resonance triangles for bent notes
+            svg.querySelectorAll('polygon[data-is-bent="true"]').forEach(triangle => {
+                const originalFill = triangle.getAttribute('data-original-fill');
+                if (originalFill) {
+                    triangle.setAttribute('fill', originalFill);
+                } else {
+                    // Default fill for triangles
+                    triangle.setAttribute('fill', '#000000');
+                }
+
+                // Clean up attributes
+                triangle.removeAttribute('data-is-bent');
+                triangle.removeAttribute('data-original-fill');
+            });
+
+            // Reset bent lines
+            svg.querySelectorAll('.bent-line, path[class*="bent"]').forEach(element => {
+                element.style.opacity = '0.5';
+                element.style.strokeWidth = '1';
+            });
+        }
+
+        function unhighlightBentNotes(panelId) {
+            // Unhighlight bent notes only in the specified panel
+            const panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            const svg = panel.querySelector('svg');
+            if (!svg) return;
+
+            // Restore ONLY bent notes to original colors
+            const bentNotes = svg.querySelectorAll('circle[data-is-bent="true"]');
+            bentNotes.forEach(noteCircle => {
+                const originalFill = noteCircle.getAttribute('data-original-fill');
+                const originalStroke = noteCircle.getAttribute('data-original-stroke');
+                if (originalFill) noteCircle.setAttribute('fill', originalFill);
+                if (originalStroke) noteCircle.setAttribute('stroke', originalStroke);
+
+                // Clean up attributes
+                noteCircle.removeAttribute('data-is-bent');
+                noteCircle.removeAttribute('data-original-fill');
+                noteCircle.removeAttribute('data-original-stroke');
+            });
+
+            // Restore resonance triangles for bent notes
+            svg.querySelectorAll('polygon[data-is-bent="true"]').forEach(triangle => {
+                const originalFill = triangle.getAttribute('data-original-fill');
+                if (originalFill) triangle.setAttribute('fill', originalFill);
+
+                // Clean up attributes
+                triangle.removeAttribute('data-is-bent');
+                triangle.removeAttribute('data-original-fill');
+            });
+
+            // Reset bent lines
+            svg.querySelectorAll('.bent-line, path[class*="bent"]').forEach(element => {
+                element.style.opacity = '0.5';
+                element.style.strokeWidth = '1';
+            });
+        }
+
+        // Tuning comparison functionality
+        function updateComparisonTuning(tuningKey) {
+            const tuningData = songData.comparisonTunings[tuningKey];
+            if (!tuningData) return;
+
+            // Update tuning display
+            document.getElementById('comparisonTuning').textContent = tuningData.notes.join('-');
+            document.getElementById('comparisonBentCount').textContent =
+                `${tuningData.bentNotes} bent notes (${tuningData.bentPercentage}%)`;
+
+            // Generate new SVG for comparison tuning
+            generateComparisonTablature(tuningData);
+        }
+
+        // Generate 17-string pattern for any tuning
+        function generate17StringPattern(tuningPattern) {
+            const strings = [];
+            let stringNumber = 1;
+            let octave = 3;
+            let patternIndex = 0;
+
+            while (stringNumber <= 17) {
+                const note = tuningPattern[patternIndex % tuningPattern.length];
+                const fullNote = note + octave;
+                const cents = calculateCents(fullNote);
+
+                strings.push({
+                    number: stringNumber,
+                    note: fullNote,
+                    y: GLOBAL_SPACING_BASE + (cents / 100) * PIXELS_PER_CENT * 100 // Convert to pixels
+                });
+
+                stringNumber++;
+                patternIndex++;
+                if (patternIndex % tuningPattern.length === 0) octave++;
+            }
+            return strings;
+        }
+
+        // Calculate cents from note (simplified for demo)
+        function calculateCents(note) {
+            const noteMap = {
+                'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300,
+                'E': 400, 'F': 500, 'F#': 600, 'Gb': 600, 'G': 700, 'G#': 800,
+                'Ab': 800, 'A': 900, 'A#': 1000, 'Bb': 1000, 'B': 1100
+            };
+
+            const noteName = note.replace(/[0-9]/g, '');
+            const octave = parseInt(note.replace(/[^0-9]/g, '')) || 4;
+
+            return (octave - 4) * 1200 + (noteMap[noteName] || 0);
+        }
+
+        // Generate comparison tablature (placeholder - to be implemented by generator)
+        function generateComparisonTablature(tuningData) {
+            // This will be implemented by the generate-viewer.js to create
+            // systematic bent note analysis for the comparison tuning
+            console.log('Generating comparison tablature for:', tuningData);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial zoom
+            applyZoom();
+
+            // Hide bent notes initially
+            hideBentNotes();
+
+            // Initialize comparison tuning
+            updateComparisonTuning('traditional');
+
+            console.log('DanTranhTuningAnalyzer v3.5.8 Framework initialized');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đò đưa quan họ - V1-Style Lyrics Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        /* V1-Style Lyrics Layout */
+        .v1-lyrics-container {
+            background: rgba(52, 152, 219, 0.02);
+            border: 1px solid rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .lyrics-headers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498DB;
+        }
+
+        .vietnamese-header, .english-header {
+            font-weight: bold;
+            font-size: 16px;
+            color: #2C3E50;
+            text-align: center;
+        }
+
+        .lyrics-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            background: none;
+            border: 1px solid #3498DB;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .lyrics-note {
+            font-size: 12px;
+            color: #7F8C8D;
+            margin-left: 10px;
+        }
+
+        .lyrics-content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .vietnamese-lyrics, .english-lyrics {
+            font-size: 16px;
+            line-height: 1.8;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 6px;
+        }
+
+        .vietnamese-lyrics {
+            color: #2C3E50;
+            font-weight: 500;
+            background: rgba(52, 152, 219, 0.08);
+            border-left: 4px solid #3498DB;
+        }
+
+        .english-lyrics {
+            color: #7F8C8D;
+            font-style: italic;
+            background: rgba(127, 140, 141, 0.08);
+            border-left: 4px solid #95A5A6;
+        }
+
+        .pipe-separator {
+            color: #3498DB;
+            cursor: pointer;
+            margin: 0 2px;
+            transition: background 0.2s ease;
+            padding: 0 1px;
+            border-radius: 2px;
+        }
+
+        .pipe-separator:hover {
+            background: rgba(52, 152, 219, 0.2);
+        }
+
+        .word-segment {
+            cursor: pointer;
+            transition: background 0.2s ease;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .word-segment:hover {
+            background: rgba(255, 215, 0, 0.3);
+        }
+
+        .word-segment.highlighted {
+            background: #FFD700;
+            color: #4A3C00;
+        }
+
+        .lyrics-bottom-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 12px;
+            color: #7F8C8D;
+        }
+
+        .font-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .font-controls label {
+            font-size: 12px;
+        }
+
+        .font-controls select {
+            padding: 2px 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .font-controls button {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #3498DB;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Phrase-Level Controls */
+        .phrase-container {
+            margin-bottom: 20px;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .phrase-controls {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 8px;
+            background: rgba(52, 152, 219, 0.05);
+            border-bottom: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .phrase-control-btn {
+            background: none;
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            min-width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .phrase-control-btn:hover {
+            background: rgba(52, 152, 219, 0.1);
+            border-color: #3498DB;
+        }
+
+        .phrase-control-btn.active {
+            background: #3498DB;
+            color: white;
+            border-color: #3498DB;
+        }
+
+        .phrase-content {
+            padding: 10px;
+        }
+
+        .pronunciation-popup {
+            position: absolute;
+            background: #2C3E50;
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 300px;
+            font-size: 12px;
+            line-height: 1.4;
+            display: none;
+        }
+
+        .pronunciation-popup.visible {
+            display: block;
+        }
+
+        .pronunciation-popup::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 20px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #2C3E50 transparent transparent transparent;
+        }
+
+        /* Google Translate Floating Popup */
+        .translate-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 300px;
+            background: white;
+            border: 2px solid #3498DB;
+            border-radius: 8px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            z-index: 2000;
+            display: none;
+            overflow: hidden;
+        }
+
+        .translate-popup.visible {
+            display: block;
+        }
+
+        .translate-popup-header {
+            background: #3498DB;
+            color: white;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .translate-popup-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .translate-popup-content {
+            height: calc(100% - 50px);
+        }
+
+        .translate-popup iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Mobile and Tablet Responsive Layout */
+        @media (max-width: 768px) {
+            .lyrics-content-grid {
+                display: block; /* Stack vertically instead of side-by-side */
+                gap: 0;
+            }
+
+            .vietnamese-lyrics, .english-lyrics {
+                margin-bottom: 0;
+                padding: 8px;
+                font-size: 16px;
+            }
+
+            .vietnamese-lyrics {
+                border-bottom: 1px solid rgba(52, 152, 219, 0.2);
+                margin-bottom: 5px;
+            }
+
+            .english-lyrics {
+                background: rgba(127, 140, 141, 0.1);
+                font-size: 14px;
+                margin-bottom: 15px;
+            }
+
+            .lyrics-headers {
+                grid-template-columns: 1fr; /* Stack headers vertically */
+                text-align: center;
+            }
+
+            .vietnamese-header {
+                border-bottom: 1px solid #3498DB;
+                padding-bottom: 5px;
+                margin-bottom: 5px;
+            }
+
+            .english-header {
+                font-size: 14px;
+                color: #7F8C8D;
+            }
+
+            .lyrics-controls {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .lyrics-bottom-controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+
+            .font-controls {
+                justify-content: center;
+            }
+        }
+
+        /* Extra small screens (phones) */
+        @media (max-width: 480px) {
+            .v1-lyrics-container {
+                padding: 10px;
+            }
+
+            .vietnamese-lyrics, .english-lyrics {
+                font-size: 14px;
+                padding: 6px;
+            }
+
+            .control-btn {
+                padding: 6px 10px;
+                font-size: 16px; /* Larger for touch */
+            }
+
+            .lyrics-controls {
+                gap: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Đò đưa quan họ</h1>
+            <h2>Traditional Vietnamese Folk Song - V1 Lyrics Test</h2>
+        </header>
+
+        <!-- V1-Style Interactive Lyrics Layout -->
+        <div class="v1-lyrics-container">
+            <!-- Column Headers -->
+            <div class="lyrics-headers">
+                <div class="vietnamese-header">Tiếng Việt (Vietnamese)</div>
+                <div class="english-header">English Translation</div>
+            </div>
+
+
+            <!-- Lyrics Content with Phrase-Level Controls -->
+            <div class="lyrics-content-container" id="lyricsContentContainer">
+                <!-- Phrase containers will be populated by JavaScript -->
+            </div>
+
+            <!-- Bottom Controls -->
+            <div class="lyrics-bottom-controls">
+                <span>📝 Interactive: Click Vietnamese syllables or English words to see translations. Click "|" to adjust line breaks.</span>
+                <div class="font-controls">
+                    <label>Font: <select id="fontFamily" onchange="changeLyricsFont()">
+                        <option value="default">Default</option>
+                        <option value="serif">Times New Roman</option>
+                        <option value="sans-serif">Arial</option>
+                        <option value="monospace">Courier New</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Tahoma">Tahoma</option>
+                        <option value="Trebuchet MS">Trebuchet MS</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Comic Sans MS">Comic Sans MS</option>
+                    </select></label>
+                    <label>Size: <select id="fontSize" onchange="changeLyricsFontSize()">
+                        <option value="4px">4px</option>
+                        <option value="6px">6px</option>
+                        <option value="8px">8px</option>
+                        <option value="10px">10px</option>
+                        <option value="12px">12px</option>
+                        <option value="14px">14px</option>
+                        <option value="16px" selected>16px</option>
+                        <option value="18px">18px</option>
+                        <option value="20px">20px</option>
+                        <option value="22px">22px</option>
+                        <option value="24px">24px</option>
+                        <option value="26px">26px</option>
+                        <option value="28px">28px</option>
+                        <option value="30px">30px</option>
+                    </select></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Translate Floating Popup -->
+        <div class="translate-popup" id="translatePopup">
+            <div class="translate-popup-header">
+                <span>Google Translate</span>
+                <button class="translate-popup-close" onclick="closeTranslatePopup()">×</button>
+            </div>
+            <div class="translate-popup-content">
+                <iframe id="translateFrame" src=""></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Traditional Vietnamese folk song "Đò đưa quan họ" (public domain)
+        function initializeLyrics() {
+            // Vietnamese lyrics: Each PHRASE as separate block with clear syllable boundaries
+            const vietnamesePhrases = [
+                "Đò | đưa | quan | họ | bát | nước | trôi",
+                "Anh | đưa | em | tới | bến | sông | Hồi",
+                "Nước | chảy | xiết | về | đâu | có | biết",
+                "Tình | anh | với | em | trăm | năm | không | vơi"
+            ];
+
+            // English translation: preserving Vietnamese proper nouns
+            const englishPhrases = [
+                "Ferry | carries | quan họ | songs | bowls | water | floating",
+                "I | take | you | to | dock | river | Hồi",
+                "Water | flows | swift | return | where | can | know",
+                "Love | I | with | you | hundred | years | not | fade"
+            ];
+
+            // Populate the lyrics
+            const vietnameseElement = document.getElementById('vietnameseLyrics');
+            const englishElement = document.getElementById('englishLyrics');
+
+            const container = document.getElementById('lyricsContentContainer');
+            if (!container) return;
+
+            let containerHTML = '';
+            let wordIndex = 0; // Global word index for highlighting pairs
+
+            // Create phrase containers with individual controls
+            for (let phraseIndex = 0; phraseIndex < vietnamesePhrases.length; phraseIndex++) {
+                const vietnameseWords = vietnamesePhrases[phraseIndex].split(' | ');
+                const englishWords = englishPhrases[phraseIndex].split(' | ');
+
+                // Build phrase-level control bar
+                containerHTML += `
+                    <div class="phrase-container" id="phrase-${phraseIndex}">
+                        <div class="phrase-controls">
+                            <button class="phrase-control-btn" onclick="playPhrase(${phraseIndex})" title="Play phrase music (includes melisma)">▶️</button>
+                            <button class="phrase-control-btn" onclick="loopPhrase(${phraseIndex})" title="Loop phrase for practice">🔄</button>
+                            <button class="phrase-control-btn" onclick="stopPhrase(${phraseIndex})" title="Stop phrase music">⏹️</button>
+                            <button class="phrase-control-btn" onclick="showPronunciationGuide(${phraseIndex})" title="Pronunciation guide for this phrase">📝</button>
+                            <button class="phrase-control-btn" onclick="openGoogleTranslate(${phraseIndex})" title="Google Translate popup">🌐</button>
+                            <button class="phrase-control-btn" onclick="speakPhrase(${phraseIndex})" title="Text-to-speech for this phrase">🔊</button>
+                        </div>
+                        <div class="phrase-content">
+                            <div class="lyrics-content-grid">
+                                <div class="vietnamese-lyrics" id="vietnamese-phrase-${phraseIndex}"></div>
+                                <div class="english-lyrics" id="english-phrase-${phraseIndex}"></div>
+                            </div>
+                        </div>
+                        <div class="pronunciation-popup" id="pronunciation-popup-${phraseIndex}"></div>
+                    </div>
+                `;
+
+                // Store word indices for this phrase
+                const phraseWordIndices = [];
+                for (let i = 0; i < vietnameseWords.length; i++) {
+                    phraseWordIndices.push(wordIndex);
+                    wordIndex++;
+                }
+
+                // Store phrase data for later use
+                window.phraseData = window.phraseData || {};
+                window.phraseData[phraseIndex] = {
+                    vietnamese: vietnameseWords,
+                    english: englishWords,
+                    wordIndices: phraseWordIndices
+                };
+            }
+
+            container.innerHTML = containerHTML;
+
+            // Populate each phrase container
+            for (let phraseIndex = 0; phraseIndex < vietnamesePhrases.length; phraseIndex++) {
+                populatePhraseContainer(phraseIndex);
+            }
+        }
+
+        // V1-Style Interactive Functions
+        function playLyrics() {
+            console.log('Playing lyrics...');
+            alert('🎵 Playing "Đò đưa quan họ" - Audio playback would start here');
+        }
+
+        function pauseLyrics() {
+            console.log('Pausing lyrics...');
+            alert('⏸️ Paused - Audio would pause here');
+        }
+
+        function stopLyrics() {
+            console.log('Stopping lyrics...');
+            alert('⏹️ Stopped - Audio would stop here');
+        }
+
+        function toggleEditMode() {
+            console.log('Toggling edit mode...');
+            const pipes = document.querySelectorAll('.pipe-separator');
+            pipes.forEach(pipe => {
+                if (pipe.style.backgroundColor) {
+                    pipe.style.backgroundColor = '';
+                    pipe.style.fontWeight = '';
+                } else {
+                    pipe.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                    pipe.style.fontWeight = 'bold';
+                }
+            });
+        }
+
+        function toggleTranslation() {
+            const englishLyrics = document.getElementById('englishLyrics');
+            if (englishLyrics.style.display === 'none') {
+                englishLyrics.style.display = 'block';
+                alert('🌐 English translation shown');
+            } else {
+                englishLyrics.style.display = 'none';
+                alert('🌐 English translation hidden');
+            }
+        }
+
+        function toggleAudio() {
+            console.log('Toggling audio...');
+            alert('🔊 Audio settings - Would open pronunciation guide');
+        }
+
+        // Synchronized line break function - affects both Vietnamese and English
+        function toggleSynchronizedLineBreak(pipeIndex) {
+            // Find both pipe separators with the same index
+            const vietnamesePipe = document.querySelector(`#vietnameseLyrics .pipe-separator[data-pipe-index="${pipeIndex}"]`);
+            const englishPipe = document.querySelector(`#englishLyrics .pipe-separator[data-pipe-index="${pipeIndex}"]`);
+
+            if (!vietnamesePipe || !englishPipe) return;
+
+            // Check if line break already exists after Vietnamese pipe
+            const nextVietnameseElement = vietnamesePipe.nextElementSibling;
+            const hasLineBreak = nextVietnameseElement && nextVietnameseElement.tagName === 'BR';
+
+            if (hasLineBreak) {
+                // Remove line breaks from both columns
+                let elementToRemove = nextVietnameseElement;
+                while (elementToRemove && elementToRemove.tagName === 'BR') {
+                    const next = elementToRemove.nextElementSibling;
+                    elementToRemove.remove();
+                    elementToRemove = next;
+                }
+
+                // Remove corresponding English line breaks
+                let englishElement = englishPipe.nextElementSibling;
+                while (englishElement && englishElement.tagName === 'BR') {
+                    const next = englishElement.nextElementSibling;
+                    englishElement.remove();
+                    englishElement = next;
+                }
+
+                // Visual feedback
+                vietnamesePipe.style.backgroundColor = '';
+                englishPipe.style.backgroundColor = '';
+            } else {
+                // Add synchronized line breaks to both columns
+                vietnamesePipe.insertAdjacentHTML('afterend', '<br>');
+                englishPipe.insertAdjacentHTML('afterend', '<br>');
+
+                // Visual feedback
+                vietnamesePipe.style.backgroundColor = 'rgba(52, 152, 219, 0.2)';
+                englishPipe.style.backgroundColor = 'rgba(52, 152, 219, 0.2)';
+            }
+        }
+
+        function highlightWordPair(index) {
+            // Clear all highlights
+            document.querySelectorAll('.word-segment.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+
+            // Highlight both Vietnamese and English words at same index
+            const vietnameseWord = document.querySelector(`.vietnamese-word[data-index="${index}"]`);
+            const englishWord = document.querySelector(`.english-word[data-index="${index}"]`);
+
+            if (vietnameseWord) vietnameseWord.classList.add('highlighted');
+            if (englishWord) englishWord.classList.add('highlighted');
+
+            // Show word meaning
+            const viWord = vietnameseWord?.textContent;
+            const enWord = englishWord?.textContent;
+            if (viWord && enWord) {
+                console.log(`"${viWord}" = "${enWord}"`);
+            }
+        }
+
+        function startLearning() {
+            alert('▶️ Starting interactive learning mode for "Đò đưa quan họ"!\n\n🎯 Try:\n• Click any Vietnamese word to see English\n• Click "|" symbols to adjust line breaks\n• Use control buttons for audio/edit features');
+        }
+
+        // Populate individual phrase container
+        function populatePhraseContainer(phraseIndex) {
+            const data = window.phraseData[phraseIndex];
+            const vietnameseElement = document.getElementById(`vietnamese-phrase-${phraseIndex}`);
+            const englishElement = document.getElementById(`english-phrase-${phraseIndex}`);
+
+            if (!data || !vietnameseElement || !englishElement) return;
+
+            let vietnameseHTML = '';
+            let englishHTML = '';
+
+            // Build phrase HTML with word-level highlighting
+            for (let i = 0; i < data.vietnamese.length; i++) {
+                const wordIndex = data.wordIndices[i];
+
+                // Add word segments with global index
+                vietnameseHTML += `<span class="word-segment vietnamese-word" data-index="${wordIndex}" onclick="highlightWordPair(${wordIndex})">${data.vietnamese[i]}</span>`;
+                englishHTML += `<span class="word-segment english-word" data-index="${wordIndex}" onclick="highlightWordPair(${wordIndex})">${data.english[i] || ''}</span>`;
+
+                // Add pipe separators within phrase (not at phrase end)
+                if (i < data.vietnamese.length - 1) {
+                    vietnameseHTML += ` <span class="pipe-separator" data-pipe-index="${wordIndex}" onclick="toggleSynchronizedLineBreak(${wordIndex})">|</span> `;
+                    englishHTML += ` <span class="pipe-separator" data-pipe-index="${wordIndex}" onclick="toggleSynchronizedLineBreak(${wordIndex})">|</span> `;
+                }
+            }
+
+            vietnameseElement.innerHTML = vietnameseHTML;
+            englishElement.innerHTML = englishHTML;
+        }
+
+        // Phrase-Level Control Functions (Infrastructure for future audio integration)
+        function playPhrase(phraseIndex) {
+            console.log(`Playing phrase ${phraseIndex}: "${window.phraseData[phraseIndex].vietnamese.join(' ')}" with melisma`);
+            alert(`🎵 Would play phrase: "${window.phraseData[phraseIndex].vietnamese.join(' ')}" \n(Including melisma notes for that phrase)`);
+            // TODO: Integrate with tablature audio system
+        }
+
+        function loopPhrase(phraseIndex) {
+            console.log(`Looping phrase ${phraseIndex} for practice`);
+            alert(`🔄 Would loop phrase: "${window.phraseData[phraseIndex].vietnamese.join(' ')}" \n(Repeat for pronunciation practice)`);
+            // TODO: Audio loop functionality
+        }
+
+        function stopPhrase(phraseIndex) {
+            console.log(`Stopping phrase ${phraseIndex}`);
+            alert(`⏹️ Stopped phrase playback`);
+            // TODO: Stop audio playback
+        }
+
+        function showPronunciationGuide(phraseIndex) {
+            const popup = document.getElementById(`pronunciation-popup-${phraseIndex}`);
+            const data = window.phraseData[phraseIndex];
+
+            // Create pronunciation guide for each word in the phrase
+            const pronunciations = {
+                'Đò': '"doh" (boat)',
+                'đưa': '"doo-ah" (to carry/take)',
+                'quan họ': '"kwan ho" (folk song tradition)',
+                'bát': '"baht" (bowl)',
+                'nước': '"nook" (water, falling tone)',
+                'trôi': '"troy" (to float)',
+                'Anh': '"ahn" (I/brother)',
+                'em': '"em" (you/younger)',
+                'tới': '"toy" (to arrive)',
+                'bến': '"ben" (dock)',
+                'sông': '"song" (river)',
+                'Hồi': '"hoy" (river name)',
+                'chảy': '"chie" (to flow)',
+                'xiết': '"xiet" (swift)',
+                'về': '"veh" (to return)',
+                'đâu': '"dow" (where)',
+                'có': '"ko" (to have)',
+                'biết': '"biet" (to know)',
+                'Tình': '"tinh" (love, level tone)',
+                'với': '"voy" (with)',
+                'trăm': '"tram" (hundred)',
+                'năm': '"nam" (year)',
+                'không': '"khong" (not)',
+                'vơi': '"voy" (to fade)'
+            };
+
+            let pronunciationHTML = '<strong>Pronunciation Guide:</strong><br>';
+            data.vietnamese.forEach(word => {
+                if (pronunciations[word]) {
+                    pronunciationHTML += `• "${word}" sounds like ${pronunciations[word]}<br>`;
+                }
+            });
+
+            popup.innerHTML = pronunciationHTML;
+            popup.classList.toggle('visible');
+
+            // Hide popup when clicking elsewhere
+            setTimeout(() => {
+                document.addEventListener('click', function hidePopup(e) {
+                    if (!popup.contains(e.target)) {
+                        popup.classList.remove('visible');
+                        document.removeEventListener('click', hidePopup);
+                    }
+                });
+            }, 100);
+        }
+
+        function openGoogleTranslate(phraseIndex) {
+            const data = window.phraseData[phraseIndex];
+            const phrase = data.vietnamese.join(' ');
+
+            // Create translation modal popup with enhanced Vietnamese pronunciation
+            const popup = document.getElementById('translatePopup');
+            const content = popup.querySelector('.translate-popup-content');
+
+            content.innerHTML = `
+                <div style="padding: 20px; text-align: center;">
+                    <div style="margin-bottom: 20px;">
+                        <strong style="font-size: 16px;">Vietnamese Phrase:</strong><br>
+                        <div style="font-size: 24px; color: #2C3E50; margin: 10px 0; font-weight: bold;">${phrase}</div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <strong>English Translation:</strong><br>
+                        <div style="color: #7F8C8D; font-style: italic; font-size: 18px;">${data.english.join(' ')}</div>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <button onclick="openExternalTranslate('${phrase}')"
+                                style="background: #4285F4; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">
+                            🌐 Open Google Translate
+                        </button>
+                    </div>
+
+                    <div style="font-size: 14px; color: #7F8C8D; border-top: 1px solid #eee; padding-top: 15px;">
+                        <strong>Cultural Context:</strong><br>
+                        ${getPhraseCulturalContext(phraseIndex)}
+                    </div>
+                </div>
+            `;
+
+            popup.querySelector('.translate-popup-header span').textContent = 'Vietnamese Learning Assistant';
+            popup.classList.add('visible');
+
+            console.log(`Opening learning popup for: "${phrase}"`);
+        }
+
+        // Enhanced Vietnamese pronunciation with better voice settings
+        function speakPhraseAdvanced(phrase) {
+            if ('speechSynthesis' in window) {
+                // Stop any ongoing speech
+                speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(phrase);
+                utterance.lang = 'vi-VN';
+                utterance.rate = 0.7; // Slower for learning
+                utterance.pitch = 1.0;
+                utterance.volume = 1.0;
+
+                // Try to find Vietnamese voice
+                const voices = speechSynthesis.getVoices();
+                const vietnameseVoice = voices.find(voice =>
+                    voice.lang.includes('vi') || voice.name.includes('Vietnamese')
+                );
+
+                if (vietnameseVoice) {
+                    utterance.voice = vietnameseVoice;
+                    console.log('Using Vietnamese voice:', vietnameseVoice.name);
+                }
+
+                speechSynthesis.speak(utterance);
+                console.log(`Speaking Vietnamese: "${phrase}"`);
+            } else {
+                alert('🔊 Text-to-speech not available in this browser. Please use the Google Translate option for audio.');
+            }
+        }
+
+        function getPhraseCulturalContext(phraseIndex) {
+            const contexts = [
+                "Traditional ferry boats were essential for Vietnamese river travel and became symbols of journey and transition in folk poetry.",
+                "The mention of 'bến sông Hồi' refers to a specific river dock, showing how Vietnamese songs preserve geographic and cultural memory.",
+                "The flowing water metaphor represents the passage of time and the uncertainty of life's journey in Vietnamese literature.",
+                "The promise of eternal love 'trăm năm không vơi' reflects Vietnamese values of enduring commitment and faithfulness."
+            ];
+            return contexts[phraseIndex] || "Traditional Vietnamese folk poetry often uses nature imagery to express human emotions.";
+        }
+
+        function openExternalTranslate(phrase) {
+            const googleTranslateURL = `https://translate.google.com/?sl=vi&tl=en&text=${encodeURIComponent(phrase)}`;
+            window.open(googleTranslateURL, '_blank');
+        }
+
+        function showGoogleTranslateEmbed(phrase) {
+            const popup = document.getElementById('translatePopup');
+            const content = popup.querySelector('.translate-popup-content');
+
+            // Create iframe with Google Translate for read-aloud access
+            const googleTranslateURL = `https://translate.google.com/?sl=vi&tl=en&text=${encodeURIComponent(phrase)}`;
+
+            content.innerHTML = `
+                <div style="padding: 10px; text-align: center; background: #f8f9fa; border-bottom: 1px solid #ddd;">
+                    <strong>Vietnamese Phrase with Google Voice:</strong><br>
+                    <div style="font-size: 16px; color: #2C3E50; margin: 5px 0;">${phrase}</div>
+                    <div style="font-size: 12px; color: #7F8C8D;">
+                        Use Google's 🔊 speaker button in the translate window below for authentic Vietnamese pronunciation
+                    </div>
+                </div>
+                <iframe src="${googleTranslateURL}"
+                        style="width: 100%; height: calc(100% - 80px); border: none;"
+                        title="Google Translate with Vietnamese Audio">
+                </iframe>
+            `;
+
+            // Update popup header
+            popup.querySelector('.translate-popup-header span').textContent = 'Google Translate + Vietnamese Audio';
+            popup.classList.add('visible');
+
+            console.log(`Opening Google Translate embed with audio for: "${phrase}"`);
+        }
+
+        function closeTranslatePopup() {
+            const popup = document.getElementById('translatePopup');
+            const iframe = document.getElementById('translateFrame');
+
+            popup.classList.remove('visible');
+            iframe.src = ''; // Clear iframe to stop loading
+        }
+
+        function speakPhrase(phraseIndex) {
+            const data = window.phraseData[phraseIndex];
+            const phrase = data.vietnamese.join(' ');
+
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(phrase);
+                utterance.lang = 'vi-VN'; // Vietnamese language
+                utterance.rate = 0.8; // Slower for learning
+                speechSynthesis.speak(utterance);
+                console.log(`Speaking phrase: "${phrase}"`);
+            } else {
+                alert(`🔊 Would speak: "${phrase}" \n(Text-to-speech not available in this browser)`);
+            }
+        }
+
+        function clearAll() {
+            // Clear all highlights and reset
+            document.querySelectorAll('.word-segment.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+
+            // Hide all pronunciation popups
+            document.querySelectorAll('.pronunciation-popup').forEach(popup => {
+                popup.classList.remove('visible');
+            });
+
+            // Stop any ongoing speech
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+            }
+
+            alert('🗑 All highlights cleared and audio stopped');
+        }
+
+        // Font control functions
+        function changeLyricsFont() {
+            const fontFamily = document.getElementById('fontFamily').value;
+            const lyricsElements = document.querySelectorAll('.vietnamese-lyrics, .english-lyrics');
+
+            lyricsElements.forEach(element => {
+                if (fontFamily === 'default') {
+                    element.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+                } else {
+                    element.style.fontFamily = fontFamily;
+                }
+            });
+        }
+
+        function changeLyricsFontSize() {
+            const fontSize = document.getElementById('fontSize').value;
+            const lyricsElements = document.querySelectorAll('.vietnamese-lyrics, .english-lyrics');
+
+            lyricsElements.forEach(element => {
+                element.style.fontSize = fontSize;
+            });
+        }
+
+        // Font control functions
+        function changeLyricsFont() {
+            const fontFamily = document.getElementById('fontFamily').value;
+            const lyricsElements = document.querySelectorAll('.vietnamese-lyrics, .english-lyrics');
+
+            lyricsElements.forEach(element => {
+                if (fontFamily === 'default') {
+                    element.style.fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+                } else {
+                    element.style.fontFamily = fontFamily;
+                }
+            });
+        }
+
+        function changeLyricsFontSize() {
+            const fontSize = document.getElementById('fontSize').value;
+            const lyricsElements = document.querySelectorAll('.vietnamese-lyrics, .english-lyrics');
+
+            lyricsElements.forEach(element => {
+                element.style.fontSize = fontSize;
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLyrics();
+            console.log('V1-Style lyrics test initialized for "Đò đưa quan họ"');
+        });
+    </script>
+</body>
+</html>

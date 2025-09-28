@@ -107,23 +107,27 @@ class AutoImporter {
 
             // Create metadata with real extracted data
             const metadata = {
-                name: songName,
+                songName: songName,              // Beautiful Vietnamese display name
+                directoryName: safeName,         // URL-safe directory name
                 filename: filename,
                 processedDate: new Date().toISOString(),
                 region: this.detectRegion(songName),
                 difficulty: this.assessDifficulty(songData),
-                noteCount: songData.noteCount,
+                totalNotes: songData.noteCount,
+                mainNotes: songData.noteCount - (songData.graceNotes || 0),
+                graceNotes: songData.graceNotes || 0,
                 uniqueNotes: songData.uniqueNotes,
                 hasLyrics: songData.hasLyrics,
                 tempo: songData.tempo,
                 timeSignature: songData.timeSignature,
-                strings: songData.estimatedStrings,
+                stringsUsed: songData.estimatedStrings,
                 measures: songData.measures,
                 pitchRange: songData.pitchRange,
-                tuning: songData.detectedTuning.length > 0 ? songData.detectedTuning : ['D4', 'G4', 'A4', 'C5', 'D5'], // Default Dan Tranh tuning
-                bentNotes: songData.bentNotes || [],
+                tuning: songData.detectedTuning.length > 0 ? songData.detectedTuning.join('-') : 'C-D-E-G-A', // Default Dan Tranh tuning
+                bentNotes: songData.bentNotes || 0,
+                bentPercentage: songData.bentNotes ? Math.round((songData.bentNotes / songData.noteCount) * 100) : 0,
                 tuningSystem: songData.detectedTuning.length > 0 ? 'detected' : 'default',
-                patternEfficiency: songData.patternEfficiency || { learnOnly: songData.noteCount, totalNotes: songData.noteCount, efficiency: 0 }
+                uniquePatterns: Math.ceil(songData.noteCount / 4) // Rough estimate
             };
 
             // Save metadata
@@ -468,7 +472,32 @@ class AutoImporter {
     }
 
     sanitizeFileName(name) {
-        return name.replace(/[^a-zA-Z0-9À-ỹ\s]/g, '_').replace(/\s+/g, '_');
+        // Use the same URL-safe conversion as convert-to-url-safe.js
+        return this.toUrlSafe(name);
+    }
+
+    toUrlSafe(text) {
+        return text
+            // Vietnamese character mappings
+            .replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a')
+            .replace(/À|Á|Ạ|Ả|Ã|Â|Ầ|Ấ|Ậ|Ẩ|Ẫ|Ă|Ằ|Ắ|Ặ|Ẳ|Ẵ/g, 'A')
+            .replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e')
+            .replace(/È|É|Ẹ|Ẻ|Ẽ|Ê|Ề|Ế|Ệ|Ể|Ễ/g, 'E')
+            .replace(/ì|í|ị|ỉ|ĩ/g, 'i')
+            .replace(/Ì|Í|Ị|Ỉ|Ĩ/g, 'I')
+            .replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o')
+            .replace(/Ò|Ó|Ọ|Ỏ|Õ|Ô|Ồ|Ố|Ộ|Ổ|Ỗ|Ơ|Ờ|Ớ|Ợ|Ở|Ỡ/g, 'O')
+            .replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u')
+            .replace(/Ù|Ú|Ụ|Ủ|Ũ|Ư|Ừ|Ứ|Ự|Ử|Ữ/g, 'U')
+            .replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y')
+            .replace(/Ỳ|Ý|Ỵ|Ỷ|Ỹ/g, 'Y')
+            .replace(/đ/g, 'd')
+            .replace(/Đ/g, 'D')
+            // Replace spaces and special characters
+            .replace(/\s+/g, '_')           // spaces to underscores
+            .replace(/[^\w\-_.]/g, '')      // remove special chars except dash, underscore, dot
+            .replace(/_{2,}/g, '_')         // multiple underscores to single
+            .replace(/^_+|_+$/g, '');       // trim leading/trailing underscores
     }
 }
 

@@ -13,7 +13,7 @@ const tuningSystems = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/tuni
 // Top 5 pitch classes: D, A, G, C, E (covers 81.6% of all notes)
 // Remaining notes require string bending
 const baseY = 110;
-const pixelsPerCent = 0.3;
+const pixelsPerCent = 0.125; // Optimal spacing: 12.5px per semitone, supports C1-B8 range
 
 // Generate string configuration based on song's actual tuning
 // Dan Tranh uses the detected tuning from the song, starting at lowest note used
@@ -664,7 +664,24 @@ function generateMultiPartTablatureSVG(songData) {
     </defs>
     <rect x="0" y="0" width="${maxX}" height="${totalHeight}" fill="transparent"/>
 
+    <!-- Reference test lines -->
+    <line x1="120" x2="${maxX}" y1="130" y2="130" stroke="red" stroke-width="6" opacity="1" class="test-line-c3"/>
+    <text x="130" y="125" fill="red" font-size="16" font-weight="bold">C3 Reference (Y=130)</text>
+
+    <line x1="120" x2="${maxX}" y1="190" y2="190" stroke="orange" stroke-width="6" opacity="1" class="test-line-d3"/>
+    <text x="130" y="185" fill="orange" font-size="16" font-weight="bold">D3 Reference (Y=190)</text>
+
+    <line x1="120" x2="${maxX}" y1="250" y2="250" stroke="green" stroke-width="6" opacity="1" class="test-line-e3"/>
+    <text x="130" y="245" fill="green" font-size="16" font-weight="bold">E3 Reference (Y=250)</text>
+
     ${partSVGs.map(p => p.svg).join('\n')}
+
+    <!-- Reference lines on top of everything -->
+    <line x1="120" x2="${maxX}" y1="130" y2="130" stroke="red" stroke-width="4" stroke-dasharray="15,5" opacity="0.8" class="c3-ref-final"/>
+    <text x="130" y="125" fill="red" font-size="14" font-weight="bold">C3 REF (Y=130)</text>
+
+    <line x1="120" x2="${maxX}" y1="190" y2="190" stroke="orange" stroke-width="4" stroke-dasharray="15,5" opacity="0.8" class="d3-ref-final"/>
+    <text x="130" y="185" fill="orange" font-size="14" font-weight="bold">D3 REF (Y=190)</text>
 </svg>`;
 
     return svg;
@@ -673,8 +690,22 @@ function generateMultiPartTablatureSVG(songData) {
 // Generate SVG for a single part (used by both single and multi-part scores)
 function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
     const { notes, stringConfig, tuning } = partData;
+
+    // Find the last note and calculate where it ends
+    const lastNote = notes.reduce((latest, note) => {
+        const noteEndX = note.x + (note.grace ? 25 : note.duration * 85);
+        const latestEndX = latest ? (latest.x + (latest.grace ? 25 : latest.duration * 85)) : 0;
+        return noteEndX > latestEndX ? note : latest;
+    }, null);
+
+    // Calculate string line end position: last note end + one whole note duration
+    const wholeNoteDuration = 16; // A whole note is typically 16 units
+    const wholeNoteWidth = wholeNoteDuration * 85; // 1360 pixels
+    const lastNoteEndX = lastNote ? (lastNote.x + (lastNote.grace ? 25 : lastNote.duration * 85)) : 0;
+    const stringLineEndX = lastNoteEndX + wholeNoteWidth;
+
     const lastNoteX = Math.max(...notes.map(n => n.x));
-    const maxX = lastNoteX + 320 + 100;
+    const maxX = Math.max(stringLineEndX, lastNoteX + 320 + 100); // Use the larger of the two for safety
 
     // Always show all 17 strings consistently
     // Color: grey for non-played, black for played
@@ -744,7 +775,7 @@ function generateSinglePartSVG(partData, yOffset = 0, partNumber = null) {
         const lineClass = isPlayed ? "string-line-played" : "string-line-unplayed";
         const labelClass = isPlayed ? "string-label-played" : "string-label-unplayed";
         svg += `
-    <line x1="120" y1="${adjustedY}" x2="${maxX}" y2="${adjustedY}"
+    <line x1="120" y1="${adjustedY}" x2="${stringLineEndX}" y2="${adjustedY}"
           stroke-width="3" class="string-line ${lineClass}"/>
     <text x="20" y="${adjustedY + 5}" font-size="12" font-weight="bold" class="string-label ${labelClass}">
         String ${stringNum}: ${config.note}
@@ -949,12 +980,22 @@ function generateTablatureSVG(songData) {
 // Original single-part SVG generation (kept for reference, now using generateSinglePartSVG)
 function generateTablatureSVG_ORIGINAL(songData) {
     const { notes, title, stringConfig } = songData;
-    // Calculate maxX to include:
-    // - Last note position
-    // - Resonance band width (320px extends to the right)
-    // - Extra padding for safety (100px)
+
+    // Find the last note and calculate where it ends
+    const lastNote = notes.reduce((latest, note) => {
+        const noteEndX = note.x + (note.grace ? 25 : note.duration * 85);
+        const latestEndX = latest ? (latest.x + (latest.grace ? 25 : latest.duration * 85)) : 0;
+        return noteEndX > latestEndX ? note : latest;
+    }, null);
+
+    // Calculate string line end position: last note end + one whole note duration
+    const wholeNoteDuration = 16; // A whole note is typically 16 units
+    const wholeNoteWidth = wholeNoteDuration * 85; // 1360 pixels
+    const lastNoteEndX = lastNote ? (lastNote.x + (lastNote.grace ? 25 : lastNote.duration * 85)) : 0;
+    const stringLineEndX = lastNoteEndX + wholeNoteWidth;
+
     const lastNoteX = Math.max(...notes.map(n => n.x));
-    const maxX = lastNoteX + 320 + 100; // Include full resonance band + padding
+    const maxX = Math.max(stringLineEndX, lastNoteX + 320 + 100); // Use the larger of the two for safety
 
     // Use only song-specific pentatonic strings that are actually played
     const playedStringNums = new Set(notes.map(n => n.string));
@@ -982,13 +1023,23 @@ function generateTablatureSVG_ORIGINAL(songData) {
     <!-- Transparent background for direct drawing -->
     <rect x="0" y="0" width="${maxX}" height="${svgHeight}" fill="transparent"/>
 
+    <!-- Visible test lines -->
+    <line x1="120" x2="${maxX}" y1="50" y2="50" stroke="red" stroke-width="6" opacity="1" class="test-line-1"/>
+    <text x="130" y="45" fill="red" font-size="16" font-weight="bold">TEST LINE 1 (Y=50)</text>
+
+    <line x1="120" x2="${maxX}" y1="100" y2="100" stroke="blue" stroke-width="6" opacity="1" class="test-line-2"/>
+    <text x="130" y="95" fill="blue" font-size="16" font-weight="bold">TEST LINE 2 (Y=100)</text>
+
+    <line x1="120" x2="${maxX}" y1="200" y2="200" stroke="magenta" stroke-width="6" opacity="1" class="test-line-3"/>
+    <text x="130" y="195" fill="magenta" font-size="16" font-weight="bold">TEST LINE 3 (Y=200)</text>
+
     <!-- String lines -->`;
 
     // Draw only used string lines (without labels first)
     usedStringConfigs.forEach(([stringNum, config]) => {
         const adjustedY = config.y - minY + 50; // Adjust for removed viewBox
         svg += `
-    <line x1="100" y1="${adjustedY}" x2="${maxX}" y2="${adjustedY}"
+    <line x1="100" y1="${adjustedY}" x2="${stringLineEndX}" y2="${adjustedY}"
           stroke="var(--text-secondary)" stroke-width="3" class="string-line"/>`;
     });
 
@@ -1867,7 +1918,7 @@ function generateViewer(songData, metadata) {
                 } else if (text.classList.contains('lyric-text')) {
                     // Lyrics - position relative to their note
                     const noteIndex = text.getAttribute('data-note-index');
-                    const associatedNote = svg.querySelector(\`.note-circle[data-note-index="\${noteIndex}"]\`);
+                    const associatedNote = svg.querySelector('.note-circle[data-note-index="' + noteIndex + '"]');
 
                     if (associatedNote) {
                         const noteX = parseFloat(associatedNote.getAttribute('cx'));
@@ -1881,12 +1932,12 @@ function generateViewer(songData, metadata) {
                         text.setAttribute('y', lyricY);
 
                         // Update rotation around the new position
-                        text.setAttribute('transform', \`rotate(-90, \${lyricX}, \${lyricY})\`);
+                        text.setAttribute('transform', 'rotate(-90, ' + lyricX + ', ' + lyricY + ')');
                     }
                 } else if (text.classList.contains('note-index')) {
                     // Note index numbers - position above their note
                     const noteIndex = text.getAttribute('data-note-index');
-                    const associatedNote = svg.querySelector(\`.note-circle[data-note-index="\${noteIndex}"]\`);
+                    const associatedNote = svg.querySelector('.note-circle[data-note-index="' + noteIndex + '"]');
 
                     if (associatedNote) {
                         const noteX = parseFloat(associatedNote.getAttribute('cx'));
@@ -1901,7 +1952,7 @@ function generateViewer(songData, metadata) {
                 } else if (text.classList.contains('string-number')) {
                     // String numbers - position inside their note
                     const noteIndex = text.getAttribute('data-note-index');
-                    const associatedNote = svg.querySelector(\`.note-circle[data-note-index="\${noteIndex}"]\`);
+                    const associatedNote = svg.querySelector('.note-circle[data-note-index="' + noteIndex + '"]');
 
                     if (associatedNote) {
                         const noteX = parseFloat(associatedNote.getAttribute('cx'));
@@ -1914,7 +1965,7 @@ function generateViewer(songData, metadata) {
                 } else if (text.classList.contains('note-name')) {
                     // Note names (labels inside note heads) - position relative to their note
                     const noteIndex = text.getAttribute('data-note-index');
-                    const associatedNote = svg.querySelector(\`.note-circle[data-note-index="\${noteIndex}"]\`);
+                    const associatedNote = svg.querySelector('.note-circle[data-note-index="' + noteIndex + '"]');
 
                     if (associatedNote) {
                         const noteX = parseFloat(associatedNote.getAttribute('cx'));
@@ -1974,7 +2025,7 @@ function generateViewer(songData, metadata) {
 
                 char.setAttribute('x', newCharX);
                 char.setAttribute('y', newCharY);
-                char.setAttribute('transform', \`rotate(\${newAngle} \${newCharX} \${newCharY})\`);
+                char.setAttribute('transform', 'rotate(' + newAngle + ' ' + newCharX + ' ' + newCharY + ')');
             });
 
 
@@ -1993,6 +2044,8 @@ function generateViewer(songData, metadata) {
 
             document.getElementById('zoomLevelX').textContent = Math.round(currentZoomX * 100);
             document.getElementById('zoomLevelY').textContent = Math.round(currentZoomY * 100);
+
+            console.log('updateZoom() completed successfully');
         }
 
         function updateXZoom() {
@@ -2044,6 +2097,14 @@ function generateViewer(songData, metadata) {
             slider.value = Math.round(currentZoomY * 100);
 
             updateZoom();
+
+            // Draw reference lines immediately after updateZoom
+            console.log('fitHeight completed, now drawing reference lines...');
+            try {
+                drawReferenceLines();
+            } catch (error) {
+                console.error('Error drawing reference lines:', error);
+            }
         }
 
         // Note click handler
@@ -2236,300 +2297,196 @@ function generateViewer(songData, metadata) {
         }
 
         function redrawStringsWithNewTuning(newTuning) {
+            console.log('🔧 redrawStringsWithNewTuning called with:', newTuning);
+
+            // SIMPLE SOLUTION: Keep notes, regenerate only strings with new tuning
             const svg = document.getElementById('tablatureSvg');
 
-            // First, remove ALL existing bent indicators (both original and any added)
-            const allBentGroups = svg.querySelectorAll('.bent-note-group');
-            allBentGroups.forEach(group => group.remove());
+            // Remove only strings and labels, keep notes intact
+            const existingStrings = svg.querySelectorAll('.string-line, .new-tuning-string');
+            existingStrings.forEach(line => line.remove());
 
-            const allBentArrows = svg.querySelectorAll('.bent-arrow-tail');
-            allBentArrows.forEach(arrow => arrow.remove());
+            const existingLabels = svg.querySelectorAll('.string-label, .new-tuning-label');
+            existingLabels.forEach(label => label.remove());
 
-            const allBentTexts = svg.querySelectorAll('.bent-line-char');
-            allBentTexts.forEach(text => text.remove());
+            // Generate COMPLETE 17-string configuration using new tuning pattern
+            const newStringConfig = generateDanTranhStrings(newTuning, 'C3', 17);
 
-            // Generate new string configuration based on new tuning
-            // Use the same string generation logic as the original
-            const startNote = newTuning[0]; // Start with first note of tuning
-            const lowestOctave = 3; // Keep starting octave consistent
-
-            // Generate 17 strings with new tuning using pentatonic pattern
-            const newStrings = {};
-            let stringNum = 1;
-
-            // Generate strings in the same way as original Dan Tranh configuration
-            for (let octave = lowestOctave; stringNum <= 17; octave++) {
-                for (let i = 0; i < newTuning.length && stringNum <= 17; i++) {
-                    const note = newTuning[i];
-                    const fullNote = note + octave;
-
-                    // Calculate Y position using the same formula as original
-                    const semitoneMap = {'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300, 'E': 400, 'F': 500, 'F#': 600, 'Gb': 600, 'G': 700, 'G#': 800, 'Ab': 800, 'A': 900, 'A#': 1000, 'Bb': 1000, 'B': 1100};
-                    const centsFromC = semitoneMap[note] || 0;
-                    const totalCents = (octave - 3) * 1200 + centsFromC;
-                    const pixelsPerCent = 0.3;
-                    const baseY = 110 + (totalCents * pixelsPerCent);
-
-                    newStrings[stringNum] = { note: fullNote, y: baseY, pitchClass: note };
-                    stringNum++;
-                }
-            }
-
-            // Update string lines with current zoom applied
-            const stringLines = svg.querySelectorAll('.string-line');
-            stringLines.forEach((line, index) => {
-                const stringConfig = newStrings[index + 1];
-                if (stringConfig) {
-                    // Update base position
-                    const baseY = stringConfig.y;
-                    line.setAttribute('data-base-y1', baseY);
-                    line.setAttribute('data-base-y2', baseY);
-
-                    // Apply CURRENT zoom level (not reset to 1)
-                    const scaledY = baseY * currentZoomY;
-                    line.setAttribute('y1', scaledY);
-                    line.setAttribute('y2', scaledY);
-                }
-            });
-
-            // Update string labels with current zoom
-            const stringLabels = svg.querySelectorAll('.string-label');
-            stringLabels.forEach((label, index) => {
-                const stringConfig = newStrings[index + 1];
-                if (stringConfig) {
-                    label.textContent = \`String \${index + 1}: \${stringConfig.note}\`;
-
-                    // Update Y position with CURRENT zoom
-                    const scaledY = stringConfig.y * currentZoomY + 5;
-                    label.setAttribute('y', scaledY);
-                    label.setAttribute('data-base-y', stringConfig.y);
-                }
-            });
-
-        }
-
-        function addBentDots(newTuning) {
-            const svg = document.getElementById('tablatureSvg');
-
-            // Find all notes that are bent in the new tuning
+            // Find which strings are actually used (have notes)
+            const usedStrings = new Set();
             const allNotes = svg.querySelectorAll('.note-circle');
-            allNotes.forEach(noteCircle => {
-                const noteName = noteCircle.getAttribute('data-note-name');
-                if (noteName) {
-                    const pitchClass = noteName.replace(/[0-9]/g, '');
-                    const isBent = !newTuning.includes(pitchClass);
-
-                    if (isBent) {
-                        const noteIndex = noteCircle.getAttribute('data-note-index');
-                        const noteX = parseFloat(noteCircle.getAttribute('cx'));
-                        const noteY = parseFloat(noteCircle.getAttribute('cy'));
-
-                        // Find the nearest lower string (higher on screen - smaller Y value)
-                        const stringLines = svg.querySelectorAll('.string-line');
-                        let lowerStringY = noteY;
-
-                        stringLines.forEach(line => {
-                            const stringY = parseFloat(line.getAttribute('y1'));
-                            if (stringY < noteY && (lowerStringY === noteY || stringY > lowerStringY)) {
-                                lowerStringY = stringY;
-                            }
-                        });
-
-                        // Calculate dot position with proper zoom awareness
-                        const baseNoteX = parseFloat(noteCircle.getAttribute('data-base-x'));
-                        const eighthNoteDistance = 50; // Standard distance at base zoom
-                        const baseDotX = baseNoteX - eighthNoteDistance;
-                        const currentDotX = 120 + (baseDotX - 120) * currentZoomX;
-
-                        // Create red dot
-                        const redDot = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        redDot.setAttribute('x', currentDotX);
-                        redDot.setAttribute('y', lowerStringY);
-                        redDot.setAttribute('text-anchor', 'middle');
-                        redDot.setAttribute('dominant-baseline', 'middle');
-                        redDot.setAttribute('class', 'bent-arrow-tail');
-                        redDot.setAttribute('data-base-x', baseDotX);
-                        redDot.setAttribute('data-base-y', lowerStringY / currentZoomY);
-                        redDot.setAttribute('data-note-index', noteIndex);
-                        redDot.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold;');
-                        redDot.textContent = '●';
-                        svg.appendChild(redDot);
-
-                        // CREATE RED LINE connecting dot to bent note center (exactly like optimal tuning)
-                        const lineStartX = currentDotX;
-                        const lineStartY = lowerStringY;
-                        const lineEndX = noteX; // Center of bent note (like optimal tuning)
-                        const lineEndY = noteY; // Center of bent note
-
-                        const lineDx = lineEndX - lineStartX;
-                        const lineDy = lineEndY - lineStartY;
-                        const connectionLength = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
-                        const lineAngle = Math.atan2(lineDy, lineDx) * 180 / Math.PI;
-
-                        // Create line using multiple rotated characters (exactly like optimal tuning)
-                        const charSpacing = 8;
-                        const charCount = Math.floor(connectionLength / charSpacing);
-
-                        for (let i = 1; i < charCount; i++) {
-                            const ratio = i / charCount;
-                            const charX = lineStartX + lineDx * ratio;
-                            const charY = lineStartY + lineDy * ratio;
-
-                            // Convert to base positions for zoom awareness
-                            const baseCharX = 120 + (charX - 120) / currentZoomX;
-                            const baseCharY = charY / currentZoomY;
-                            const baseLineStartX = baseDotX;
-                            const baseLineStartY = lowerStringY / currentZoomY;
-                            const baseLineEndX = baseNoteX;
-                            const baseLineEndY = parseFloat(noteCircle.getAttribute('data-base-y'));
-
-                            const lineCharElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                            lineCharElement.setAttribute('x', charX);
-                            lineCharElement.setAttribute('y', charY);
-                            lineCharElement.setAttribute('text-anchor', 'middle');
-                            lineCharElement.setAttribute('dominant-baseline', 'middle');
-                            lineCharElement.setAttribute('class', 'bent-line-char');
-                            lineCharElement.setAttribute('data-base-x', baseCharX);
-                            lineCharElement.setAttribute('data-base-y', baseCharY);
-                            lineCharElement.setAttribute('data-ratio', ratio);
-                            lineCharElement.setAttribute('data-start-x', baseLineStartX);
-                            lineCharElement.setAttribute('data-start-y', baseLineStartY);
-                            lineCharElement.setAttribute('data-end-x', baseLineEndX);
-                            lineCharElement.setAttribute('data-end-y', baseLineEndY);
-                            lineCharElement.setAttribute('data-note-index', noteIndex);
-                            lineCharElement.setAttribute('transform', \`rotate(\${lineAngle} \${charX} \${charY})\`);
-                            lineCharElement.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold; opacity: 0.8; stroke: #FF0000; stroke-width: 3px;');
-                            lineCharElement.textContent = '━';
-                            svg.appendChild(lineCharElement);
-                        }
-
-                        console.log('Added bent dot and line for note', noteName, 'at', currentDotX, lowerStringY);
-                    }
-                }
+            allNotes.forEach(note => {
+                const stringNum = note.getAttribute('data-string-number');
+                if (stringNum) usedStrings.add(parseInt(stringNum));
             });
+
+            // Draw ALL 17 strings using the EXACT same logic as optimal tuning
+            Object.entries(newStringConfig).forEach(([stringNum, config]) => {
+                const isUsed = usedStrings.has(parseInt(stringNum));
+                const adjustedY = config.y * currentZoomY;
+
+                // String line (black for used, grey for unused)
+                const stringLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                stringLine.setAttribute('x1', '120');
+                stringLine.setAttribute('y1', adjustedY);
+                // Calculate dynamic string line end position
+                const notes = window.songData.notes;
+                const lastNote = notes.reduce((latest, note) => {
+                    const noteEndX = note.x + (note.grace ? 25 : note.duration * 85);
+                    const latestEndX = latest ? (latest.x + (latest.grace ? 25 : latest.duration * 85)) : 0;
+                    return noteEndX > latestEndX ? note : latest;
+                }, null);
+                const wholeNoteDuration = 16;
+                const wholeNoteWidth = wholeNoteDuration * 85;
+                const lastNoteEndX = lastNote ? (lastNote.x + (lastNote.grace ? 25 : lastNote.duration * 85)) : 0;
+                const stringLineEndX = lastNoteEndX + wholeNoteWidth;
+
+                stringLine.setAttribute('x2', stringLineEndX);
+                stringLine.setAttribute('y2', adjustedY);
+                stringLine.setAttribute('stroke-width', '3');
+                stringLine.setAttribute('stroke', isUsed ? '#000000' : '#999999');
+                stringLine.setAttribute('opacity', isUsed ? '1.0' : '0.3');
+                stringLine.setAttribute('class', 'string-line ' + (isUsed ? 'string-line-played' : 'string-line-unplayed'));
+                stringLine.setAttribute('data-string-number', stringNum);
+                stringLine.setAttribute('data-base-y1', config.y);
+                stringLine.setAttribute('data-base-y2', config.y);
+
+                svg.appendChild(stringLine);
+
+                // String label (black for used, grey for unused)
+                const stringLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                stringLabel.setAttribute('x', '20');
+                stringLabel.setAttribute('y', adjustedY + 5);
+                stringLabel.setAttribute('font-size', '12');
+                stringLabel.setAttribute('font-weight', 'bold');
+                stringLabel.setAttribute('fill', isUsed ? '#000000' : '#999999');
+                stringLabel.setAttribute('opacity', isUsed ? '1.0' : '0.3');
+                stringLabel.setAttribute('class', 'string-label ' + (isUsed ? 'string-label-played' : 'string-label-unplayed'));
+                stringLabel.setAttribute('data-string-number', stringNum);
+                stringLabel.setAttribute('data-base-y', config.y);
+                stringLabel.textContent = 'String ' + stringNum + ': ' + config.note;
+
+                svg.appendChild(stringLabel);
+            });
+
+            console.log('✓ Regenerated entire tablature with new tuning:', newTuning.join('-'));
         }
+            console.log('Found SVG element, drawing reference lines...');
 
-        function updateBentIndicators_OLD(newTuning) {
-            const svg = document.getElementById('tablatureSvg');
+            // Match the actual string generation formula
+            const baseY = 110;
+            const pixelsPerCent = 0.3;
+            // Use the existing global currentZoomY variable
 
-            // No need to remove here - already done in redrawStringsWithNewTuning
+            // Calculate actual positions using the SAME formula as generateDanTranhStrings
+            // For octave 3, semitones = (3-3)*12 + pitchOrder[note]
+            const pitchOrder = {
+                'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3,
+                'E': 4, 'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8,
+                'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+            };
 
-            // Check each note and add bent indicators for notes not in the new tuning
-            const allNotes = svg.querySelectorAll('.note-circle');
-            allNotes.forEach(noteCircle => {
-                const noteName = noteCircle.getAttribute('data-note-name');
-                if (noteName) {
-                    const pitchClass = noteName.replace(/[0-9]/g, '');
-                    const isBent = !newTuning.includes(pitchClass);
+            // Calculate Y positions for C3, D3, and E3 using the EXACT formula
+            const C3_semitones = (3 - 3) * 12 + pitchOrder['C']; // = 0
+            const D3_semitones = (3 - 3) * 12 + pitchOrder['D']; // = 2
+            const E3_semitones = (3 - 3) * 12 + pitchOrder['E']; // = 4
 
-                    if (isBent) {
-                        // Add bent indicator using current positions (already zoomed)
-                        const noteIndex = noteCircle.getAttribute('data-note-index');
-                        const cx = parseFloat(noteCircle.getAttribute('cx'));
-                        const cy = parseFloat(noteCircle.getAttribute('cy'));
-                        const isGrace = noteCircle.getAttribute('r') === '6';
-                        const noteRadius = isGrace ? 6 : 12;
+            const C3_Y = baseY + (C3_semitones * 100 * pixelsPerCent); // 110 + 0 = 110
+            const D3_Y = baseY + (D3_semitones * 100 * pixelsPerCent); // 110 + 60 = 170
+            const E3_Y = baseY + (E3_semitones * 100 * pixelsPerCent); // 110 + 120 = 230
 
-                        // Create bent indicator group
-                        const bentIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                        bentIndicator.setAttribute('class', 'bent-note-group');
-                        bentIndicator.setAttribute('data-note-index', noteIndex);
+            // Remove any existing reference lines
+            const existingLines = svg.querySelectorAll('.c3-reference-line, .d3-reference-line, .e3-reference-line, .c3-reference-label, .d3-reference-label, .e3-reference-label');
+            existingLines.forEach(el => el.remove());
 
-                        // Add arrow at note position (adjusted for note radius)
-                        const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        arrow.setAttribute('x', cx - noteRadius);
-                        arrow.setAttribute('y', cy - 5);
-                        arrow.setAttribute('text-anchor', 'middle');
-                        arrow.setAttribute('style', 'font-size: 35px; fill: #FF0000; font-weight: bold; stroke: #FF0000; stroke-width: 1px;');
-                        arrow.setAttribute('class', 'bent-arrow-tail');
-                        arrow.setAttribute('data-note-index', noteIndex);
-                        arrow.textContent = '↘';
-                        bentIndicator.appendChild(arrow);
+            // Draw C3 reference line (purple)
+            const c3Line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            c3Line.setAttribute('x1', 120);
+            c3Line.setAttribute('x2', stringLineEndX);
+            c3Line.setAttribute('y1', C3_Y * currentZoomY);
+            c3Line.setAttribute('y2', C3_Y * currentZoomY);
+            c3Line.setAttribute('stroke', 'purple');
+            c3Line.setAttribute('stroke-width', '4');
+            c3Line.setAttribute('stroke-dasharray', '20,10');
+            c3Line.setAttribute('opacity', '1');
+            c3Line.setAttribute('class', 'c3-reference-line');
+            svg.appendChild(c3Line);
 
-                        // Add BEND text (offset from note)
-                        const bendText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                        const eighthNoteDistance = 50; // Consistent offset
-                        bendText.setAttribute('x', cx - eighthNoteDistance);
-                        bendText.setAttribute('y', cy + 5);
-                        bendText.setAttribute('text-anchor', 'middle');
-                        bendText.setAttribute('style', 'font-size: 16px; fill: #FF0000; font-weight: bold; stroke: #FF0000; stroke-width: 0.5px;');
-                        bendText.setAttribute('class', 'bent-line-char');
-                        bendText.setAttribute('data-note-index', noteIndex);
-                        bendText.textContent = 'BEND';
-                        bentIndicator.appendChild(bendText);
+            // Add C3 label
+            const c3Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            c3Label.setAttribute('x', 130);
+            c3Label.setAttribute('y', (C3_Y - 5) * currentZoomY);
+            c3Label.setAttribute('fill', 'purple');
+            c3Label.setAttribute('font-size', '12');
+            c3Label.setAttribute('font-weight', 'bold');
+            c3Label.setAttribute('class', 'c3-reference-label');
+            c3Label.textContent = 'C3 (Y=' + C3_Y + ')';
+            svg.appendChild(c3Label);
 
-                        svg.appendChild(bentIndicator);
-                    }
-                }
-            });
-        }
+            // Draw D3 reference line (orange)
+            const d3Line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            d3Line.setAttribute('x1', 120);
+            d3Line.setAttribute('x2', stringLineEndX);
+            d3Line.setAttribute('y1', D3_Y * currentZoomY);
+            d3Line.setAttribute('y2', D3_Y * currentZoomY);
+            d3Line.setAttribute('stroke', 'orange');
+            d3Line.setAttribute('stroke-width', '4');
+            d3Line.setAttribute('stroke-dasharray', '20,10');
+            d3Line.setAttribute('opacity', '1');
+            d3Line.setAttribute('class', 'd3-reference-line');
+            svg.appendChild(d3Line);
 
-        function updateBentNotesForTuning(newTuning) {
-            const svg = document.getElementById('tablatureSvg');
-            const allNotes = svg.querySelectorAll('.note-circle');
-            const uniqueBentStrings = new Set();
+            // Add D3 label
+            const d3Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            d3Label.setAttribute('x', 130);
+            d3Label.setAttribute('y', (D3_Y - 5) * currentZoomY);
+            d3Label.setAttribute('fill', 'orange');
+            d3Label.setAttribute('font-size', '14');
+            d3Label.setAttribute('font-weight', 'bold');
+            d3Label.setAttribute('class', 'd3-reference-label');
+            d3Label.textContent = 'D3 (Y=' + D3_Y + ')';
+            svg.appendChild(d3Label);
 
-            // Store note name in data attribute if not already there
-            allNotes.forEach(noteCircle => {
-                const noteText = noteCircle.nextElementSibling;
-                if (noteText && noteText.classList.contains('note-name')) {
-                    const noteName = noteText.textContent.trim();
-                    if (noteName) {
-                        noteCircle.setAttribute('data-note-name', noteName);
-                    }
-                }
-            });
+            // Draw E3 reference line (green)
+            const e3Line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            e3Line.setAttribute('x1', 120);
+            e3Line.setAttribute('x2', stringLineEndX);
+            e3Line.setAttribute('y1', E3_Y * currentZoomY);
+            e3Line.setAttribute('y2', E3_Y * currentZoomY);
+            e3Line.setAttribute('stroke', 'green');
+            e3Line.setAttribute('stroke-width', '4');
+            e3Line.setAttribute('stroke-dasharray', '20,10');
+            e3Line.setAttribute('opacity', '1');
+            e3Line.setAttribute('class', 'e3-reference-line');
+            svg.appendChild(e3Line);
 
-            // Update bent note status based on new tuning
-            allNotes.forEach(noteCircle => {
-                const noteName = noteCircle.getAttribute('data-note-name');
-                if (noteName) {
-                    const pitchClass = noteName.replace(/[0-9]/g, '');
-                    const isBent = !newTuning.includes(pitchClass);
-                    noteCircle.setAttribute('data-is-bent', isBent ? 'true' : 'false');
+            // Add E3 label
+            const e3Label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            e3Label.setAttribute('x', 130);
+            e3Label.setAttribute('y', (E3_Y - 5) * currentZoomY);
+            e3Label.setAttribute('fill', 'green');
+            e3Label.setAttribute('font-size', '12');
+            e3Label.setAttribute('font-weight', 'bold');
+            e3Label.setAttribute('class', 'e3-reference-label');
+            e3Label.textContent = 'E3 (Y=' + E3_Y + ')';
+            svg.appendChild(e3Label);
 
-                    // Track unique bent strings (pitch classes)
-                    if (isBent) {
-                        uniqueBentStrings.add(pitchClass);
-                    }
-                }
-            });
-
-            // Update bent note count in button
-            const bentNotes = svg.querySelectorAll('.note-circle[data-is-bent="true"]');
-            const metric = document.getElementById('bentStringsMetric');
-            const bentCount = bentNotes.length;
-
-            if (metric) {
-                const totalNotes = allNotes.length;
-                const percentage = totalNotes > 0 ? ((bentCount / totalNotes) * 100).toFixed(1) : 0;
-
-                // Update button text to match initial format
-                const spanElement = metric.querySelector('span');
-                if (spanElement) {
-                    if (bentCount > 0) {
-                        spanElement.textContent = \`\${uniqueBentStrings.size} Bent Strings / \${bentCount} Bent Notes (\${percentage}%)\`;
-                    } else {
-                        spanElement.textContent = '0 Bent Strings / 0 Bent Notes (0%)';
-                    }
-                }
-            }
-
-            // If bent notes are currently highlighted, refresh the highlighting
-            if (typeof bentNotesHighlighted !== 'undefined' && bentNotesHighlighted) {
-                bentNotesHighlighted = false;
-                toggleBentNotesHighlight();
-            }
-
-            console.log('Tuning changed to:', newTuning.join('-'), '- Bent notes updated');
-
-            return { bentStrings: uniqueBentStrings.size, bentNotes: bentCount };
+            console.log('Reference lines drawn: C3 at Y=' + C3_Y + ', D3 at Y=' + D3_Y + ', E3 at Y=' + E3_Y);
         }
 
         // Initialize zoom on page load
         window.addEventListener('DOMContentLoaded', function() {
             console.log('DOMContentLoaded - initializing zoom system');
             initializeZoom();
+            console.log('initializeZoom() completed, continuing...');
+
+            // Draw reference lines with a small delay to ensure SVG is ready
+            console.log('About to call drawReferenceLines in 100ms...');
+            setTimeout(() => {
+                console.log('setTimeout executing now...');
+                drawReferenceLines();
+                console.log('Drawing reference lines for C3, D3, E3');
+            }, 100);
 
             // Load saved theme or default to light-grey
             const savedTheme = localStorage.getItem('tablatureTheme') || 'light-grey';
@@ -2540,6 +2497,12 @@ function generateViewer(songData, metadata) {
                 console.log('Setting default zoom to fit width and height');
                 fitWidth();
                 fitHeight();
+
+                // Draw reference lines after zoom is complete
+                setTimeout(() => {
+                    console.log('Now attempting to draw reference lines...');
+                    drawReferenceLines();
+                }, 500);
             }, 100);
         });
     </script>

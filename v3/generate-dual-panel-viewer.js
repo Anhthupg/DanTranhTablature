@@ -354,7 +354,9 @@ class DualPanelGenerator {
         const notes = relationshipData.notes;
 
         // Get original tuning from metadata
-        const originalTuning = ['C', 'D', 'Eb', 'F', 'Bb']; // From Cô nói sao
+        const originalTuning = relationshipData.metadata.tuning ?
+            relationshipData.metadata.tuning.split('-') :
+            ['C', 'D', 'E', 'G', 'A']; // Default pentatonic if not specified
 
         // Generate SVGs for both panels
         const optimalSVG = this.generateTuningSVG(notes, originalTuning, songName, 'optimal');
@@ -679,7 +681,7 @@ class DualPanelGenerator {
             <input type="range" class="zoom-slider" min="10" max="200" value="100"
                    onchange="updateZoom('y', this.value)">
             <button onclick="toggleBentNotes()">Toggle Bent Notes</button>
-            <button onclick="window.location.href='../../../library.html'">← Back to Library</button>
+            <button onclick="window.location.href='../../../'">← Back to Library</button>
         </div>
 
         <!-- Optimal Tuning Panel -->

@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cô nói sao - Dual Panel Tuning Analysis</title>
+    <style>
+        /* DanTranhTuningAnalyzer v3.5.8 Framework with Optimal 0.125px/cent Spacing */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        header h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 1.1em;
+        }
+
+        /* 4-Theme System */
+        body.theme-white {
+            background: #FFFFFF;
+            --panel-bg: #FFFFFF;
+            --panel-border: #E0E0E0;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+        }
+
+        body.theme-light-grey {
+            background: #D0D0D0;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --panel-border: #B0B0B0;
+            --text-primary: #2C3E50;
+            --text-secondary: #5A5A5A;
+        }
+
+        body.theme-dark-grey {
+            background: #2C3E50;
+            --panel-bg: rgba(52, 73, 94, 0.9);
+            --panel-border: #34495E;
+            --text-primary: #ECF0F1;
+            --text-secondary: #BDC3C7;
+        }
+
+        body.theme-black {
+            background: #000000;
+            --panel-bg: rgba(26, 26, 26, 0.9);
+            --panel-border: #333333;
+            --text-primary: #FFFFFF;
+            --text-secondary: #CCCCCC;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--panel-bg, white);
+            border: 1px solid var(--panel-border, #ddd);
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .theme-selector select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary, #2c3e50);
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Dual-Panel Collapsible System */
+        .tuning-analyzer-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tuning-panel {
+            background: var(--panel-bg, white);
+            border: 2px solid var(--panel-border, #e0e0e0);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .panel-header:hover {
+            background: linear-gradient(135deg, #2980b9, #1f5f99);
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .collapse-indicator {
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.3s ease;
+        }
+
+        .panel-header.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0;
+        }
+
+        .panel-content.expanded {
+            max-height: 1200px;
+        }
+
+        .tuning-info {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tuning-display {
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            color: #008080; /* 12-color system teal */
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .bent-notes-count {
+            font-size: 14px;
+            color: #e74c3c; /* 12-color system red */
+            font-weight: 600;
+            background: #fff5f5;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #fecaca;
+        }
+
+        /* Tablature Container Styles */
+        .tablature-container {
+            padding: 20px;
+            overflow-x: auto;
+            background: #fafafa;
+        }
+
+        .optimal-tablature {
+            border-top: 3px solid #27ae60; /* Green for optimal */
+        }
+
+        .comparison-tablature {
+            border-top: 3px solid #e74c3c; /* Red for comparison */
+        }
+
+        /* Tuning Dropdown */
+        .tuning-dropdown {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid var(--panel-border, #e0e0e0);
+        }
+
+        .tuning-dropdown label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            margin-right: 10px;
+        }
+
+        .tuning-dropdown select {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 14px;
+            color: var(--text-primary, #2c3e50);
+            cursor: pointer;
+        }
+
+        /* SVG and Note Styling - v3.5.8 compliance */
+        .note-circle {
+            fill: #666666; /* Neutral grey - identical across all tunings */
+            stroke: #333333;
+            stroke-width: 1;
+            transition: all 0.2s ease;
+        }
+
+        .bent-indicator {
+            fill: #FF0000;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .bent-line {
+            stroke: #FF0000;
+            stroke-width: 1.5;
+            stroke-dasharray: 3,2;
+            fill: none;
+        }
+
+        .string-line {
+            stroke: #000000;
+            stroke-width: 3;
+            opacity: 1;
+        }
+
+        .string-line.unused {
+            stroke: #999999;
+            opacity: 0.3;
+        }
+
+        /* Control styles */
+        .controls {
+            background: var(--panel-bg, white);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .zoom-control label {
+            font-weight: 600;
+            color: var(--text-primary, #2c3e50);
+            min-width: 80px;
+        }
+
+        .zoom-slider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db; /* 12-color system blue */
+            cursor: pointer;
+        }
+
+        .zoom-value {
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--text-primary, #2c3e50);
+            min-width: 50px;
+        }
+
+        button {
+            background: #3498db; /* 12-color system blue */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.toggle-active {
+            background: #e74c3c; /* 12-color system red */
+        }
+
+        button.toggle-active:hover {
+            background: #c0392b;
+        }
+
+        /* Back to Library button */
+        .back-button {
+            background: #27ae60; /* 12-color system green */
+            margin-left: auto;
+        }
+
+        .back-button:hover {
+            background: #219a52;
+        }
+
+        /* Spacing Info Panel */
+        .spacing-info {
+            background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border: 2px solid #008080;
+            text-align: center;
+            font-size: 12px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .zoom-control {
+                justify-content: space-between;
+            }
+        }
+
+    </style>
+</head>
+<body class="theme-white">
+    <div class="container">
+        <!-- Theme Selector -->
+        <div class="theme-selector">
+            <select id="themeSelector" onchange="changeTheme(this.value)">
+                <option value="white">White</option>
+                <option value="light-grey">Light Grey</option>
+                <option value="dark-grey">Dark Grey</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+
+        <!-- Header -->
+        <header>
+            <h1>Cô nói sao</h1>
+            <h2>DanTranhTuningAnalyzer - Dual Panel Comparison</h2>
+        </header>
+
+        <!-- Spacing Information -->
+        <div class="spacing-info">
+            <strong>OPTIMAL SPACING:</strong> 0.125px per cent (C1-B8 coverage) |
+            <strong>17-STRING PATTERN:</strong> Complete downward bending analysis |
+            <strong>GLOBAL POSITIONING:</strong> Identical note placement across all tunings
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="zoom-control">
+                <label>X-Zoom:</label>
+                <input type="range" id="xZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateXZoom(this.value)">
+                <span class="zoom-value" id="xZoomValue">100%</span>
+                <button onclick="fitWidth()">Fit Width</button>
+            </div>
+
+            <div class="zoom-control">
+                <label>Y-Zoom:</label>
+                <input type="range" id="yZoomSlider" class="zoom-slider" min="1" max="500" value="100"
+                       oninput="updateYZoom(this.value)">
+                <span class="zoom-value" id="yZoomValue">100%</span>
+                <button onclick="fitHeight()">Fit Height</button>
+            </div>
+
+            <button id="bentNotesToggle" onclick="toggleBentNotes()">Show Bent Notes</button>
+
+            <button class="back-button" onclick="window.location.href='../../../library.html'">← Back to Library</button>
+        </div>
+
+        <!-- Dual-Panel Tuning Analyzer System -->
+        <div class="tuning-analyzer-container">
+
+            <!-- Top Panel: Optimal Tuning -->
+            <div class="tuning-panel" id="optimalPanel">
+                <div class="panel-header" onclick="togglePanel('optimal')">
+                    <h3>🎵 Optimal Tuning (Song-Specific)</h3>
+                    <span class="collapse-indicator" id="optimalCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="optimalContent">
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="optimalTuning">C-D-Eb-F-Bb</span>
+                        <span class="bent-notes-count" id="optimalBentCount">0 bent notes (0.0%)</span>
+                    </div>
+                    <div class="tablature-container optimal-tablature">
+                        <svg width="1200" height="600" xmlns="http://www.w3.org/2000/svg"
+                             id="optimalTablatureSvg" data-base-width="1200">
+
+                            <!-- 17-String Pattern: C-D-Eb-F-Bb repeating -->
+                            <!-- Optimal 0.125px/cent spacing: C4=0, D4=25, Eb4=37.5, F4=62.5, Bb4=125 -->
+
+                            <!-- String 1: C3 (y=25) -->
+                            <line x1="50" y1="25" x2="1150" y2="25" class="string-line unused"/>
+                            <text x="20" y="30" font-size="8" fill="#999">C3</text>
+
+                            <!-- String 2: D3 (y=50) -->
+                            <line x1="50" y1="50" x2="1150" y2="50" class="string-line unused"/>
+                            <text x="20" y="55" font-size="8" fill="#999">D3</text>
+
+                            <!-- String 3: Eb3 (y=62.5) -->
+                            <line x1="50" y1="62.5" x2="1150" y2="62.5" class="string-line unused"/>
+                            <text x="15" y="67" font-size="8" fill="#999">Eb3</text>
+
+                            <!-- String 4: F3 (y=87.5) -->
+                            <line x1="50" y1="87.5" x2="1150" y2="87.5" class="string-line unused"/>
+                            <text x="20" y="92" font-size="8" fill="#999">F3</text>
+
+                            <!-- String 5: Bb3 (y=150) -->
+                            <line x1="50" y1="150" x2="1150" y2="150" class="string-line unused"/>
+                            <text x="15" y="155" font-size="8" fill="#999">Bb3</text>
+
+                            <!-- String 6: C4 (y=175) -->
+                            <line x1="50" y1="175" x2="1150" y2="175" class="string-line"/>
+                            <text x="20" y="180" font-size="8" fill="#000">C4</text>
+
+                            <!-- String 7: D4 (y=200) -->
+                            <line x1="50" y1="200" x2="1150" y2="200" class="string-line"/>
+                            <text x="20" y="205" font-size="8" fill="#000">D4</text>
+
+                            <!-- String 8: Eb4 (y=212.5) -->
+                            <line x1="50" y1="212.5" x2="1150" y2="212.5" class="string-line"/>
+                            <text x="15" y="217" font-size="8" fill="#000">Eb4</text>
+
+                            <!-- String 9: F4 (y=237.5) - USED HEAVILY -->
+                            <line x1="50" y1="237.5" x2="1150" y2="237.5" class="string-line"/>
+                            <text x="20" y="242" font-size="8" fill="#000">F4</text>
+
+                            <!-- String 10: Bb4 (y=300) -->
+                            <line x1="50" y1="300" x2="1150" y2="300" class="string-line"/>
+                            <text x="15" y="305" font-size="8" fill="#000">Bb4</text>
+
+                            <!-- String 11: C5 (y=325) - USED HEAVILY -->
+                            <line x1="50" y1="325" x2="1150" y2="325" class="string-line"/>
+                            <text x="20" y="330" font-size="8" fill="#000">C5</text>
+
+                            <!-- String 12: D5 (y=350) -->
+                            <line x1="50" y1="350" x2="1150" y2="350" class="string-line unused"/>
+                            <text x="20" y="355" font-size="8" fill="#999">D5</text>
+
+                            <!-- String 13: Eb5 (y=362.5) -->
+                            <line x1="50" y1="362.5" x2="1150" y2="362.5" class="string-line unused"/>
+                            <text x="15" y="367" font-size="8" fill="#999">Eb5</text>
+
+                            <!-- String 14: F5 (y=387.5) -->
+                            <line x1="50" y1="387.5" x2="1150" y2="387.5" class="string-line unused"/>
+                            <text x="20" y="392" font-size="8" fill="#999">F5</text>
+
+                            <!-- String 15: Bb5 (y=450) -->
+                            <line x1="50" y1="450" x2="1150" y2="450" class="string-line unused"/>
+                            <text x="15" y="455" font-size="8" fill="#999">Bb5</text>
+
+                            <!-- String 16: C6 (y=475) -->
+                            <line x1="50" y1="475" x2="1150" y2="475" class="string-line unused"/>
+                            <text x="20" y="480" font-size="8" fill="#999">C6</text>
+
+                            <!-- String 17: D6 (y=500) -->
+                            <line x1="50" y1="500" x2="1150" y2="500" class="string-line unused"/>
+                            <text x="20" y="505" font-size="8" fill="#999">D6</text>
+
+                            <!-- Sample notes for "Cô nói sao" - optimal tuning (all on open strings) -->
+                            <circle cx="100" cy="237.5" r="6" class="note-circle"/>
+                            <text x="100" y="227" text-anchor="middle" font-size="8" fill="#333">1</text>
+
+                            <circle cx="150" cy="325" r="6" class="note-circle"/>
+                            <text x="150" y="315" text-anchor="middle" font-size="8" fill="#333">2</text>
+
+                            <circle cx="200" cy="237.5" r="6" class="note-circle"/>
+                            <text x="200" y="227" text-anchor="middle" font-size="8" fill="#333">3</text>
+
+                            <circle cx="250" cy="325" r="6" class="note-circle"/>
+                            <text x="250" y="315" text-anchor="middle" font-size="8" fill="#333">4</text>
+
+                            <circle cx="300" cy="300" r="6" class="note-circle"/>
+                            <text x="300" y="290" text-anchor="middle" font-size="8" fill="#333">5</text>
+
+                            <circle cx="350" cy="237.5" r="6" class="note-circle"/>
+                            <text x="350" y="227" text-anchor="middle" font-size="8" fill="#333">6</text>
+
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panel: Comparison Tuning -->
+            <div class="tuning-panel" id="comparisonPanel">
+                <div class="panel-header" onclick="togglePanel('comparison')">
+                    <h3>🔍 Comparison Tuning Analysis</h3>
+                    <span class="collapse-indicator" id="comparisonCollapse">▼</span>
+                </div>
+                <div class="panel-content expanded" id="comparisonContent">
+                    <div class="tuning-dropdown">
+                        <label for="comparisonTuningSelect">Select Tuning:</label>
+                        <select id="comparisonTuningSelect" onchange="updateComparisonTuning(this.value)">
+                            <option value="traditional">Traditional (C-D-E-G-A)</option>
+                            <option value="natural">Natural Major (C-D-E-F-G)</option>
+                            <option value="pentatonic">Pentatonic (A-C-D-E-G)</option>
+                            <option value="exotic1">Exotic 1 (Eb-G-Ab-Bb-Cb)</option>
+                            <option value="exotic2">Exotic 2 (C#-D#-F#-G-G#)</option>
+                        </select>
+                    </div>
+                    <div class="tuning-info">
+                        <span class="tuning-display" id="comparisonTuning">C-D-E-G-A</span>
+                        <span class="bent-notes-count" id="comparisonBentCount">Calculating...</span>
+                    </div>
+                    <div class="tablature-container comparison-tablature">
+                        <svg width="1200" height="600" xmlns="http://www.w3.org/2000/svg"
+                             id="comparisonTablatureSvg" data-base-width="1200">
+
+                            <!-- This will be populated by JavaScript based on selected tuning -->
+                            <text x="600" y="300" text-anchor="middle" font-size="16" fill="#666">
+                                Select a comparison tuning to analyze...
+                            </text>
+
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DanTranhTuningAnalyzer v3.5.8 Framework with Optimal 0.125px/cent Spacing
+
+        // Optimal spacing: 0.125px per cent (C1-B8 coverage)
+        const PIXELS_PER_CENT = 0.125;
+        const BASE_Y_POSITION = 25; // Starting position for C3
+
+        // Song data for "Cô nói sao"
+        const songData = {
+            name: "Cô nói sao",
+            optimalTuning: ["C", "D", "Eb", "F", "Bb"],
+            notes: [
+                { pitch: "F4", timing: 100, duration: 1.0, cents: 500 },
+                { pitch: "C5", timing: 150, duration: 1.0, cents: 1200 },
+                { pitch: "F4", timing: 200, duration: 1.0, cents: 500 },
+                { pitch: "C5", timing: 250, duration: 1.0, cents: 1200 },
+                { pitch: "Bb4", timing: 300, duration: 1.0, cents: 1000 },
+                { pitch: "F4", timing: 350, duration: 1.0, cents: 500 }
+            ],
+            totalNotes: 89,
+            bentNotesOptimal: 0
+        };
+
+        // Comparison tuning definitions
+        const comparisonTunings = {
+            traditional: {
+                notes: ["C", "D", "E", "G", "A"],
+                name: "Traditional"
+            },
+            natural: {
+                notes: ["C", "D", "E", "F", "G"],
+                name: "Natural Major"
+            },
+            pentatonic: {
+                notes: ["A", "C", "D", "E", "G"],
+                name: "Pentatonic"
+            },
+            exotic1: {
+                notes: ["Eb", "G", "Ab", "Bb", "Cb"],
+                name: "Exotic 1"
+            },
+            exotic2: {
+                notes: ["C#", "D#", "F#", "G", "G#"],
+                name: "Exotic 2"
+            }
+        };
+
+        // Note-to-cents mapping
+        const noteTocents = {
+            'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300,
+            'E': 400, 'F': 500, 'F#': 600, 'Gb': 600, 'G': 700, 'G#': 800,
+            'Ab': 800, 'A': 900, 'A#': 1000, 'Bb': 1000, 'B': 1100, 'Cb': 1100
+        };
+
+        // Theme management
+        function changeTheme(theme) {
+            document.body.className = `theme-${theme}`;
+            localStorage.setItem('danTranh_theme', theme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('danTranh_theme') || 'white';
+        document.body.className = `theme-${savedTheme}`;
+        document.getElementById('themeSelector').value = savedTheme;
+
+        // Panel collapse/expand functionality
+        function togglePanel(panelType) {
+            const content = document.getElementById(`${panelType}Content`);
+            const indicator = document.getElementById(`${panelType}Collapse`);
+            const header = document.querySelector(`#${panelType}Panel .panel-header`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                indicator.textContent = '▼';
+                header.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                indicator.textContent = '▶';
+                header.classList.add('collapsed');
+            }
+        }
+
+        // Zoom functionality
+        let currentXZoom = 1.0;
+        let currentYZoom = 1.0;
+
+        function updateXZoom(value) {
+            currentXZoom = value / 100;
+            document.getElementById('xZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function updateYZoom(value) {
+            currentYZoom = value / 100;
+            document.getElementById('yZoomValue').textContent = value + '%';
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const svgs = ['optimalTablatureSvg', 'comparisonTablatureSvg'];
+
+            svgs.forEach(svgId => {
+                const svg = document.getElementById(svgId);
+                if (!svg) return;
+
+                svg.style.transform = `scaleX(${currentXZoom}) scaleY(${currentYZoom})`;
+                svg.style.transformOrigin = '0 0';
+
+                const container = svg.closest('.tablature-container');
+                if (container && currentXZoom > 1) {
+                    container.style.overflowX = 'auto';
+                }
+            });
+        }
+
+        function fitWidth() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerWidth = container.clientWidth - 40;
+            const svgWidth = parseInt(svg.getAttribute('data-base-width'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerWidth / svgWidth));
+
+            document.getElementById('xZoomSlider').value = Math.round(fitZoom * 100);
+            updateXZoom(Math.round(fitZoom * 100));
+        }
+
+        function fitHeight() {
+            const container = document.querySelector('.tablature-container');
+            const svg = document.getElementById('optimalTablatureSvg');
+            if (!container || !svg) return;
+
+            const containerHeight = window.innerHeight * 0.4;
+            const svgHeight = parseInt(svg.getAttribute('height'));
+            const fitZoom = Math.max(0.1, Math.min(5.0, containerHeight / svgHeight));
+
+            document.getElementById('yZoomSlider').value = Math.round(fitZoom * 100);
+            updateYZoom(Math.round(fitZoom * 100));
+        }
+
+        // Bent notes toggle
+        let bentNotesVisible = false;
+
+        function toggleBentNotes() {
+            bentNotesVisible = !bentNotesVisible;
+            const button = document.getElementById('bentNotesToggle');
+
+            if (bentNotesVisible) {
+                button.textContent = 'Hide Bent Notes';
+                button.classList.add('toggle-active');
+                showBentNotes();
+            } else {
+                button.textContent = 'Show Bent Notes';
+                button.classList.remove('toggle-active');
+                hideBentNotes();
+            }
+        }
+
+        function showBentNotes() {
+            document.querySelectorAll('.bent-indicator, .bent-line').forEach(element => {
+                element.style.opacity = '1';
+            });
+        }
+
+        function hideBentNotes() {
+            document.querySelectorAll('.bent-indicator, .bent-line').forEach(element => {
+                element.style.opacity = '0';
+            });
+        }
+
+        // Generate 17-string pattern for any tuning with optimal spacing
+        function generate17StringPattern(tuningPattern) {
+            const strings = [];
+            let stringNumber = 1;
+            let octave = 3;
+            let patternIndex = 0;
+
+            while (stringNumber <= 17) {
+                const note = tuningPattern[patternIndex % tuningPattern.length];
+                const fullNote = note + octave;
+                const baseCents = noteTocents[note] || 0;
+                const totalCents = baseCents + (octave - 4) * 1200;
+
+                // Optimal spacing: 0.125px per cent
+                const yPosition = BASE_Y_POSITION + (totalCents * PIXELS_PER_CENT);
+
+                strings.push({
+                    number: stringNumber,
+                    note: fullNote,
+                    y: yPosition,
+                    cents: totalCents
+                });
+
+                stringNumber++;
+                patternIndex++;
+                if (patternIndex % tuningPattern.length === 0) octave++;
+            }
+            return strings;
+        }
+
+        // Systematic bent note analysis
+        function analyzeBentNotes(notes, tuningPattern) {
+            let bentCount = 0;
+
+            notes.forEach((note, index) => {
+                const pitchClass = note.pitch.replace(/[0-9]/g, '');
+                const isInTuning = tuningPattern.includes(pitchClass);
+
+                if (!isInTuning) {
+                    bentCount++;
+                    console.log(`Note ${index + 1}: ${note.pitch} requires bending - not in tuning ${tuningPattern.join('-')}`);
+                }
+            });
+
+            return {
+                bentNotes: bentCount,
+                totalNotes: notes.length,
+                bentPercentage: ((bentCount / notes.length) * 100).toFixed(1)
+            };
+        }
+
+        // Generate comparison tablature
+        function generateComparisonTablature(tuningKey) {
+            const tuningData = comparisonTunings[tuningKey];
+            const strings = generate17StringPattern(tuningData.notes);
+            const bentAnalysis = analyzeBentNotes(songData.notes, tuningData.notes);
+
+            // Update bent count display
+            document.getElementById('comparisonBentCount').textContent =
+                `${bentAnalysis.bentNotes} bent notes (${bentAnalysis.bentPercentage}%)`;
+
+            const svg = document.getElementById('comparisonTablatureSvg');
+
+            // Clear existing content
+            svg.innerHTML = '';
+
+            // Draw string lines
+            strings.forEach((string, index) => {
+                const isUsed = songData.notes.some(note => {
+                    const notePitchClass = note.pitch.replace(/[0-9]/g, '');
+                    const stringPitchClass = string.note.replace(/[0-9]/g, '');
+                    return notePitchClass === stringPitchClass;
+                });
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', '50');
+                line.setAttribute('y1', string.y);
+                line.setAttribute('x2', '1150');
+                line.setAttribute('y2', string.y);
+                line.setAttribute('class', isUsed ? 'string-line' : 'string-line unused');
+                svg.appendChild(line);
+
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', '20');
+                label.setAttribute('y', string.y + 5);
+                label.setAttribute('font-size', '8');
+                label.setAttribute('fill', isUsed ? '#000' : '#999');
+                label.textContent = string.note;
+                svg.appendChild(label);
+            });
+
+            // Draw notes with bending analysis
+            songData.notes.forEach((note, index) => {
+                const noteX = 100 + (index * 50);
+                const notePitchClass = note.pitch.replace(/[0-9]/g, '');
+                const noteOctave = parseInt(note.pitch.replace(/[^0-9]/g, '')) || 4;
+                const noteCents = noteTocents[notePitchClass] + (noteOctave - 4) * 1200;
+                const noteY = BASE_Y_POSITION + (noteCents * PIXELS_PER_CENT);
+
+                // Check if note is in tuning
+                const isInTuning = tuningData.notes.includes(notePitchClass);
+
+                if (isInTuning) {
+                    // Draw normal note
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', noteX);
+                    circle.setAttribute('cy', noteY);
+                    circle.setAttribute('r', '6');
+                    circle.setAttribute('class', 'note-circle');
+                    svg.appendChild(circle);
+                } else {
+                    // Find nearest string for bending (downward only)
+                    const availableStrings = strings.filter(s => s.y <= noteY);
+                    if (availableStrings.length > 0) {
+                        const nearestString = availableStrings.reduce((nearest, current) => {
+                            const nearestDiff = Math.abs(nearest.cents - noteCents);
+                            const currentDiff = Math.abs(current.cents - noteCents);
+                            return currentDiff < nearestDiff ? current : nearest;
+                        });
+
+                        // Draw bent note
+                        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        circle.setAttribute('cx', noteX);
+                        circle.setAttribute('cy', noteY);
+                        circle.setAttribute('r', '6');
+                        circle.setAttribute('class', 'note-circle');
+                        svg.appendChild(circle);
+
+                        // Draw bent indicator
+                        const bentDot = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        bentDot.setAttribute('x', noteX - 15);
+                        bentDot.setAttribute('y', nearestString.y);
+                        bentDot.setAttribute('class', 'bent-indicator');
+                        bentDot.textContent = '●';
+                        svg.appendChild(bentDot);
+
+                        // Draw bent line
+                        const bentLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        bentLine.setAttribute('x1', noteX - 15);
+                        bentLine.setAttribute('y1', nearestString.y);
+                        bentLine.setAttribute('x2', noteX);
+                        bentLine.setAttribute('y2', noteY);
+                        bentLine.setAttribute('class', 'bent-line');
+                        svg.appendChild(bentLine);
+                    }
+                }
+
+                // Add note number
+                const noteNum = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                noteNum.setAttribute('x', noteX);
+                noteNum.setAttribute('y', noteY - 10);
+                noteNum.setAttribute('text-anchor', 'middle');
+                noteNum.setAttribute('font-size', '8');
+                noteNum.setAttribute('fill', '#333');
+                noteNum.textContent = index + 1;
+                svg.appendChild(noteNum);
+            });
+
+            console.log(`Generated comparison tablature for ${tuningData.name}: ${bentAnalysis.bentNotes} bent notes`);
+        }
+
+        // Tuning comparison functionality
+        function updateComparisonTuning(tuningKey) {
+            const tuningData = comparisonTunings[tuningKey];
+            if (!tuningData) return;
+
+            // Update tuning display
+            document.getElementById('comparisonTuning').textContent = tuningData.notes.join('-');
+
+            // Generate new SVG for comparison tuning
+            generateComparisonTablature(tuningKey);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial zoom
+            applyZoom();
+
+            // Hide bent notes initially
+            hideBentNotes();
+
+            // Initialize comparison tuning
+            updateComparisonTuning('traditional');
+
+            console.log('DanTranhTuningAnalyzer v3.5.8 Framework initialized with optimal 0.125px/cent spacing');
+            console.log(`Analyzing: ${songData.name}`);
+            console.log(`Optimal tuning: ${songData.optimalTuning.join('-')} (${songData.bentNotesOptimal} bent notes)`);
+        });
+    </script>
+</body>
+</html>

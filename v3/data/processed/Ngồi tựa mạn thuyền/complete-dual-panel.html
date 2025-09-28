@@ -1,0 +1,2081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ngồi tựa mạn thuyền - Complete Dual Panel Visualization</title>
+    <style>
+        /* DanTranhTuningAnalyzer v3.5.8 with Optimal Spacing */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        h2 {
+            color: #7f8c8d;
+            font-weight: normal;
+            font-size: 18px;
+        }
+
+        /* 4-Theme System */
+        body.theme-white {
+            background: #FFFFFF;
+            --panel-bg: #FFFFFF;
+            --text-primary: #2C3E50;
+        }
+
+        body.theme-light-grey {
+            background: #D0D0D0;
+            --panel-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #2C3E50;
+        }
+
+        body.theme-dark-grey {
+            background: #2C3E50;
+            --panel-bg: rgba(52, 73, 94, 0.9);
+            --text-primary: #ECF0F1;
+        }
+
+        body.theme-black {
+            background: #000000;
+            --panel-bg: rgba(26, 26, 26, 0.9);
+            --text-primary: #FFFFFF;
+        }
+
+        /* Theme Selector */
+        .theme-selector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: var(--panel-bg, white);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        /* Metrics Bar */
+        .metrics-bar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-around;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .metric-item {
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* Dual Panels */
+        .tuning-panel {
+            background: var(--panel-bg, white);
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header.optimal {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+        }
+
+        .panel-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .collapse-indicator {
+            font-size: 18px;
+            transition: transform 0.3s;
+        }
+
+        .panel-header.collapsed .collapse-indicator {
+            transform: rotate(-90deg);
+        }
+
+        .panel-content {
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .panel-content.collapsed {
+            max-height: 0;
+        }
+
+        .panel-content.expanded {
+            max-height: 1200px;
+        }
+
+        .tuning-info {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .tuning-display {
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            color: #008080;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .bent-notes-count {
+            font-size: 14px;
+            color: #e74c3c;
+            font-weight: 600;
+        }
+
+        .tablature-container {
+            padding: 20px;
+            overflow-x: auto;
+            background: #fafafa;
+        }
+
+        /* Controls */
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .zoom-slider {
+            width: 150px;
+        }
+
+        /* Relationship Indicators */
+        .relationship-legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 30px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="theme-white">
+    <div class="container">
+        <!-- Theme Selector -->
+        <div class="theme-selector">
+            <select onchange="document.body.className = 'theme-' + this.value">
+                <option value="white">White</option>
+                <option value="light-grey">Light Grey</option>
+                <option value="dark-grey">Dark Grey</option>
+                <option value="black">Black</option>
+            </select>
+        </div>
+
+        <!-- Header -->
+        <header>
+            <h1>Ngồi tựa mạn thuyền</h1>
+            <h2>Complete Musical Relationships Visualization</h2>
+        </header>
+
+        <!-- Metrics Bar -->
+        <div class="metrics-bar">
+            <div class="metric-item">
+                <div class="metric-value">142</div>
+                <div class="metric-label">Total Notes</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">126</div>
+                <div class="metric-label">Main Notes</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">16</div>
+                <div class="metric-label">Grace Notes</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">12</div>
+                <div class="metric-label">Grace Relations</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">15</div>
+                <div class="metric-label">Melisma Groups</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-value">12</div>
+                <div class="metric-label">Lyric Phrases</div>
+            </div>
+        </div>
+
+        <!-- Relationship Legend -->
+        <div class="relationship-legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #FFD700"></div>
+                <span>Grace Notes</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #E74C3C"></div>
+                <span>Melisma</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #FF0000"></div>
+                <span>Bent Notes</span>
+            </div>
+            <div class="legend-item">
+                <span>●</span>
+                <span>Bent from String</span>
+            </div>
+            <div class="legend-item">
+                <span>♪</span>
+                <span>Has Grace Notes</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <label>X-Zoom:</label>
+            <input type="range" class="zoom-slider" min="10" max="200" value="100"
+                   onchange="updateZoom('x', this.value)">
+            <label>Y-Zoom:</label>
+            <input type="range" class="zoom-slider" min="10" max="200" value="100"
+                   onchange="updateZoom('y', this.value)">
+            <button onclick="toggleBentNotes()">Toggle Bent Notes</button>
+            <button onclick="window.location.href='../../../library.html'">← Back to Library</button>
+        </div>
+
+        <!-- Optimal Tuning Panel -->
+        <div class="tuning-panel">
+            <div class="panel-header optimal" onclick="togglePanel('optimal')">
+                <h3>🎵 Optimal Tuning: C-D-Eb-F-Bb</h3>
+                <span class="collapse-indicator">▼</span>
+            </div>
+            <div class="panel-content expanded" id="optimalContent">
+                <div class="tuning-info">
+                    <span class="tuning-display">C-D-Eb-F-Bb</span>
+                    <span class="bent-notes-count">56 bent notes</span>
+                </div>
+                <div class="tablature-container">
+                    <svg width="61060" height="600" id="optimalSVG">
+                        <line x1="50" y1="100" x2="61010" y2="100"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="104" font-size="10" fill="#000000">C3</text>
+<line x1="50" y1="125" x2="61010" y2="125"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="129" font-size="10" fill="#000000">D3</text>
+<line x1="50" y1="137.5" x2="61010" y2="137.5"
+                     stroke="#999999" stroke-width="2" opacity="0.3"/><text x="20" y="141.5" font-size="10" fill="#999999">Eb3</text>
+<line x1="50" y1="162.5" x2="61010" y2="162.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="166.5" font-size="10" fill="#000000">F3</text>
+<line x1="50" y1="225" x2="61010" y2="225"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="229" font-size="10" fill="#000000">Bb3</text>
+<line x1="50" y1="250" x2="61010" y2="250"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="254" font-size="10" fill="#000000">C4</text>
+<line x1="50" y1="275" x2="61010" y2="275"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="279" font-size="10" fill="#000000">D4</text>
+<line x1="50" y1="287.5" x2="61010" y2="287.5"
+                     stroke="#999999" stroke-width="2" opacity="0.3"/><text x="20" y="291.5" font-size="10" fill="#999999">Eb4</text>
+<line x1="50" y1="312.5" x2="61010" y2="312.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="316.5" font-size="10" fill="#000000">F4</text>
+<line x1="50" y1="375" x2="61010" y2="375"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="379" font-size="10" fill="#000000">Bb4</text>
+<line x1="50" y1="400" x2="61010" y2="400"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="404" font-size="10" fill="#000000">C5</text>
+<line x1="50" y1="425" x2="61010" y2="425"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="429" font-size="10" fill="#000000">D5</text>
+<line x1="50" y1="437.5" x2="61010" y2="437.5"
+                     stroke="#999999" stroke-width="2" opacity="0.3"/><text x="20" y="441.5" font-size="10" fill="#999999">Eb5</text>
+<line x1="50" y1="462.5" x2="61010" y2="462.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="466.5" font-size="10" fill="#000000">F5</text>
+<line x1="50" y1="525" x2="61010" y2="525"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="529" font-size="10" fill="#000000">Bb5</text>
+<line x1="50" y1="550" x2="61010" y2="550"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="554" font-size="10" fill="#000000">C6</text>
+<line x1="50" y1="575" x2="61010" y2="575"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="579" font-size="10" fill="#000000">D6</text>
+<text x="85" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="90" y1="312.5" x2="100" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="100" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="100" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="100" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">1</text><text x="100" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">Ngồi</text><circle cx="597.5" cy="312.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="rằng" class="lyrics-rằng"/><text x="597.5" y="314.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">F4</text><text x="597.5" y="302.5" text-anchor="middle" font-size="6"
+                        fill="#666">2</text>
+<text x="595" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="600" y1="312.5" x2="610" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="610" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="610" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="610" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">3</text><text x="610" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">rằng</text><line x1="620" y1="362.5" x2="660" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="595" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><text x="1105" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="1110" y1="312.5" x2="1120" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="1120" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1120" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="1120" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">4</text><text x="1360" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="1365" y1="312.5" x2="1375" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="1375" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1375" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="1375" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">5</text><circle cx="1617.5" cy="375" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ngồi" class="lyrics-ngồi"/><text x="1617.5" y="377" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">Bb4</text><text x="1617.5" y="365" text-anchor="middle" font-size="6"
+                        fill="#666">6</text>
+<circle cx="1630" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1630" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="1630" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">7</text><text x="1630" y="450" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">ngồi</text><line x1="1640" y1="450" x2="1680" y2="450"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="1615" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="2140" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2140" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="2140" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">8</text><circle cx="2395" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2395" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="2395" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">9</text><text x="2635" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="2640" y1="312.5" x2="2650" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="2650" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2650" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="2650" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">10</text><text x="2650" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">tựa</text><circle cx="3147.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="i" class="lyrics-i"/><text x="3147.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="3147.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">11</text>
+<circle cx="3160" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="3160" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="3160" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">12</text><text x="3160" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="3145" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="3670" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="3670" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="3670" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">13</text><text x="3670" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="4677.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4677.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="4677.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">14</text>
+<circle cx="4665" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4665" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="4665" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">15</text>
+<circle cx="4652.5" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4652.5" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="4652.5" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">16</text>
+<circle cx="4690" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="4690" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="4690" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">17</text><text x="4690" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><text x="4675" y="400" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="5710" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="5710" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="5710" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">18</text><text x="5710" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">có</text><circle cx="6220" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6220" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="6220" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">19</text><text x="6220" y="450" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mấy</text><line x1="6230" y1="450" x2="6270" y2="450"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="6475" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6475" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="6475" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">20</text><circle cx="6730" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6730" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="6730" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">21</text><text x="6730" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">mạn</text><text x="7480" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="7485" y1="312.5" x2="7495" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="7495" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="7495" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="7495" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">22</text><circle cx="7750" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="7750" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="7750" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">23</text><circle cx="8247.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ối" class="lyrics-ối"/><text x="8247.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="8247.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">24</text>
+<circle cx="8260" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="8260" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="8260" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">25</text><text x="8260" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ối</text><text x="8245" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="8757.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ha" class="lyrics-ha"/><text x="8757.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="8757.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">26</text>
+<circle cx="8770" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="8770" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="8770" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">27</text><text x="8770" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ha</text><text x="8755" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="9790" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="9790" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="9790" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">28</text><circle cx="9960" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="9960" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="9960" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">29</text><text x="9960" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">ha</text><circle cx="10130" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10130" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="10130" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">30</text><text x="10285" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="10290" y1="312.5" x2="10300" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="10300" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10300" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="10300" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">31</text><text x="10795" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="10800" y1="312.5" x2="10810" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="10810" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10810" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="10810" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">32</text><text x="10810" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">thuyền</text><text x="11815" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="11820" y1="312.5" x2="11830" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="11830" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="11830" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="11830" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">33</text><text x="11830" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><text x="12325" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="12330" y1="312.5" x2="12340" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="12340" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="12340" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="12340" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">34</text><text x="12340" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ngồi</text><circle cx="12837.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="tựa" class="lyrics-tựa"/><text x="12837.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="12837.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">35</text>
+<circle cx="12850" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="12850" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="12850" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">36</text><text x="12850" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">tựa</text><text x="12835" y="375" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="13360" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13360" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="13360" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">37</text><text x="13360" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">có</text><circle cx="13615" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13615" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="13615" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">38</text><circle cx="13870" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13870" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="13870" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">39</text><circle cx="14040" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14040" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="14040" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">40</text><text x="14040" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mạn</text><line x1="14050" y1="425" x2="14090" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="14210" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14210" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="14210" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">41</text><text x="14365" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="14370" y1="312.5" x2="14380" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="14380" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14380" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="14380" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">42</text><text x="14875" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="14880" y1="312.5" x2="14890" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="14890" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14890" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="14890" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">43</text><text x="14890" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">thuyền</text><text x="16915" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="16920" y1="312.5" x2="16930" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="16930" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="16930" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="16930" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">44</text><text x="17425" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="17430" y1="312.5" x2="17440" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="17440" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17440" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17440" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">45</text><text x="17807.5" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="17812.5" y1="312.5" x2="17822.5" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="17822.5" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17822.5" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17822.5" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">46</text><text x="17822.5" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="17935" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="17940" y1="312.5" x2="17950" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="17950" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17950" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17950" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">47</text><text x="17950" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><text x="18955" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="18960" y1="312.5" x2="18970" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="18970" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="18970" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="18970" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">48</text><text x="18970" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><text x="19720" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="19725" y1="312.5" x2="19735" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="19735" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="19735" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="19735" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">49</text><text x="19735" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i.</text><circle cx="19977.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="Trăng" class="lyrics-Trăng"/><text x="19977.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="19977.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">50</text>
+<circle cx="19990" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="19990" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="19990" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">51</text><text x="19990" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">Trăng</text><text x="19975" y="375" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="20500" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20500" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="20500" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">52</text><circle cx="20670" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20670" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="20670" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">53</text><circle cx="20840" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20840" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="20840" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">54</text><circle cx="21010" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21010" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="21010" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">55</text><text x="21010" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">in</text><circle cx="21520" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21520" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="21520" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">56</text><text x="21520" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">ơ</text><circle cx="21902.5" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21902.5" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="21902.5" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">57</text><circle cx="22030" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22030" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="22030" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">58</text><text x="22030" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">hơ</text><line x1="22040" y1="425" x2="22080" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="22285" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22285" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="22285" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">59</text><text x="22525" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="22530" y1="312.5" x2="22540" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="22540" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22540" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="22540" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">60</text><text x="22540" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="23050" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="23050" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="23050" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">61</text><text x="23050" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><text x="24055" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="24060" y1="312.5" x2="24070" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="24070" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24070" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="24070" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">62</text><text x="24070" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">mặt</text><circle cx="24325" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24325" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="24325" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">63</text><circle cx="24580" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24580" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="24580" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">64</text><circle cx="24835" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24835" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="24835" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">65</text><circle cx="25090" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25090" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="25090" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">66</text><text x="25090" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">nước</text><circle cx="25600" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25600" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="25600" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">67</text><text x="25600" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="25982.5" cy="462.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25982.5" y="465.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F5</text><text x="25982.5" y="450.5" text-anchor="middle" font-size="8"
+                        fill="#333">68</text><text x="25982.5" y="487.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="26110" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="26110" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="26110" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">69</text><text x="26110" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="26875" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="26875" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="26875" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">70</text><circle cx="27117.5" cy="312.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="cũng" class="lyrics-cũng"/><text x="27117.5" y="314.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">F4</text><text x="27117.5" y="302.5" text-anchor="middle" font-size="6"
+                        fill="#666">71</text>
+<text x="27115" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="27120" y1="312.5" x2="27130" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="27130" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27130" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="27130" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">72</text><text x="27130" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">cũng</text><text x="27115" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="27640" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27640" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="27640" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">73</text><text x="27640" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">có</text><line x1="27650" y1="425" x2="27690" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="27895" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27895" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="27895" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">74</text><text x="28135" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="28140" y1="312.5" x2="28150" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="28150" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28150" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="28150" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">75</text><text x="28150" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">a</text><circle cx="28405" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28405" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="28405" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">76</text><text x="28645" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="28650" y1="312.5" x2="28660" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="28660" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28660" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="28660" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">77</text><text x="28660" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">càng</text><circle cx="29170" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="29170" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="29170" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">78</text><text x="29170" y="300" text-anchor="middle" font-size="10"
+                            fill="#333">nhìn</text><circle cx="30190" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30190" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="30190" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">79</text><text x="30190" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><text x="30685" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="30690" y1="312.5" x2="30700" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="30700" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30700" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="30700" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">80</text><text x="30700" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">càng</text><line x1="30710" y1="362.5" x2="30750" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="30955" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30955" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="30955" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">81</text><circle cx="31210" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31210" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="31210" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">82</text><text x="31210" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">nhìn</text><text x="31705" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="31710" y1="312.5" x2="31720" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="31720" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31720" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="31720" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">83</text><text x="31720" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">non</text><line x1="31730" y1="362.5" x2="31770" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="31975" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31975" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="31975" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">84</text><circle cx="32230" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32230" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="32230" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">85</text><text x="32230" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">nước</text><line x1="32240" y1="425" x2="32280" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="32485" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32485" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="32485" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">86</text><circle cx="32740" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32740" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="32740" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">87</text><text x="32740" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">càng</text><text x="33235" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="33240" y1="312.5" x2="33250" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="33250" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="33250" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="33250" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">88</text><text x="33250" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">xinh</text><text x="33745" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="33750" y1="312.5" x2="33760" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="33760" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="33760" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="33760" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">89</text><text x="33760" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><text x="34127.5" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="34132.5" y1="312.5" x2="34142.5" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="34142.5" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="34142.5" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="34142.5" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">90</text><text x="34142.5" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><text x="34255" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="34260" y1="312.5" x2="34270" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="34270" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="34270" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="34270" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">91</text><text x="34270" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><circle cx="35035" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="35035" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="35035" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">92</text><text x="35035" y="300" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><circle cx="35277.5" cy="275" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hư" class="lyrics-hư"/><text x="35277.5" y="277" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D4</text><text x="35277.5" y="265" text-anchor="middle" font-size="6"
+                        fill="#666">93</text>
+<text x="35275" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="35280" y1="312.5" x2="35290" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="35290" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="35290" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="35290" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">94</text><text x="35290" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><text x="35275" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="36055" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36055" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="36055" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">95</text><circle cx="36310" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36310" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="36310" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">96</text><text x="36310" y="400" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">là</text><line x1="36320" y1="400" x2="36360" y2="400"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="36565" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36565" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="36565" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">97</text><text x="36805" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="36810" y1="312.5" x2="36820" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="36820" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36820" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="36820" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">98</text><text x="36820" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ôi</text><text x="37315" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="37320" y1="312.5" x2="37330" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="37330" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="37330" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="37330" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">99</text><text x="37330" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư.</text><text x="39355" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="39360" y1="312.5" x2="39370" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="39370" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="39370" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="39370" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">100</text><text x="40375" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="40380" y1="312.5" x2="40390" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="40390" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="40390" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="40390" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">101</text><text x="40390" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">Ngồi</text><line x1="40400" y1="362.5" x2="40440" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="40900" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="40900" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="40900" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">102</text><text x="41140" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="41145" y1="312.5" x2="41155" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="41155" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41155" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41155" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">103</text><text x="41395" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="41400" y1="312.5" x2="41410" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="41410" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41410" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41410" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">104</text><text x="41410" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">...Làm</text><text x="41905" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="41910" y1="312.5" x2="41920" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="41920" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41920" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41920" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">105</text><text x="41920" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><text x="42160" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="42165" y1="312.5" x2="42175" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="42175" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42175" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="42175" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">106</text><text x="42415" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="42420" y1="312.5" x2="42430" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="42430" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42430" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="42430" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">107</text><text x="42430" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><text x="42925" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="42930" y1="312.5" x2="42940" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="42940" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42940" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="42940" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">108</text><text x="42940" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#333">tài</text><text x="43180" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="43185" y1="312.5" x2="43195" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="43195" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="43195" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="43195" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">109</text><circle cx="43450" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="43450" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="43450" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">110</text><text x="43450" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">trai</text><circle cx="45490" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="45490" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="45490" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">111</text><circle cx="46255" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="46255" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="46255" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">112</text><text x="46255" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="46510" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="46510" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="46510" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">113</text><text x="46510" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="47530" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="47530" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="47530" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">114</text><text x="48280" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="48285" y1="312.5" x2="48295" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="48295" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="48295" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="48295" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">115</text><text x="48295" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="48537.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chơi" class="lyrics-chơi"/><text x="48537.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="48537.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">116</text>
+<circle cx="48550" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="48550" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="48550" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">117</text><text x="48550" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">chơi</text><text x="48535" y="400" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="49557.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49557.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="49557.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">118</text>
+<circle cx="49545" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49545" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="49545" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">119</text>
+<circle cx="49532.5" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49532.5" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="49532.5" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">120</text>
+<text x="49555" y="441.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="49560" y1="437.5" x2="49570" y2="450"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="49570" cy="450" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="49570" y="453" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">E5</text><text x="49570" y="438" text-anchor="middle" font-size="8"
+                        fill="#333">121</text><text x="49570" y="475" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">chốn</text><line x1="49580" y1="475" x2="49620" y2="475"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="49555" y="450" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><text x="50065" y="441.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="50070" y1="437.5" x2="50080" y2="450"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="50080" cy="450" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50080" y="453" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">E5</text><text x="50080" y="438" text-anchor="middle" font-size="8"
+                        fill="#333">122</text><circle cx="50335" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50335" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="50335" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">123</text><text x="50335" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="50590" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50590" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="50590" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">124</text><text x="50590" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="51610" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="51610" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="51610" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">125</text><text x="51610" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="53140" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53140" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="53140" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">126</text><text x="53140" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">hư</text><line x1="53150" y1="425" x2="53190" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="53380" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="53385" y1="312.5" x2="53395" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="53395" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53395" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="53395" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">127</text><text x="53635" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="53640" y1="312.5" x2="53650" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="53650" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53650" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="53650" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">128</text><text x="53650" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hà</text><text x="54655" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="54660" y1="312.5" x2="54670" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="54670" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="54670" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="54670" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">129</text><text x="54670" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="55180" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55180" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="55180" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">130</text><text x="55180" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ối</text><circle cx="55435" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55435" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="55435" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">131</text><text x="55675" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="55680" y1="312.5" x2="55690" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="55690" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55690" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="55690" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">132</text><text x="55690" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#333">a</text><text x="56440" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="56445" y1="312.5" x2="56455" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="56455" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56455" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="56455" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">133</text><text x="56455" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">tôi</text><circle cx="56710" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56710" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="56710" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">134</text><text x="56710" y="300" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mà</text><line x1="56720" y1="300" x2="56760" y2="300"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="56950" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="56955" y1="312.5" x2="56965" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="56965" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56965" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="56965" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">135</text><text x="57205" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="57210" y1="312.5" x2="57220" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="57220" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57220" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="57220" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">136</text><text x="57220" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">tấu</text><line x1="57230" y1="387.5" x2="57270" y2="387.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="57475" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57475" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="57475" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">137</text><text x="57715" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="57720" y1="312.5" x2="57730" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="57730" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57730" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="57730" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">138</text><text x="57730" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hà</text><text x="58225" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="58230" y1="312.5" x2="58240" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="58240" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58240" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="58240" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">139</text><text x="58240" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="58480" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="58485" y1="312.5" x2="58495" y2="362.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="58495" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58495" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="58495" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">140</text><text x="58735" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="58740" y1="312.5" x2="58750" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="58750" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58750" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="58750" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">141</text><text x="58750" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="59755" y="316.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="59760" y1="312.5" x2="59770" y2="337.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="59770" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="59770" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="59770" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">142</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Traditional Tuning Panel -->
+        <div class="tuning-panel">
+            <div class="panel-header" onclick="togglePanel('traditional')">
+                <h3>🔍 Traditional Tuning: C-D-E-G-A</h3>
+                <span class="collapse-indicator">▼</span>
+            </div>
+            <div class="panel-content expanded" id="traditionalContent">
+                <div class="tuning-info">
+                    <span class="tuning-display">C-D-E-G-A</span>
+                    <span class="bent-notes-count">24 bent notes</span>
+                </div>
+                <div class="tablature-container">
+                    <svg width="61060" height="600" id="traditionalSVG">
+                        <line x1="50" y1="100" x2="61010" y2="100"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="104" font-size="10" fill="#000000">C3</text>
+<line x1="50" y1="125" x2="61010" y2="125"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="129" font-size="10" fill="#000000">D3</text>
+<line x1="50" y1="150" x2="61010" y2="150"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="154" font-size="10" fill="#000000">E3</text>
+<line x1="50" y1="187.5" x2="61010" y2="187.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="191.5" font-size="10" fill="#000000">G3</text>
+<line x1="50" y1="212.5" x2="61010" y2="212.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="216.5" font-size="10" fill="#000000">A3</text>
+<line x1="50" y1="250" x2="61010" y2="250"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="254" font-size="10" fill="#000000">C4</text>
+<line x1="50" y1="275" x2="61010" y2="275"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="279" font-size="10" fill="#000000">D4</text>
+<line x1="50" y1="300" x2="61010" y2="300"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="304" font-size="10" fill="#000000">E4</text>
+<line x1="50" y1="337.5" x2="61010" y2="337.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="341.5" font-size="10" fill="#000000">G4</text>
+<line x1="50" y1="362.5" x2="61010" y2="362.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="366.5" font-size="10" fill="#000000">A4</text>
+<line x1="50" y1="400" x2="61010" y2="400"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="404" font-size="10" fill="#000000">C5</text>
+<line x1="50" y1="425" x2="61010" y2="425"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="429" font-size="10" fill="#000000">D5</text>
+<line x1="50" y1="450" x2="61010" y2="450"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="454" font-size="10" fill="#000000">E5</text>
+<line x1="50" y1="487.5" x2="61010" y2="487.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="491.5" font-size="10" fill="#000000">G5</text>
+<line x1="50" y1="512.5" x2="61010" y2="512.5"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="516.5" font-size="10" fill="#000000">A5</text>
+<line x1="50" y1="550" x2="61010" y2="550"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="554" font-size="10" fill="#000000">C6</text>
+<line x1="50" y1="575" x2="61010" y2="575"
+                     stroke="#000000" stroke-width="2" opacity="1"/><text x="20" y="579" font-size="10" fill="#000000">D6</text>
+<circle cx="100" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="100" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="100" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">1</text><text x="100" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">Ngồi</text><circle cx="597.5" cy="312.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="rằng" class="lyrics-rằng"/><text x="597.5" y="314.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">F4</text><text x="597.5" y="302.5" text-anchor="middle" font-size="6"
+                        fill="#666">2</text>
+<circle cx="610" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="610" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="610" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">3</text><text x="610" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">rằng</text><line x1="620" y1="362.5" x2="660" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="595" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="1120" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1120" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="1120" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">4</text><circle cx="1375" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1375" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="1375" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">5</text><circle cx="1617.5" cy="375" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ngồi" class="lyrics-ngồi"/><text x="1617.5" y="377" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">Bb4</text><text x="1617.5" y="365" text-anchor="middle" font-size="6"
+                        fill="#666">6</text>
+<circle cx="1630" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="1630" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="1630" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">7</text><text x="1630" y="450" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">ngồi</text><line x1="1640" y1="450" x2="1680" y2="450"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="1615" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="2140" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2140" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="2140" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">8</text><circle cx="2395" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2395" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="2395" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">9</text><circle cx="2650" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="2650" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="2650" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">10</text><text x="2650" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">tựa</text><circle cx="3147.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="i" class="lyrics-i"/><text x="3147.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="3147.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">11</text>
+<circle cx="3160" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="3160" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="3160" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">12</text><text x="3160" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="3145" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="3670" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="3670" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="3670" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">13</text><text x="3670" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="4677.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4677.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="4677.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">14</text>
+<circle cx="4665" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4665" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="4665" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">15</text>
+<circle cx="4652.5" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hơ" class="lyrics-hơ"/><text x="4652.5" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="4652.5" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">16</text>
+<circle cx="4690" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="4690" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="4690" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">17</text><text x="4690" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><text x="4675" y="400" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="5710" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="5710" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="5710" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">18</text><text x="5710" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">có</text><circle cx="6220" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6220" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="6220" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">19</text><text x="6220" y="450" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mấy</text><line x1="6230" y1="450" x2="6270" y2="450"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="6475" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6475" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="6475" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">20</text><text x="6715" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="6720" y1="362.5" x2="6730" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="6730" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="6730" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="6730" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">21</text><text x="6730" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">mạn</text><circle cx="7495" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="7495" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="7495" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">22</text><text x="7735" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="7740" y1="362.5" x2="7750" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="7750" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="7750" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="7750" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">23</text><circle cx="8247.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ối" class="lyrics-ối"/><text x="8247.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="8247.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">24</text>
+<circle cx="8260" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="8260" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="8260" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">25</text><text x="8260" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ối</text><text x="8245" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="8757.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="ha" class="lyrics-ha"/><text x="8757.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="8757.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">26</text>
+<circle cx="8770" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="8770" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="8770" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">27</text><text x="8770" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ha</text><text x="8755" y="425" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><text x="9775" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="9780" y1="362.5" x2="9790" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="9790" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="9790" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="9790" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">28</text><circle cx="9960" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="9960" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="9960" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">29</text><text x="9960" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">ha</text><text x="10115" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="10120" y1="362.5" x2="10130" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="10130" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10130" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="10130" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">30</text><circle cx="10300" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10300" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="10300" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">31</text><circle cx="10810" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="10810" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="10810" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">32</text><text x="10810" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">thuyền</text><circle cx="11830" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="11830" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="11830" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">33</text><text x="11830" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="12340" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="12340" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="12340" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">34</text><text x="12340" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ngồi</text><circle cx="12837.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="tựa" class="lyrics-tựa"/><text x="12837.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="12837.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">35</text>
+<text x="12835" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="12840" y1="362.5" x2="12850" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="12850" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="12850" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="12850" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">36</text><text x="12850" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">tựa</text><text x="12835" y="375" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="13360" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13360" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="13360" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">37</text><text x="13360" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">có</text><circle cx="13615" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13615" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="13615" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">38</text><text x="13855" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="13860" y1="362.5" x2="13870" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="13870" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="13870" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="13870" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">39</text><circle cx="14040" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14040" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="14040" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">40</text><text x="14040" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mạn</text><line x1="14050" y1="425" x2="14090" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="14195" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="14200" y1="362.5" x2="14210" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="14210" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14210" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="14210" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">41</text><circle cx="14380" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14380" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="14380" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">42</text><circle cx="14890" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="14890" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="14890" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">43</text><text x="14890" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">thuyền</text><circle cx="16930" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="16930" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="16930" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">44</text><circle cx="17440" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17440" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17440" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">45</text><circle cx="17822.5" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17822.5" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17822.5" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">46</text><text x="17822.5" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="17950" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="17950" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="17950" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">47</text><text x="17950" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="18970" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="18970" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="18970" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">48</text><text x="18970" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="19735" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="19735" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="19735" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">49</text><text x="19735" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i.</text><circle cx="19977.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="Trăng" class="lyrics-Trăng"/><text x="19977.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="19977.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">50</text>
+<text x="19975" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="19980" y1="362.5" x2="19990" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="19990" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="19990" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="19990" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">51</text><text x="19990" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">Trăng</text><text x="19975" y="375" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="20500" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20500" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="20500" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">52</text><circle cx="20670" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20670" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="20670" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">53</text><circle cx="20840" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="20840" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="20840" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">54</text><text x="20995" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="21000" y1="362.5" x2="21010" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="21010" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21010" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="21010" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">55</text><text x="21010" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">in</text><text x="21505" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="21510" y1="362.5" x2="21520" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="21520" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21520" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="21520" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">56</text><text x="21520" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">ơ</text><circle cx="21902.5" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="21902.5" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="21902.5" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">57</text><circle cx="22030" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22030" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="22030" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">58</text><text x="22030" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">hơ</text><line x1="22040" y1="425" x2="22080" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="22270" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="22275" y1="362.5" x2="22285" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="22285" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22285" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="22285" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">59</text><circle cx="22540" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="22540" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="22540" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">60</text><text x="22540" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><text x="23035" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="23040" y1="362.5" x2="23050" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="23050" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="23050" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="23050" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">61</text><text x="23050" y="400" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="24070" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24070" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="24070" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">62</text><text x="24070" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">mặt</text><circle cx="24325" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24325" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="24325" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">63</text><circle cx="24580" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24580" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="24580" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">64</text><circle cx="24835" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="24835" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="24835" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">65</text><circle cx="25090" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25090" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="25090" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">66</text><text x="25090" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">nước</text><circle cx="25600" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25600" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="25600" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">67</text><text x="25600" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><text x="25967.5" y="454"
+                                font-size="10" fill="#FF0000">●</text><line x1="25972.5" y1="450" x2="25982.5" y2="462.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="25982.5" cy="462.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="25982.5" y="465.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F5</text><text x="25982.5" y="450.5" text-anchor="middle" font-size="8"
+                        fill="#333">68</text><text x="25982.5" y="487.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="26110" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="26110" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="26110" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">69</text><text x="26110" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="26875" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="26875" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="26875" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">70</text><circle cx="27117.5" cy="312.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="cũng" class="lyrics-cũng"/><text x="27117.5" y="314.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">F4</text><text x="27117.5" y="302.5" text-anchor="middle" font-size="6"
+                        fill="#666">71</text>
+<circle cx="27130" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27130" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="27130" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">72</text><text x="27130" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">cũng</text><text x="27115" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="27640" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27640" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="27640" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">73</text><text x="27640" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">có</text><line x1="27650" y1="425" x2="27690" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="27880" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="27885" y1="362.5" x2="27895" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="27895" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="27895" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="27895" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">74</text><circle cx="28150" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28150" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="28150" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">75</text><text x="28150" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">a</text><text x="28390" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="28395" y1="362.5" x2="28405" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="28405" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28405" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="28405" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">76</text><circle cx="28660" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="28660" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="28660" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">77</text><text x="28660" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">càng</text><circle cx="29170" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="29170" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="29170" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">78</text><text x="29170" y="300" text-anchor="middle" font-size="10"
+                            fill="#333">nhìn</text><text x="30175" y="304"
+                                font-size="10" fill="#FF0000">●</text><line x1="30180" y1="300" x2="30190" y2="312.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="30190" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30190" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="30190" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">79</text><text x="30190" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="30700" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30700" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="30700" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">80</text><text x="30700" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">càng</text><line x1="30710" y1="362.5" x2="30750" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="30940" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="30945" y1="362.5" x2="30955" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="30955" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="30955" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="30955" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">81</text><text x="31195" y="304"
+                                font-size="10" fill="#FF0000">●</text><line x1="31200" y1="300" x2="31210" y2="312.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="31210" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31210" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="31210" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">82</text><text x="31210" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">nhìn</text><circle cx="31720" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31720" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="31720" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">83</text><text x="31720" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">non</text><line x1="31730" y1="362.5" x2="31770" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="31960" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="31965" y1="362.5" x2="31975" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="31975" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="31975" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="31975" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">84</text><circle cx="32230" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32230" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="32230" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">85</text><text x="32230" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">nước</text><line x1="32240" y1="425" x2="32280" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="32470" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="32475" y1="362.5" x2="32485" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="32485" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32485" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="32485" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">86</text><text x="32725" y="304"
+                                font-size="10" fill="#FF0000">●</text><line x1="32730" y1="300" x2="32740" y2="312.5"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="32740" cy="312.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="32740" y="315.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">F4</text><text x="32740" y="300.5" text-anchor="middle" font-size="8"
+                        fill="#333">87</text><text x="32740" y="337.5" text-anchor="middle" font-size="10"
+                            fill="#333">càng</text><circle cx="33250" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="33250" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="33250" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">88</text><text x="33250" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">xinh</text><circle cx="33760" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="33760" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="33760" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">89</text><text x="33760" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><circle cx="34142.5" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="34142.5" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="34142.5" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">90</text><text x="34142.5" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><circle cx="34270" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="34270" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="34270" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">91</text><text x="34270" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><circle cx="35035" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="35035" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="35035" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">92</text><text x="35035" y="300" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><circle cx="35277.5" cy="275" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="hư" class="lyrics-hư"/><text x="35277.5" y="277" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D4</text><text x="35277.5" y="265" text-anchor="middle" font-size="6"
+                        fill="#666">93</text>
+<circle cx="35290" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="35290" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="35290" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">94</text><text x="35290" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><text x="35275" y="337.5" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><text x="36040" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="36045" y1="362.5" x2="36055" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="36055" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36055" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="36055" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">95</text><text x="36295" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="36300" y1="362.5" x2="36310" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="36310" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36310" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="36310" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">96</text><text x="36310" y="400" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">là</text><line x1="36320" y1="400" x2="36360" y2="400"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="36565" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36565" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="36565" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">97</text><circle cx="36820" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="36820" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="36820" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">98</text><text x="36820" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ôi</text><circle cx="37330" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="37330" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="37330" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">99</text><text x="37330" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư.</text><circle cx="39370" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="39370" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="39370" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">100</text><circle cx="40390" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="40390" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="40390" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">101</text><text x="40390" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">Ngồi</text><line x1="40400" y1="362.5" x2="40440" y2="362.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="40885" y="366.5"
+                                font-size="10" fill="#FF0000">●</text><line x1="40890" y1="362.5" x2="40900" y2="375"
+                                stroke="#FF0000" stroke-width="1.5"
+                                stroke-dasharray="3,2" fill="none"/><circle cx="40900" cy="375" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="40900" y="378" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">Bb4</text><text x="40900" y="363" text-anchor="middle" font-size="8"
+                        fill="#333">102</text><circle cx="41155" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41155" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41155" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">103</text><circle cx="41410" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41410" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41410" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">104</text><text x="41410" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">...Làm</text><circle cx="41920" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="41920" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="41920" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">105</text><text x="41920" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">ư</text><circle cx="42175" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42175" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="42175" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">106</text><circle cx="42430" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42430" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="42430" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">107</text><text x="42430" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hư</text><circle cx="42940" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="42940" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="42940" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">108</text><text x="42940" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#333">tài</text><circle cx="43195" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="43195" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="43195" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">109</text><circle cx="43450" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="43450" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="43450" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">110</text><text x="43450" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">trai</text><circle cx="45490" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="45490" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="45490" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">111</text><circle cx="46255" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="46255" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="46255" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">112</text><text x="46255" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="46510" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="46510" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="46510" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">113</text><text x="46510" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="47530" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="47530" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="47530" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">114</text><circle cx="48295" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="48295" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="48295" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">115</text><text x="48295" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="48537.5" cy="337.5" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chơi" class="lyrics-chơi"/><text x="48537.5" y="339.5" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">G4</text><text x="48537.5" y="327.5" text-anchor="middle" font-size="6"
+                        fill="#666">116</text>
+<circle cx="48550" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="48550" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="48550" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">117</text><text x="48550" y="425" text-anchor="middle" font-size="10"
+                            fill="#333">chơi</text><text x="48535" y="400" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="49557.5" cy="400" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49557.5" y="402" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">C5</text><text x="49557.5" y="390" text-anchor="middle" font-size="6"
+                        fill="#666">118</text>
+<circle cx="49545" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49545" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="49545" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">119</text>
+<circle cx="49532.5" cy="425" r="5" fill="#FFD700"
+                        stroke="#CC9900" stroke-width="1"
+                        data-lyrics="chốn" class="lyrics-chốn"/><text x="49532.5" y="427" text-anchor="middle" font-size="5"
+                        fill="#4A3C00" font-weight="bold">D5</text><text x="49532.5" y="415" text-anchor="middle" font-size="6"
+                        fill="#666">120</text>
+<circle cx="49570" cy="450" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="49570" y="453" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">E5</text><text x="49570" y="438" text-anchor="middle" font-size="8"
+                        fill="#333">121</text><text x="49570" y="475" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">chốn</text><line x1="49580" y1="475" x2="49620" y2="475"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><text x="49555" y="450" text-anchor="middle" font-size="6"
+                            fill="#FFD700">♪</text><circle cx="50080" cy="450" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50080" y="453" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">E5</text><text x="50080" y="438" text-anchor="middle" font-size="8"
+                        fill="#333">122</text><circle cx="50335" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50335" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="50335" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">123</text><text x="50335" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="50590" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="50590" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="50590" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">124</text><text x="50590" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hi</text><circle cx="51610" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="51610" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="51610" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">125</text><text x="51610" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">hơ</text><circle cx="53140" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53140" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="53140" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">126</text><text x="53140" y="425" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">hư</text><line x1="53150" y1="425" x2="53190" y2="425"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="53395" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53395" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="53395" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">127</text><circle cx="53650" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="53650" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="53650" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">128</text><text x="53650" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hà</text><circle cx="54670" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="54670" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="54670" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">129</text><text x="54670" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">là</text><circle cx="55180" cy="425" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55180" y="428" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D5</text><text x="55180" y="413" text-anchor="middle" font-size="8"
+                        fill="#333">130</text><text x="55180" y="450" text-anchor="middle" font-size="10"
+                            fill="#333">ối</text><circle cx="55435" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55435" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="55435" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">131</text><circle cx="55690" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="55690" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="55690" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">132</text><text x="55690" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#333">a</text><circle cx="56455" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56455" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="56455" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">133</text><text x="56455" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">tôi</text><circle cx="56710" cy="275" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56710" y="278" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">D4</text><text x="56710" y="263" text-anchor="middle" font-size="8"
+                        fill="#333">134</text><text x="56710" y="300" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">mà</text><line x1="56720" y1="300" x2="56760" y2="300"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="56965" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="56965" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="56965" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">135</text><circle cx="57220" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57220" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="57220" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">136</text><text x="57220" y="387.5" text-anchor="middle" font-size="10"
+                            fill="#E74C3C">tấu</text><line x1="57230" y1="387.5" x2="57270" y2="387.5"
+                                stroke="#E74C3C" stroke-width="1"
+                                stroke-dasharray="2,2"/><circle cx="57475" cy="400" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57475" y="403" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">C5</text><text x="57475" y="388" text-anchor="middle" font-size="8"
+                        fill="#333">137</text><circle cx="57730" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="57730" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="57730" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">138</text><text x="57730" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">hà</text><circle cx="58240" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58240" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="58240" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">139</text><text x="58240" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="58495" cy="362.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58495" y="365.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">A4</text><text x="58495" y="350.5" text-anchor="middle" font-size="8"
+                        fill="#333">140</text><circle cx="58750" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="58750" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="58750" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">141</text><text x="58750" y="362.5" text-anchor="middle" font-size="10"
+                            fill="#333">i</text><circle cx="59770" cy="337.5" r="8" fill="#666666"
+                        stroke="#333" stroke-width="1" class="note-circle"/><text x="59770" y="340.5" text-anchor="middle" font-size="7"
+                        fill="white" font-weight="bold">G4</text><text x="59770" y="325.5" text-anchor="middle" font-size="8"
+                        fill="#333">142</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Panel collapse functionality
+        function togglePanel(panelType) {
+            const content = document.getElementById(panelType + 'Content');
+            const header = content.previousElementSibling;
+            const indicator = header.querySelector('.collapse-indicator');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                content.classList.add('expanded');
+                indicator.textContent = '▼';
+                header.classList.remove('collapsed');
+            } else {
+                content.classList.remove('expanded');
+                content.classList.add('collapsed');
+                indicator.textContent = '▶';
+                header.classList.add('collapsed');
+            }
+        }
+
+        // Zoom functionality
+        let xZoom = 1, yZoom = 1;
+
+        function updateZoom(axis, value) {
+            const zoom = value / 100;
+            if (axis === 'x') xZoom = zoom;
+            else yZoom = zoom;
+
+            document.querySelectorAll('svg').forEach(svg => {
+                svg.style.transform = `scaleX(${xZoom}) scaleY(${yZoom})`;
+                svg.style.transformOrigin = '0 0';
+            });
+        }
+
+        // Toggle bent notes visibility
+        let bentNotesVisible = true;
+
+        function toggleBentNotes() {
+            bentNotesVisible = !bentNotesVisible;
+            const opacity = bentNotesVisible ? '1' : '0';
+
+            document.querySelectorAll('[stroke-dasharray="3,2"]').forEach(el => {
+                el.style.opacity = opacity;
+            });
+
+            document.querySelectorAll('text').forEach(el => {
+                if (el.textContent === '●') {
+                    el.style.opacity = opacity;
+                }
+            });
+        }
+
+        // Audio Playback System (Prepared for Integration)
+        class AudioPlayer {
+            constructor() {
+                this.audioContext = null;
+                this.currentBuffer = null;
+                this.source = null;
+                this.isPlaying = false;
+                this.playbackRate = 1.0;
+                this.currentNoteIndex = 0;
+                this.noteTimings = [];
+            }
+
+            async init() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            async loadAudio(url) {
+                try {
+                    const response = await fetch(url);
+                    const arrayBuffer = await response.arrayBuffer();
+                    this.currentBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+                    return true;
+                } catch (error) {
+                    console.error('Failed to load audio:', error);
+                    return false;
+                }
+            }
+
+            play() {
+                if (!this.currentBuffer || this.isPlaying) return;
+
+                this.source = this.audioContext.createBufferSource();
+                this.source.buffer = this.currentBuffer;
+                this.source.playbackRate.value = this.playbackRate;
+                this.source.connect(this.audioContext.destination);
+
+                this.source.onended = () => {
+                    this.isPlaying = false;
+                    this.clearHighlights();
+                };
+
+                this.source.start(0);
+                this.isPlaying = true;
+                this.startHighlighting();
+            }
+
+            stop() {
+                if (this.source && this.isPlaying) {
+                    this.source.stop();
+                    this.isPlaying = false;
+                    this.clearHighlights();
+                }
+            }
+
+            setPlaybackRate(rate) {
+                this.playbackRate = rate;
+                if (this.source) {
+                    this.source.playbackRate.value = rate;
+                }
+            }
+
+            // Note highlighting during playback
+            startHighlighting() {
+                const notes = document.querySelectorAll('circle[data-note-index]');
+                const noteTimings = this.calculateNoteTimings(notes);
+
+                let currentIndex = 0;
+                const highlightNext = () => {
+                    if (currentIndex >= notes.length || !this.isPlaying) {
+                        return;
+                    }
+
+                    // Remove previous highlight
+                    if (currentIndex > 0) {
+                        notes[currentIndex - 1].classList.remove('playing');
+                    }
+
+                    // Add current highlight
+                    notes[currentIndex].classList.add('playing');
+
+                    // Schedule next highlight
+                    const nextDelay = noteTimings[currentIndex] || 100;
+                    currentIndex++;
+                    setTimeout(highlightNext, nextDelay / this.playbackRate);
+                };
+
+                highlightNext();
+            }
+
+            calculateNoteTimings(notes) {
+                // Calculate timing based on x positions and durations
+                const timings = [];
+                for (let i = 0; i < notes.length; i++) {
+                    const x = parseFloat(notes[i].getAttribute('cx') || 0);
+                    const duration = parseFloat(notes[i].dataset.duration || 0.5);
+                    timings.push(duration * 1000); // Convert to milliseconds
+                }
+                return timings;
+            }
+
+            clearHighlights() {
+                document.querySelectorAll('.playing').forEach(el => {
+                    el.classList.remove('playing');
+                });
+            }
+        }
+
+        // Cross-Element Highlighting System
+        class HighlightManager {
+            constructor() {
+                this.activeHighlights = new Set();
+                this.highlightGroups = new Map();
+            }
+
+            registerGroup(groupId, elements) {
+                this.highlightGroups.set(groupId, elements);
+            }
+
+            highlightGroup(groupId) {
+                const elements = this.highlightGroups.get(groupId);
+                if (!elements) return;
+
+                // Clear existing highlights
+                this.clearAll();
+
+                // Add new highlights
+                elements.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(el => {
+                        el.classList.add('highlighted');
+                        this.activeHighlights.add(el);
+                    });
+                });
+            }
+
+            highlightLyric(lyricText) {
+                // Find all notes with this lyric
+                const noteElements = document.querySelectorAll(`[data-lyrics="${lyricText}"]`);
+                const lyricElements = document.querySelectorAll(`.lyric-text:contains("${lyricText}")`);
+
+                this.clearAll();
+
+                noteElements.forEach(el => {
+                    el.classList.add('highlighted');
+                    this.activeHighlights.add(el);
+                });
+
+                lyricElements.forEach(el => {
+                    el.classList.add('highlighted');
+                    this.activeHighlights.add(el);
+                });
+            }
+
+            clearAll() {
+                this.activeHighlights.forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+                this.activeHighlights.clear();
+            }
+        }
+
+        // Initialize systems
+        const audioPlayer = new AudioPlayer();
+        const highlightManager = new HighlightManager();
+
+        // Setup click handlers for lyrics
+        document.addEventListener('DOMContentLoaded', () => {
+            // Lyric click highlighting
+            document.querySelectorAll('.lyric-text').forEach(lyric => {
+                lyric.addEventListener('click', () => {
+                    const lyricText = lyric.textContent.trim();
+                    highlightManager.highlightLyric(lyricText);
+                });
+            });
+
+            // Note click highlighting
+            document.querySelectorAll('circle[data-lyrics]').forEach(note => {
+                note.addEventListener('click', () => {
+                    const lyricText = note.dataset.lyrics;
+                    highlightManager.highlightLyric(lyricText);
+                });
+            });
+
+            // Pattern band click highlighting
+            document.querySelectorAll('.resonance-band').forEach(band => {
+                band.addEventListener('click', () => {
+                    const pattern = band.dataset.pattern;
+                    highlightManager.highlightGroup(pattern);
+                });
+            });
+        });
+
+        console.log('Loaded Ngồi tựa mạn thuyền with complete relationships');
+        console.log('Grace notes: 16');
+        console.log('Melisma groups: 15');
+        console.log('Optimal spacing: 0.125px per cent');
+    </script>
+</body>
+</html>

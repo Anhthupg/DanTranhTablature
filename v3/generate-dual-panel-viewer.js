@@ -823,19 +823,19 @@ class DualPanelGenerator {
             container.innerHTML = '<svg width="' + svgData.width + '" height="' + svgData.height + '" id="traditionalSVG">' +
                                 svgData.svg + '</svg>';
 
-            // Reapply zoom to new SVG
+            // Preserve current zoom level - don't change user's view
             const svg = document.getElementById('traditionalSVG');
             if (svg && (xZoom !== 1 || yZoom !== 1)) {
-                // Apply zoom to all elements in the new SVG
+                // Apply current zoom levels to new SVG elements
                 svg.querySelectorAll('*').forEach(element => {
-                    // Store base positions
+                    // Store base positions for zoom calculations
                     element.dataset.baseX = element.getAttribute('x') || element.getAttribute('cx') || element.getAttribute('x1') || '0';
                     element.dataset.baseY = element.getAttribute('y') || element.getAttribute('cy') || element.getAttribute('y1') || '0';
                     element.dataset.baseX2 = element.getAttribute('x2') || '';
                     element.dataset.baseY2 = element.getAttribute('y2') || '';
                 });
 
-                // Apply current zoom levels
+                // Apply existing zoom levels without changing sliders
                 updateZoom('x', xZoom * 100);
                 updateZoom('y', yZoom * 100);
             }
@@ -865,42 +865,25 @@ class DualPanelGenerator {
 
         // Calculate default zoom to fit content
         function calculateDefaultZoom() {
-            // Get the first SVG to measure content
+            // Get the first SVG to measure
             const svg = document.querySelector('svg');
             if (!svg) return { x: 100, y: 100 };
 
-            // Get actual SVG dimensions from attributes
-            const svgWidth = parseFloat(svg.getAttribute('width') || 0);
-            const svgHeight = parseFloat(svg.getAttribute('height') || 0);
+            // Get tablature dimensions directly
+            const tablatureWidth = parseFloat(svg.getAttribute('width') || 0);
+            const tablatureHeight = parseFloat(svg.getAttribute('height') || 0);
 
-            if (svgWidth === 0 || svgHeight === 0) return { x: 100, y: 100 };
+            if (tablatureWidth === 0) return { x: 100, y: 100 };
 
-            // Calculate available viewport space
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
+            // Simple calculation: screen width / tablature width
+            const screenWidth = window.innerWidth - 40; // Small margin
+            const screenHeight = (window.innerHeight - 300) / 2; // Two panels with UI space
 
-            // Reserve space for UI elements
-            const uiReservedWidth = 40; // Margins and padding
-            const uiReservedHeight = 300; // Headers, controls, etc.
+            // Direct percentage calculation - allow very small zoom for very long songs
+            const xZoomPercent = Math.min(Math.max((screenWidth / tablatureWidth) * 100, 3), 200);
+            const yZoomPercent = Math.min(Math.max((screenHeight / tablatureHeight) * 100, 20), 200);
 
-            // Available space for content
-            const availableWidth = viewportWidth - uiReservedWidth;
-            const availableHeight = (viewportHeight - uiReservedHeight) / 2; // Two panels
-
-            // Calculate zoom to fit entire song width
-            const xZoomValue = availableWidth / svgWidth;
-
-            // Calculate zoom to fit panel height comfortably
-            const yZoomValue = availableHeight / svgHeight;
-
-            // Convert to percentage values for sliders
-            // For X: ensure we can see the full song width (minimum 20% for very long songs)
-            const xZoomPercent = Math.min(Math.max(xZoomValue * 100, 20), 200);
-
-            // For Y: ensure content fits in panel (minimum 30% for very tall content)
-            const yZoomPercent = Math.min(Math.max(yZoomValue * 100, 30), 200);
-
-            console.log('Auto-zoom calculated: X=' + xZoomPercent.toFixed(1) + '%, Y=' + yZoomPercent.toFixed(1) + '% (SVG: ' + svgWidth + '×' + svgHeight + ', Viewport: ' + availableWidth + '×' + availableHeight + ')');
+            console.log('Simple auto-zoom: X=' + xZoomPercent.toFixed(1) + '%, Y=' + yZoomPercent.toFixed(1) + '% (Tablature: ' + tablatureWidth + '×' + tablatureHeight + ', Screen: ' + screenWidth + '×' + screenHeight + ')');
 
             return {
                 x: xZoomPercent,
@@ -1180,24 +1163,37 @@ class DualPanelGenerator {
 
         // Setup click handlers for lyrics and apply default zoom
         document.addEventListener('DOMContentLoaded', () => {
-            // Apply default zoom to fit content - delay to ensure SVG is loaded
-            setTimeout(() => {
+            // Apply default zoom to fit content - multiple attempts to ensure reliable calculation
+            function tryApplyDefaultZoom(attempts = 0) {
+                if (attempts > 5) return; // Give up after 5 attempts
+
                 const defaultZoom = calculateDefaultZoom();
 
-                // Update X-zoom slider and apply
-                const xSlider = document.querySelectorAll('.zoom-slider')[0];
-                if (xSlider) {
-                    xSlider.value = defaultZoom.x;
-                    updateZoom('x', defaultZoom.x);
-                }
+                // Only apply if we got valid zoom values
+                if (defaultZoom.x > 10 && defaultZoom.x < 200) {
+                    // Update X-zoom slider and apply
+                    const xSlider = document.querySelectorAll('.zoom-slider')[0];
+                    if (xSlider) {
+                        xSlider.value = defaultZoom.x;
+                        updateZoom('x', defaultZoom.x);
+                    }
 
-                // Update Y-zoom slider and apply
-                const ySlider = document.querySelectorAll('.zoom-slider')[1];
-                if (ySlider) {
-                    ySlider.value = defaultZoom.y;
-                    updateZoom('y', defaultZoom.y);
+                    // Update Y-zoom slider and apply
+                    const ySlider = document.querySelectorAll('.zoom-slider')[1];
+                    if (ySlider) {
+                        ySlider.value = defaultZoom.y;
+                        updateZoom('y', defaultZoom.y);
+                    }
+
+                    console.log('Successfully applied auto-zoom on attempt', attempts + 1);
+                } else {
+                    // Retry with longer delay
+                    setTimeout(() => tryApplyDefaultZoom(attempts + 1), 200);
                 }
-            }, 250); // Longer delay to ensure SVG dimensions are available
+            }
+
+            // Start trying after initial delay
+            setTimeout(() => tryApplyDefaultZoom(), 300);
 
             // Lyric click highlighting
             document.querySelectorAll('.lyric-text').forEach(lyric => {

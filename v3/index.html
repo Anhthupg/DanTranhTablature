@@ -164,35 +164,38 @@
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
         }
 
-        .thumbnail-container {
-            height: 120px;
-            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%),
-                        linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 10px;
+        .song-metrics {
+            padding: 1rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            text-align: center;
+        }
+
+        .metric-item {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
         }
 
-        .thumbnail-container svg {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
         }
 
-        .thumbnail-svg {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        .metric-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .thumbnail-placeholder {
-            color: #999;
-            font-size: 3rem;
-        }
+        .metric-notes { color: var(--main-note); }
+        .metric-strings { color: var(--kpic-2); }
+        .metric-tuning { color: var(--tone-fill); }
 
         .card-info {
             padding: 1rem;
@@ -838,15 +841,24 @@
                 card.dataset.highlights = JSON.stringify(song.highlights || []);
 
                 card.innerHTML = `
-                    <div class="thumbnail-container">
-                        <div class="thumbnail-placeholder">♪</div>
+                    <div class="song-metrics">
+                        <div class="metric-item">
+                            <div class="metric-value metric-notes">${song.noteCount || 0}</div>
+                            <div class="metric-label">Notes</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value metric-strings">${song.strings || 7}</div>
+                            <div class="metric-label">Strings</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-value metric-tuning">${song.bentNotes || 0}</div>
+                            <div class="metric-label">Bent</div>
+                        </div>
                     </div>
                     <div class="card-info">
                         <div class="song-title">${song.name}</div>
                         <div class="song-meta">
-                            ${song.tuning ? `<span class="meta-tag tuning">Tuning: ${song.tuning}</span>` : ''}
-                            <span class="meta-tag">${song.noteCount || 0} notes</span>
-                            ${song.bentNotes > 0 ? `<span class="meta-tag bent">${song.bentNotes} bent</span>` : ''}
+                            ${song.tuning ? `<span class="meta-tag tuning">${song.tuning}</span>` : ''}
                             ${song.patterns > 0 ? `<span class="meta-tag patterns">${song.patterns} patterns</span>` : ''}
                         </div>
                     </div>
@@ -909,29 +921,37 @@
             }
 
             generateSimpleThumbnail(song) {
-                // Generate a simple visual representation
+                // Generate minimal thumbnail with key information only
                 const strings = song.strings || 7;
-                const noteCount = Math.min(song.noteCount || 10, 20); // Show max 20 notes
+                const tuning = song.tuning || 'C-D-E-G-A';
 
                 let svg = `
-                    <svg class="thumbnail-svg" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="300" height="120" fill="#f8f9fa"/>
+                    <svg class="thumbnail-svg" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="200" height="80" fill="#f8f9fa"/>
                 `;
 
-                // Draw string lines
-                for (let i = 0; i < strings; i++) {
-                    const y = 20 + (i * (80 / strings));
-                    svg += `<line x1="10" y1="${y}" x2="290" y2="${y}" stroke="#ccc" stroke-width="1"/>`;
-                }
+                // Simple visual indicators
+                svg += `
+                    <!-- Song stats display -->
+                    <rect x="10" y="10" width="180" height="60" fill="white" stroke="#ddd" stroke-width="1" rx="5"/>
 
-                // Draw some notes
-                for (let i = 0; i < noteCount; i++) {
-                    const x = 20 + (i * 13);
-                    const y = 20 + Math.random() * 80;
-                    const isBent = Math.random() < (song.bentNotes / song.noteCount);
-                    const color = isBent ? '#E74C3C' : '#008080';
-                    svg += `<circle cx="${x}" cy="${y}" r="3" fill="${color}" opacity="0.8"/>`;
-                }
+                    <!-- Note count (large) -->
+                    <text x="100" y="35" font-size="20" fill="#008080" text-anchor="middle" font-weight="bold">${song.noteCount}</text>
+                    <text x="100" y="48" font-size="10" fill="#666" text-anchor="middle">notes</text>
+
+                    <!-- String count -->
+                    <text x="30" y="25" font-size="12" fill="#3498DB" text-anchor="middle" font-weight="bold">${strings}</text>
+                    <text x="30" y="35" font-size="8" fill="#666" text-anchor="middle">strings</text>
+
+                    <!-- Tuning indicator -->
+                    <text x="170" y="25" font-size="9" fill="#9B59B6" text-anchor="middle" font-weight="bold">${tuning}</text>
+                    <text x="170" y="35" font-size="7" fill="#666" text-anchor="middle">tuning</text>
+
+                    <!-- Bent notes if any -->
+                    ${song.bentNotes > 0 ? `
+                        <text x="100" y="60" font-size="8" fill="#E74C3C" text-anchor="middle">${song.bentNotes} bent</text>
+                    ` : ''}
+                `;
 
                 svg += `</svg>`;
                 return svg;

@@ -136,7 +136,7 @@ class MusicalRelationshipParser {
     /**
      * Main parsing function - extracts all relationships from MusicXML
      */
-    parseCompleteRelationships(xmlContent, songName) {
+    parseCompleteRelationships(xmlContent, songName, metadataPath = null) {
         const dom = new JSDOM(xmlContent, { contentType: 'text/xml' });
         const doc = dom.window.document;
 
@@ -145,6 +145,17 @@ class MusicalRelationshipParser {
         // Extract all notes with complete context
         const notes = this.extractEnhancedNotes(doc);
 
+        // Try to load tuning from metadata.json if path provided
+        let tuning = null;
+        if (metadataPath && fs.existsSync(metadataPath)) {
+            try {
+                const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+                tuning = metadata.tuning;
+            } catch (e) {
+                console.log(`   ⚠️ Could not load tuning from metadata: ${e.message}`);
+            }
+        }
+
         // Build relationship structures
         const relationships = {
             metadata: {
@@ -152,7 +163,8 @@ class MusicalRelationshipParser {
                 parseDate: new Date().toISOString(),
                 totalNotes: notes.length,
                 mainNotes: notes.filter(n => !n.isGrace).length,
-                graceNotes: notes.filter(n => n.isGrace).length
+                graceNotes: notes.filter(n => n.isGrace).length,
+                tuning: tuning || 'C-D-E-G-A' // Default pentatonic if not found
             },
 
             // Core relationships
@@ -822,7 +834,16 @@ if (require.main === module) {
             const xmlContent = fs.readFileSync(testFile, 'utf8');
             const songName = path.basename(testFile, '.musicxml.xml');
 
-            const relationships = parser.parseCompleteRelationships(xmlContent, songName);
+            // Try to find metadata.json in the processed folder
+            const processedDir = path.join(
+                path.dirname(testFile),
+                '..',
+                'processed',
+                songName.replace(/[^a-zA-Z0-9À-ỹ\s]/g, '_')
+            );
+            const metadataPath = path.join(processedDir, 'metadata.json');
+
+            const relationships = parser.parseCompleteRelationships(xmlContent, songName, metadataPath);
 
             // Save output
             const outputPath = path.join(
@@ -874,13 +895,16 @@ if (require.main === module) {
 
                 console.log(`Processing: ${songName}`);
 
-                const relationships = parser.parseCompleteRelationships(xmlContent, songName);
-
                 // Create output directory
                 const outputDir = path.join(processedDir, songName);
                 if (!fs.existsSync(outputDir)) {
                     fs.mkdirSync(outputDir, { recursive: true });
                 }
+
+                // Check for existing metadata
+                const metadataPath = path.join(outputDir, 'metadata.json');
+
+                const relationships = parser.parseCompleteRelationships(xmlContent, songName, metadataPath);
 
                 // Save relationships
                 const outputPath = path.join(outputDir, 'relationships.json');

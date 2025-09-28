@@ -210,9 +210,34 @@ class DualPanelGenerator {
             (lastNote.isGrace ? 0.5 : (lastNote.duration ? lastNote.duration.value : 4)) : 4;
         const scaledDurationWidth = lastNote ?
             (lastNote.isGrace ? 12.5 : lastNoteDurationValue * 42.5) : 0;
-        const wholeNoteDuration = 16 * 42.5; // 680 pixels for a whole note (scaled)
-        const lastNoteEndX = lastNote ? (100 + lastNote.timing * 0.5 + scaledDurationWidth) : 100;
-        const width = Math.max(2400, lastNoteEndX + wholeNoteDuration + 100); // +100 for padding
+        // Calculate width based on all elements that will be created
+        let maxRightEdge = 2400; // Minimum width
+
+        // Pre-calculate all element positions to find the rightmost edge
+        notes.forEach(note => {
+            const x = 100 + note.timing * 0.5;
+
+            // Note circle with radius
+            maxRightEdge = Math.max(maxRightEdge, x + 15);
+
+            // Resonance triangle (160px extension from note edge)
+            if (!note.isGrace) {
+                maxRightEdge = Math.max(maxRightEdge, x + 12 + 160);
+            }
+
+            // Bent note indicators (up to 10px right of note)
+            if (note.isBent) {
+                maxRightEdge = Math.max(maxRightEdge, x + 22);
+            }
+
+            // Lyrics positioning (could extend further right)
+            if (note.lyric) {
+                const lyricLength = note.lyric.length * 6; // Approximate 6px per character
+                maxRightEdge = Math.max(maxRightEdge, x + lyricLength);
+            }
+        });
+
+        const width = maxRightEdge + 200; // Add more generous padding to prevent cutoff
         const height = 600;
 
         // Draw string lines
@@ -221,7 +246,7 @@ class DualPanelGenerator {
             const color = isUsed ? this.colors.string : this.colors.unusedString;
             const opacity = isUsed ? '1' : '0.3';
 
-            svg += `<line x1="50" y1="${string.y}" x2="${width - 50}" y2="${string.y}"
+            svg += `<line x1="50" y1="${string.y}" x2="${width}" y2="${string.y}"
                      stroke="${color}" stroke-width="2" opacity="${opacity}"/>`;
             svg += `<text x="20" y="${string.y + 4}" font-size="10" fill="#000000">${string.note}</text>\n`;
         });
@@ -259,7 +284,7 @@ class DualPanelGenerator {
                     svg += `<circle cx="${x}" cy="${y}" r="5" fill="${this.colors.graceNote}"
                             stroke="#CC9900" stroke-width="1"
                             data-lyrics="bao" class="lyrics-bao"/>`;
-                    svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="5"
+                    svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="8"
                             fill="#4A3C00" font-weight="bold">${note.pitch.fullNote}</text>`;
                     svg += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="6"
                             fill="#666">${index + 1}</text>\n`;
@@ -296,21 +321,21 @@ class DualPanelGenerator {
                 // Add triangle resonance for grace notes too
                 const graceNoteLength = 160; // Same length as main notes
                 const graceBandHeight = 12;
-                const graceRadius = 5;
+                const graceRadius = 6;
                 const graceStartX = x + graceRadius;
                 const graceTopY = y - graceBandHeight / 2;
                 const graceBottomY = y + graceBandHeight / 2;
                 const graceEndX = graceStartX + graceNoteLength;
 
                 svg += `<polygon points="${graceStartX},${graceTopY} ${graceStartX},${graceBottomY} ${graceEndX},${y}"
-                        fill="${this.colors.mainNote}" opacity="0.5" class="resonance-triangle"
+                        fill="var(--triangle-fill)" opacity="0.35" class="resonance-triangle"
                         data-note-y="${y}" data-band-height="${graceBandHeight}" data-note-x="${x}"/>`;
 
-                svg += `<circle cx="${x}" cy="${y}" r="5" fill="${this.colors.graceNote}"
-                        stroke="#CC9900" stroke-width="1"
+                svg += `<circle cx="${x}" cy="${y}" r="6" fill="${this.colors.graceNote}"
+                        stroke="#CC9900" stroke-width="2"
                         data-lyrics="${associatedLyrics}" class="lyrics-${associatedLyrics}"/>`;
                 // Note name inside grace note
-                svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="5"
+                svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="8"
                         fill="#4A3C00" font-weight="bold">${note.pitch.fullNote}</text>`;
                 // Add note number above grace note
                 svg += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="6"
@@ -346,23 +371,24 @@ class DualPanelGenerator {
                 const bandHeight = 12;
 
                 // Triangle starts at note head edge and tapers right to a point
-                const noteRadius = 8;
+                const noteRadius = 12;
                 const startX = x + noteRadius; // Start at right edge of note head
                 const topY = y - bandHeight / 2;
                 const bottomY = y + bandHeight / 2;
                 const endX = startX + halfNoteLength;
 
                 svg += `<polygon points="${startX},${topY} ${startX},${bottomY} ${endX},${y}"
-                        fill="${this.colors.mainNote}" opacity="0.5" class="resonance-triangle"
+                        fill="var(--triangle-fill)" opacity="0.35" class="resonance-triangle"
                         data-note-y="${y}" data-band-height="${bandHeight}" data-note-x="${x}"/>`;
 
-                // Draw note
-                svg += `<circle cx="${x}" cy="${y}" r="8" fill="${this.colors.mainNote}"
-                        stroke="#333" stroke-width="1" class="note-circle"/>`;
+                // Draw note with CSS variables
+                svg += `<circle cx="${x}" cy="${y}" r="12" fill="var(--note-fill)"
+                        stroke="var(--note-fill)" stroke-width="2" class="note-circle"/>`;
 
-                // Note name inside the note head
-                svg += `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="7"
-                        fill="white" font-weight="bold">${note.pitch.fullNote}</text>`;
+                // Note name inside the note head - zoom-aware centering
+                svg += `<text x="${x}" y="${y + 3}" text-anchor="middle" font-size="16"
+                        fill="var(--note-text)" font-weight="bold" class="note-label"
+                        data-note-x="${x}" data-note-y="${y}">${note.pitch.fullNote}</text>`;
 
                 // Note number above
                 svg += `<text x="${x}" y="${y - 12}" text-anchor="middle" font-size="8"
@@ -392,7 +418,7 @@ class DualPanelGenerator {
                 // Grace note relationship indicator
                 if (note.relationships?.graceContext?.precedingGraceNotes) {
                     svg += `<text x="${x - 15}" y="${y}" text-anchor="middle" font-size="6"
-                            fill="${this.colors.graceNote}">♪</text>`;
+                            fill="${this.colors.graceNote}">*</text>`;
                 }
             }
         });
@@ -495,29 +521,46 @@ class DualPanelGenerator {
             font-size: 18px;
         }
 
-        /* 4-Theme System */
-        body.theme-white {
-            background: #FFFFFF;
+        /* 2-Theme System: White and Black */
+        :root {
+            --bg-color: #FFFFFF;
+            --note-fill: #000000;
+            --note-text: #FFFFFF;
+            --triangle-fill: #000000;
+            --string-color: #000000;
+            --text-color: #000000;
             --panel-bg: #FFFFFF;
-            --text-primary: #2C3E50;
-        }
-
-        body.theme-light-grey {
-            background: #D0D0D0;
-            --panel-bg: rgba(255, 255, 255, 0.95);
-            --text-primary: #2C3E50;
-        }
-
-        body.theme-dark-grey {
-            background: #2C3E50;
-            --panel-bg: rgba(52, 73, 94, 0.9);
-            --text-primary: #ECF0F1;
         }
 
         body.theme-black {
-            background: #000000;
-            --panel-bg: rgba(26, 26, 26, 0.9);
-            --text-primary: #FFFFFF;
+            --bg-color: #000000;
+            --note-fill: #FFFFFF;
+            --note-text: #000000;
+            --triangle-fill: #FFFFFF;
+            --string-color: #FFFFFF;
+            --text-color: #FFFFFF;
+            --panel-bg: #000000;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .tablature-container {
+            background: var(--bg-color);
+        }
+
+        .tuning-panel {
+            background: var(--bg-color);
+        }
+
+        .panel-content {
+            background: var(--bg-color);
+        }
+
+        svg {
+            background: var(--bg-color);
         }
 
         /* Theme Selector */
@@ -565,7 +608,6 @@ class DualPanelGenerator {
             border: 2px solid #e0e0e0;
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
             margin-bottom: 20px;
         }
 
@@ -598,7 +640,8 @@ class DualPanelGenerator {
         }
 
         .panel-content {
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             transition: max-height 0.3s ease;
         }
 
@@ -762,7 +805,7 @@ class DualPanelGenerator {
                 <span>Bent from String</span>
             </div>
             <div class="legend-item">
-                <span>♪</span>
+                <span>*</span>
                 <span>Has Grace Notes</span>
             </div>
         </div>
@@ -776,14 +819,14 @@ class DualPanelGenerator {
             <input type="range" class="zoom-slider" min="10" max="200" value="100"
                    onchange="updateZoom('y', this.value)">
             <button onclick="toggleBentNotes()">Toggle Bent Notes</button>
-            <button onclick="window.location.href='../../../'">← Back to Library</button>
+            <button onclick="window.location.href='http://localhost:8080'">← Back to Library</button>
         </div>
 
         <!-- Optimal Tuning Panel -->
         <div class="tuning-panel">
             <div class="panel-header optimal" onclick="togglePanel('optimal')">
-                <h3>🎵 Optimal Tuning: ${originalTuning.join('-')}</h3>
-                <span class="collapse-indicator">▼</span>
+                <h3>Optimal Tuning: ${originalTuning.join('-')}</h3>
+                <span class="collapse-indicator">v</span>
             </div>
             <div class="panel-content expanded" id="optimalContent">
                 <div class="tuning-info">
@@ -801,7 +844,7 @@ class DualPanelGenerator {
         <!-- Traditional Tuning Panel with Dropdown -->
         <div class="tuning-panel">
             <div class="panel-header" onclick="togglePanel('traditional')">
-                <h3>🔍 Alternative Tuning: <select id="tuningSelector" onclick="event.stopPropagation()" onchange="changeTuning(this.value)" style="
+                <h3>Alternative Tuning: <select id="tuningSelector" onclick="event.stopPropagation()" onchange="changeTuning(this.value)" style="
                     background: transparent;
                     border: 1px solid rgba(255,255,255,0.3);
                     color: inherit;
@@ -821,7 +864,7 @@ class DualPanelGenerator {
                         </optgroup>
                     `).join('')}
                 </select></h3>
-                <span class="collapse-indicator">▶</span>
+                <span class="collapse-indicator">></span>
             </div>
             <div class="panel-content collapsed" id="traditionalContent">
                 <div class="tuning-info">
@@ -884,12 +927,12 @@ class DualPanelGenerator {
             if (content.classList.contains('collapsed')) {
                 content.classList.remove('collapsed');
                 content.classList.add('expanded');
-                indicator.textContent = '▼';
+                indicator.textContent = 'v';
                 header.classList.remove('collapsed');
             } else {
                 content.classList.remove('expanded');
                 content.classList.add('collapsed');
-                indicator.textContent = '▶';
+                indicator.textContent = '>';
                 header.classList.add('collapsed');
             }
         }
@@ -903,21 +946,29 @@ class DualPanelGenerator {
             const svg = document.querySelector('svg');
             if (!svg) return { x: 100, y: 100 };
 
-            // Get tablature dimensions directly
-            const tablatureWidth = parseFloat(svg.getAttribute('width') || 0);
+            // Use the declared SVG width which includes all content
+            const declaredWidth = parseFloat(svg.getAttribute('width') || 0);
             const tablatureHeight = parseFloat(svg.getAttribute('height') || 0);
 
-            if (tablatureWidth === 0) return { x: 100, y: 100 };
+            if (declaredWidth === 0) return { x: 100, y: 100 };
 
-            // Simple calculation: screen width / tablature width
-            const screenWidth = window.innerWidth - 40; // Small margin
+            // Account for container padding and margins
+            // The container has padding and the panels have margins
+            const containerPadding = 120; // Increased to account for full container structure
+            const screenWidth = window.innerWidth - containerPadding;
             const screenHeight = (window.innerHeight - 300) / 2; // Two panels with UI space
 
-            // Direct percentage calculation - allow very small zoom for very long songs
-            const xZoomPercent = Math.min(Math.max((screenWidth / tablatureWidth) * 100, 3), 200);
-            const yZoomPercent = Math.min(Math.max((screenHeight / tablatureHeight) * 100, 20), 200);
+            // Smart zoom calculation - allow very small zoom for overview
+            const xZoomPercent = Math.min(Math.max((screenWidth / declaredWidth) * 100, 1), 200); // Min 1% for full overview
+            const yZoomPercent = Math.min(Math.max((screenHeight / tablatureHeight) * 100, 1), 200); // Min 1% for full overview
 
-            console.log('Simple auto-zoom: X=' + xZoomPercent.toFixed(1) + '%, Y=' + yZoomPercent.toFixed(1) + '% (Tablature: ' + tablatureWidth + '×' + tablatureHeight + ', Screen: ' + screenWidth + '×' + screenHeight + ')');
+            console.log('Auto-zoom calculation:', {
+                declaredWidth: declaredWidth + 'px',
+                screenWidth: screenWidth + 'px',
+                containerPadding: containerPadding + 'px',
+                xZoomPercent: xZoomPercent.toFixed(1) + '%',
+                yZoomPercent: yZoomPercent.toFixed(1) + '%'
+            });
 
             return {
                 x: xZoomPercent,
@@ -1010,7 +1061,7 @@ class DualPanelGenerator {
                             const scaledNoteX = noteX <= pivotX ? noteX : pivotX + (noteX - pivotX) * xZoom;
 
                             // Triangle starts at right edge of scaled note head
-                            const noteRadius = 8;
+                            const noteRadius = 12;
                             const startX = scaledNoteX + noteRadius;
                             const endX = startX + (160 * xZoom); // Scaled half-note length
 
@@ -1022,6 +1073,21 @@ class DualPanelGenerator {
                         }
                     }
 
+                    // Handle note label positioning to stay centered on note head
+                    if (element.classList.contains('note-label') && element.dataset.noteX && element.dataset.noteY) {
+                        const noteBaseX = parseFloat(element.dataset.noteX);
+                        const noteBaseY = parseFloat(element.dataset.noteY);
+
+                        // Calculate scaled note position
+                        const pivotX = 120;
+                        const scaledNoteX = noteBaseX <= pivotX ? noteBaseX : pivotX + (noteBaseX - pivotX) * xZoom;
+                        const scaledNoteY = noteBaseY * yZoom;
+
+                        // Center text on scaled note position
+                        element.setAttribute('x', scaledNoteX);
+                        element.setAttribute('y', scaledNoteY + 5); // Slight offset for center alignment
+                    }
+
                     // Handle lyric text positioning to maintain constant distance from note
                     if (element.classList.contains('lyric-text') && element.dataset.baseY && element.dataset.lyricOffset) {
                         const noteBaseY = parseFloat(element.dataset.baseY);
@@ -1031,10 +1097,19 @@ class DualPanelGenerator {
                         element.setAttribute('y', newLyricY);
                     }
 
-                    // Keep text and circles at consistent size
-                    if (element.tagName === 'text' || element.tagName === 'circle') {
+                    // Keep circles at consistent size - NEVER modify font sizes
+                    if (element.tagName === 'circle') {
                         element.style.transform = '';
-                        element.style.fontSize = element.tagName === 'text' ? '10px' : '';
+                    }
+                    // Text elements: preserve ALL original font sizes, NEVER override
+                    if (element.tagName === 'text') {
+                        element.style.transform = '';
+                        // Explicitly preserve original font sizes regardless of zoom
+                        const originalFontSize = element.getAttribute('font-size');
+                        if (originalFontSize) {
+                            element.style.fontSize = originalFontSize + 'px';
+                            element.style.setProperty('font-size', originalFontSize + 'px', 'important');
+                        }
                     }
                 });
 
@@ -1046,7 +1121,33 @@ class DualPanelGenerator {
                     svg.dataset.baseHeight = svg.getAttribute('height');
                 }
 
-                svg.setAttribute('width', baseWidth * xZoom);
+                // Calculate actual width needed including rightmost elements
+                // Find the rightmost element position after zoom
+                let maxX = 0;
+                svg.querySelectorAll('circle, rect, line, polygon').forEach(el => {
+                    let rightEdge = 0;
+                    if (el.tagName === 'circle') {
+                        rightEdge = parseFloat(el.getAttribute('cx') || 0) + 15; // Add radius
+                    } else if (el.tagName === 'rect') {
+                        rightEdge = parseFloat(el.getAttribute('x') || 0) + parseFloat(el.getAttribute('width') || 0);
+                    } else if (el.tagName === 'line') {
+                        rightEdge = Math.max(parseFloat(el.getAttribute('x1') || 0), parseFloat(el.getAttribute('x2') || 0));
+                    } else if (el.tagName === 'polygon') {
+                        // Parse polygon points to find rightmost X coordinate
+                        const points = el.getAttribute('points') || '';
+                        const coords = points.split(/[\s,]+/).map(parseFloat);
+                        for (let i = 0; i < coords.length; i += 2) {
+                            if (!isNaN(coords[i])) {
+                                rightEdge = Math.max(rightEdge, coords[i]);
+                            }
+                        }
+                    }
+                    maxX = Math.max(maxX, rightEdge);
+                });
+
+                // Use the larger of calculated width or base width * zoom
+                const calculatedWidth = Math.max(baseWidth * xZoom, maxX + 150); // Add more padding to prevent cutoff
+                svg.setAttribute('width', calculatedWidth);
                 svg.setAttribute('height', baseHeight * yZoom);
             });
         }
@@ -1241,17 +1342,40 @@ class DualPanelGenerator {
             setTimeout(() => {
                 const defaultZoom = calculateDefaultZoom();
 
-                if (defaultZoom.x > 3 && defaultZoom.x < 200) {
+                console.log('Auto-zoom condition check:', defaultZoom.x >= 1, defaultZoom.x < 200, defaultZoom.y >= 1, defaultZoom.y < 200);
+                if (defaultZoom.x >= 1 && defaultZoom.x < 200 && defaultZoom.y >= 1 && defaultZoom.y < 200) { // SAFE AUTO-ZOOM with font preservation
+                    console.log('AUTO-ZOOM CONDITION PASSED - Looking for sliders...');
                     const xSlider = document.querySelectorAll('.zoom-slider')[0];
                     const ySlider = document.querySelectorAll('.zoom-slider')[1];
+                    console.log('Found sliders:', xSlider ? 'X-slider found' : 'X-slider missing', ySlider ? 'Y-slider found' : 'Y-slider missing');
 
                     if (xSlider) {
                         xSlider.value = defaultZoom.x;
                         updateZoom('x', defaultZoom.x);
+                        // SAFE AUTO-ZOOM: Force font preservation after zoom
+                        setTimeout(() => {
+                            document.querySelectorAll('svg text').forEach(textEl => {
+                                const originalSize = textEl.getAttribute('font-size');
+                                if (originalSize) {
+                                    textEl.style.fontSize = originalSize + 'px';
+                                    textEl.style.setProperty('font-size', originalSize + 'px', 'important');
+                                }
+                            });
+                        }, 50);
                     }
                     if (ySlider) {
                         ySlider.value = defaultZoom.y;
                         updateZoom('y', defaultZoom.y);
+                        // SAFE AUTO-ZOOM: Force font preservation after Y-zoom
+                        setTimeout(() => {
+                            document.querySelectorAll('svg text').forEach(textEl => {
+                                const originalSize = textEl.getAttribute('font-size');
+                                if (originalSize) {
+                                    textEl.style.fontSize = originalSize + 'px';
+                                    textEl.style.setProperty('font-size', originalSize + 'px', 'important');
+                                }
+                            });
+                        }, 100);
                     }
 
                     console.log('Applied auto-zoom with CSS-gradient resonance bands:', defaultZoom.x + '%, ' + defaultZoom.y + '%');
@@ -1372,6 +1496,6 @@ if (require.main === module) {
             }
         });
 
-        console.log(`\n🎵 Generated ${generated}/${total} dual-panel viewers successfully!`);
+        console.log(`\nGenerated ${generated}/${total} dual-panel viewers successfully!`);
     }
 }

@@ -80,7 +80,7 @@ class DualPanelGenerator {
 
         // Color scheme
         this.colors = {
-            mainNote: '#666666',      // Neutral grey for notes
+            mainNote: '#000000',      // Full black for notes and triangles
             graceNote: '#FFD700',     // Gold for grace notes
             bentIndicator: '#FF0000', // Red for bent notes
             melisma: '#E74C3C',       // Red for melisma
@@ -223,7 +223,7 @@ class DualPanelGenerator {
 
             svg += `<line x1="50" y1="${string.y}" x2="${width - 50}" y2="${string.y}"
                      stroke="${color}" stroke-width="2" opacity="${opacity}"/>`;
-            svg += `<text x="20" y="${string.y + 4}" font-size="10" fill="${color}">${string.note}</text>\n`;
+            svg += `<text x="20" y="${string.y + 4}" font-size="10" fill="#000000">${string.note}</text>\n`;
         });
 
         // Draw notes with relationships
@@ -293,6 +293,19 @@ class DualPanelGenerator {
                     }
                 }
 
+                // Add triangle resonance for grace notes too
+                const graceNoteLength = 160; // Same length as main notes
+                const graceBandHeight = 12;
+                const graceRadius = 5;
+                const graceStartX = x + graceRadius;
+                const graceTopY = y - graceBandHeight / 2;
+                const graceBottomY = y + graceBandHeight / 2;
+                const graceEndX = graceStartX + graceNoteLength;
+
+                svg += `<polygon points="${graceStartX},${graceTopY} ${graceStartX},${graceBottomY} ${graceEndX},${y}"
+                        fill="${this.colors.mainNote}" opacity="0.5" class="resonance-triangle"
+                        data-note-y="${y}" data-band-height="${graceBandHeight}" data-note-x="${x}"/>`;
+
                 svg += `<circle cx="${x}" cy="${y}" r="5" fill="${this.colors.graceNote}"
                         stroke="#CC9900" stroke-width="1"
                         data-lyrics="${associatedLyrics}" class="lyrics-${associatedLyrics}"/>`;
@@ -328,18 +341,20 @@ class DualPanelGenerator {
                     }
                 }
 
-                // Draw resonance band before note (half-note fixed length)
+                // Draw resonance triangle attached to note head - taper rightward
                 const halfNoteLength = 160; // Fixed length for half note (320px full note / 2)
                 const bandHeight = 12;
-                const bandY = y - bandHeight / 2; // Center band on note Y position
 
-                // Use inline CSS gradient for better persistence
-                const gradientStyle = `background: linear-gradient(to right, ${this.colors.mainNote}99, ${this.colors.mainNote}33, transparent); opacity: 0.8;`;
+                // Triangle starts at note head edge and tapers right to a point
+                const noteRadius = 8;
+                const startX = x + noteRadius; // Start at right edge of note head
+                const topY = y - bandHeight / 2;
+                const bottomY = y + bandHeight / 2;
+                const endX = startX + halfNoteLength;
 
-                svg += `<foreignObject x="${x}" y="${bandY}" width="${halfNoteLength}" height="${bandHeight}" class="resonance-band"
-                        data-base-x="${x}" data-base-y="${y}" data-base-width="${halfNoteLength}" data-band-height="${bandHeight}">
-                        <div style="width: 100%; height: 100%; ${gradientStyle}"></div>
-                        </foreignObject>`;
+                svg += `<polygon points="${startX},${topY} ${startX},${bottomY} ${endX},${y}"
+                        fill="${this.colors.mainNote}" opacity="0.5" class="resonance-triangle"
+                        data-note-y="${y}" data-band-height="${bandHeight}" data-note-x="${x}"/>`;
 
                 // Draw note
                 svg += `<circle cx="${x}" cy="${y}" r="8" fill="${this.colors.mainNote}"
@@ -786,7 +801,7 @@ class DualPanelGenerator {
         <!-- Traditional Tuning Panel with Dropdown -->
         <div class="tuning-panel">
             <div class="panel-header" onclick="togglePanel('traditional')">
-                <h3>🔍 <select id="tuningSelector" onclick="event.stopPropagation()" onchange="changeTuning(this.value)" style="
+                <h3>🔍 Alternative Tuning: <select id="tuningSelector" onclick="event.stopPropagation()" onchange="changeTuning(this.value)" style="
                     background: transparent;
                     border: 1px solid rgba(255,255,255,0.3);
                     color: inherit;
@@ -806,9 +821,9 @@ class DualPanelGenerator {
                         </optgroup>
                     `).join('')}
                 </select></h3>
-                <span class="collapse-indicator">▼</span>
+                <span class="collapse-indicator">▶</span>
             </div>
-            <div class="panel-content expanded" id="traditionalContent">
+            <div class="panel-content collapsed" id="traditionalContent">
                 <div class="tuning-info">
                     <span class="tuning-display" id="tuningDisplay">${defaultTraditionalTuning}</span>
                     <span class="bent-notes-count" id="bentNotesCount">${traditionalSVG.bentNoteCount} bent notes</span>
@@ -927,6 +942,11 @@ class DualPanelGenerator {
                         element.dataset.baseY = element.getAttribute('y') || element.getAttribute('cy') || element.getAttribute('y1') || '0';
                         element.dataset.baseX2 = element.getAttribute('x2') || '';
                         element.dataset.baseY2 = element.getAttribute('y2') || '';
+
+                        // Store width for rectangles (including resonance bands)
+                        if (element.tagName === 'rect' && element.getAttribute('width')) {
+                            element.dataset.baseWidth = element.getAttribute('width');
+                        }
                     }
 
                     const baseX = parseFloat(element.dataset.baseX);
@@ -976,22 +996,29 @@ class DualPanelGenerator {
                         element.setAttribute('y2', newY2);
                     }
 
-                    // Handle resonance band scaling with zoom
-                    if (element.classList.contains('resonance-band')) {
-                        // X-zoom: scale width
-                        if (element.dataset.baseWidth) {
-                            const baseWidth = parseFloat(element.dataset.baseWidth);
-                            const newWidth = baseWidth * xZoom;
-                            element.setAttribute('width', newWidth);
-                        }
-
-                        // Y-zoom: recalculate Y position to keep band centered on note
-                        if (element.dataset.baseY && element.dataset.bandHeight) {
-                            const noteBaseY = parseFloat(element.dataset.baseY);
+                    // Handle resonance triangle scaling - stick to note head
+                    if (element.classList.contains('resonance-triangle') && element.tagName === 'polygon') {
+                        // Recalculate triangle points based on zoom and note position
+                        if (element.dataset.noteY && element.dataset.bandHeight && element.dataset.noteX) {
+                            const noteY = parseFloat(element.dataset.noteY);
+                            const noteX = parseFloat(element.dataset.noteX);
                             const bandHeight = parseFloat(element.dataset.bandHeight);
-                            const newNoteY = noteBaseY * yZoom;
-                            const newBandY = newNoteY - bandHeight / 2;
-                            element.setAttribute('y', newBandY);
+                            const scaledNoteY = noteY * yZoom;
+
+                            // Calculate note position with X-zoom
+                            const pivotX = 120;
+                            const scaledNoteX = noteX <= pivotX ? noteX : pivotX + (noteX - pivotX) * xZoom;
+
+                            // Triangle starts at right edge of scaled note head
+                            const noteRadius = 8;
+                            const startX = scaledNoteX + noteRadius;
+                            const endX = startX + (160 * xZoom); // Scaled half-note length
+
+                            // Recalculate triangle points
+                            const topY = scaledNoteY - bandHeight / 2;
+                            const bottomY = scaledNoteY + bandHeight / 2;
+                            const newPoints = startX + ',' + topY + ' ' + startX + ',' + bottomY + ' ' + endX + ',' + scaledNoteY;
+                            element.setAttribute('points', newPoints);
                         }
                     }
 
@@ -1210,37 +1237,26 @@ class DualPanelGenerator {
 
         // Setup click handlers for lyrics and apply default zoom
         document.addEventListener('DOMContentLoaded', () => {
-            // Apply default zoom to fit content - multiple attempts to ensure reliable calculation
-            function tryApplyDefaultZoom(attempts = 0) {
-                if (attempts > 5) return; // Give up after 5 attempts
-
+            // Apply default zoom after brief delay - CSS gradients should persist
+            setTimeout(() => {
                 const defaultZoom = calculateDefaultZoom();
 
-                // Only apply if we got valid zoom values
-                if (defaultZoom.x > 10 && defaultZoom.x < 200) {
-                    // Update X-zoom slider and apply
+                if (defaultZoom.x > 3 && defaultZoom.x < 200) {
                     const xSlider = document.querySelectorAll('.zoom-slider')[0];
+                    const ySlider = document.querySelectorAll('.zoom-slider')[1];
+
                     if (xSlider) {
                         xSlider.value = defaultZoom.x;
                         updateZoom('x', defaultZoom.x);
                     }
-
-                    // Update Y-zoom slider and apply
-                    const ySlider = document.querySelectorAll('.zoom-slider')[1];
                     if (ySlider) {
                         ySlider.value = defaultZoom.y;
                         updateZoom('y', defaultZoom.y);
                     }
 
-                    console.log('Successfully applied auto-zoom on attempt', attempts + 1);
-                } else {
-                    // Retry with longer delay
-                    setTimeout(() => tryApplyDefaultZoom(attempts + 1), 200);
+                    console.log('Applied auto-zoom with CSS-gradient resonance bands:', defaultZoom.x + '%, ' + defaultZoom.y + '%');
                 }
-            }
-
-            // Start trying after initial delay
-            setTimeout(() => tryApplyDefaultZoom(), 300);
+            }, 500);
 
             // Lyric click highlighting
             document.querySelectorAll('.lyric-text').forEach(lyric => {

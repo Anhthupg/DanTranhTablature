@@ -1,1019 +1,561 @@
-# Dan Tranh Tablature Project - Claude Configuration
+# Dan Tranh Tablature V3 - Claude Configuration & Visual System
 
 ## Project Overview
-This project is an interactive Dan Tranh (Vietnamese 16-string zither) tablature visualization system with pattern analysis capabilities.
+Dan Tranh Tablature V3 is a scalable visualization system for Vietnamese 16-string zither music with advanced pattern analysis capabilities. This version maintains the exact visual experience of V1 while enabling collection-scale analysis of 130+ songs.
 
-## String Configuration and Spacing
+## Visual System Specifications
 
-### Dynamic String System (NEW)
-The Dan Tranh tablature now uses a **dynamic string configuration** that:
-- **Automatically detects** all notes used in the songs
-- **Supports 12-30 strings** as found in various Dan Tranh configurations
-- **Handles chromatic notes** (sharps ♯ and flats ♭)
-- **Supports microtones** (e.g., C4+15cents for precise tuning)
-- **Displays only played strings** for cleaner visualization
+### 12-Color Optimized Palette
 
-### Song-Specific Pentatonic Tuning System (UPDATED v3.1.6)
-Each song now uses its own optimal tuning based on the 5 most frequently used pitch classes:
-
-- **Analysis**: Analyzes all notes in a song and counts pitch class frequencies (C, D, E, F, G, A, B)
-- **Selection**: Top 5 most common pitch classes become the open strings
-- **Ordering**: Sorted alphabetically starting from C (octaves begin at C, not D)
-- **Result**: Optimal 5-note pentatonic scale specific to each song
-
-**Examples**:
-- "Bồ Các là bác chim Ri": Uses C-F-G (only 3 notes, 0 bent notes)
-- "Bà rằng bà rí": Uses C-D-E-G-A (full pentatonic, 0 bent notes)
-- "Bài chòi": Uses D-E-F-A-B (1 bent note, 2.4%)
-
-### String Bending for Non-Open Notes
-For notes that aren't in the song's pentatonic tuning:
-- Notes are placed **proportionally between strings** based on semitone distance
-- A **red curved dashed line with arrow** (bend symbol) shows the bend from the lower open string
-- The bend ratio is calculated based on the interval between strings in cents
-- Bent notes can be **highlighted in red** by clicking the "Bent Strings / Bent Notes" button
-- **Metrics tracked**: Number of bent strings, number of bent notes, percentage of bent notes
-- This represents the traditional Dan Tranh playing technique of pressing strings to reach non-open pitches
-
-### Example String Configurations
-
-| Configuration | String Count | Notes Used |
-|--------------|--------------|------------|
-| Traditional Pentatonic | 16 | C, D, E, G, A in multiple octaves |
-| Extended Chromatic | 16 | All 16 strings with chromatic coverage |
-| Custom Song-Based | Variable | Only strings needed for specific songs |
-
-### Spacing Details (UPDATED: Proportional System)
-- **Proportional Spacing**: Based on musical intervals in cents (1 semitone = 100 cents)
-- **Scale Factor**: 0.3 pixels per cent for optimal visual representation
-- **Base Position**: D4 (String 5) at Y=110px
-- **Example Spacings**:
-
-## DanTranhTuningAnalyzer Framework (NEW v3.5.8)
-
-### Purpose
-Advanced tuning comparison system for analyzing how different tuning systems affect the same musical content. Provides mathematical validation of traditional Vietnamese tuning choices.
-
-### Core Principles
-
-#### 1. Global Spacing Consistency
-```
-STRICT RULE: 20px per 100 cents (0.2 pixels per cent)
-- C4 = Y=20 (0 cents)
-- D4 = Y=60 (200 cents)
-- E4 = Y=100 (400 cents)
-- F4 = Y=120 (500 cents)
-- G4 = Y=160 (700 cents)
-- A4 = Y=200 (900 cents)
-- B4 = Y=240 (1100 cents)
-- C5 = Y=260 (1200 cents)
-- D5 = Y=300 (1400 cents)
-```
-
-#### 2. Identical Note Positioning
-- **Same note heads** across all tuning comparisons (grey circles)
-- **Same X positions** (timing consistency)
-- **Same Y positions** (pitch consistency using global spacing)
-- **Only bending indicators differ** based on tuning string availability
-
-#### 3. Physical Bending Accuracy
-- **Only downward bending**: Lines connect from higher strings (smaller Y) to lower notes (bigger Y)
-- **No upward bending**: Physically impossible technique eliminated
-- **Impossible notes flagged**: When no suitable string available for downward bending
-- **Center-to-center connections**: Red dots positioned exactly on source strings
-
-#### 4. 17-String Complete Coverage
-- **Pattern repetition**: Each tuning's 5-note pattern repeats across multiple octaves
-- **Eliminates impossible notes**: Provides strings above and below melody range
-- **Used/unused determination**: Analyze bending requirements first, then mark string usage
-- **Enharmonic accuracy**: Cb = B, E# = F, proper positioning
-
-### Implementation Workflow
-
-#### Step 1: Extract Song Data
-```javascript
-MusicXML → {notes: [{pitch, timing, duration}], metadata}
-```
-
-#### Step 2: Generate Global String Grid
-```javascript
-// 17 strings covering full chromatic range with global spacing
-const globalStrings = generateGlobalStringGrid(20); // 20px per 100 cents
-```
-
-#### Step 3: Apply Tuning Patterns
-```javascript
-tunings.forEach(tuning => {
-    const tuningStrings = apply17StringPattern(tuning); // Eb-G-Ab-Bb-Cb etc.
-    const stringSelection = markUsedStrings(songNotes, tuningStrings);
-});
-```
-
-#### Step 4: Analyze Bending Requirements
-```javascript
-songNotes.forEach(note => {
-    const nearestString = findNearestDownwardString(note.pitch, tuningStrings);
-    if (nearestString.pitch !== note.pitch) {
-        addBentIndicator(nearestString.position, note.position);
-    }
-});
-```
-
-#### Step 5: Visual Comparison
-- **Side-by-side panels**: Each tuning in separate column
-- **Identical note heads**: Same musical content across all panels
-- **Different bending patterns**: Based on tuning string availability
-- **Efficiency metrics**: Count bent notes for each tuning
-
-### Tuning Efficiency Analysis
-
-#### Proven Results
-- **"Bài chòi" with D-E-F-A-B**: 1 bent note (2.4%) - Mathematically optimal
-- **"Bài chòi" with C-D-E-G-A**: 3 bent notes - Less efficient
-- **"Bài chòi" with Exotic tunings**: 8+ bent notes - Very inefficient
-
-#### Key Insights
-- **Modal songs require modal tunings** for optimal efficiency
-- **Traditional tuning choices are mathematically validated**, not arbitrary
-- **Exotic international tunings** viable but require extensive bending for Western-style melodies
-- **17-string coverage** makes any tuning technically possible
-
-### Example Usage
-```html
-<!-- DanTranhTuningAnalyzer comparison -->
-<div class="tuning-comparison">
-    <!-- Panel 1: Original optimal tuning -->
-    <!-- Panel 2: Traditional C-D-E-G-A -->
-    <!-- Panel 3: Natural C-D-E-F-G -->
-    <!-- Panel 4: Alternative tuning -->
-    <!-- Panel 5: Exotic tuning -->
-</div>
-```
-
-### Validation Results
-- **Mathematical proof**: Optimal tunings minimize bending requirements
-- **Cultural validation**: Traditional Vietnamese choices proven efficient
-- **Cross-cultural analysis**: International tunings analyzed for Vietnamese repertoire
-- **Educational value**: Visual demonstration of tuning theory principles
-
-### Complete Implementation Rules (STRICT)
-
-#### Rule 1: 17-String Pattern Repetition
-```javascript
-// EVERY tuning gets exactly 17 strings
-function generate17StringTuning(pattern) {
-    const strings = [];
-    let stringNum = 1;
-    let octave = 3;
-    let patternIndex = 0;
-
-    while (stringNum <= 17) {
-        const note = pattern[patternIndex % pattern.length];
-        const fullNote = note + octave;
-        const cents = calculateCents(fullNote);
-
-        strings.push({
-            number: stringNum,
-            note: fullNote,
-            y: 20 + (cents / 100) * 20  // STRICT: 20px per 100 cents
-        });
-
-        stringNum++;
-        patternIndex++;
-        if (patternIndex % pattern.length === 0) octave++;
-    }
-    return strings;
-}
-```
-
-#### Rule 2: Identical Note Positioning
-```javascript
-// ALL tunings show SAME notes at SAME positions
-const notePositions = [
-    {note: "B4", x: 40, y: 480},   // Y = 20 + (1100/100) * 20 = 240
-    {note: "A4", x: 85, y: 440},   // Y = 20 + (900/100) * 20 = 200
-    {note: "F4", x: 100, y: 360},  // Y = 20 + (500/100) * 20 = 120
-    // ... consistent across ALL tunings
-];
-```
-
-#### Rule 3: Bending Analysis Logic
-```javascript
-// Determine bending AFTER drawing all strings and notes
-function analyzeBending(notes, tuningStrings) {
-    notes.forEach(note => {
-        const availableStrings = tuningStrings.filter(s => s.y <= note.y); // Only downward
-        const nearestString = findNearest(availableStrings, note.pitch);
-
-        if (nearestString.pitch !== note.pitch) {
-            addBentIndicator(nearestString.y, note.x, note.y);
-        }
-    });
-}
-```
-
-#### Rule 4: Visual Consistency Standards
-- **String colors**: Black (in tuning), Light grey (not in tuning), opacity 0.3
-- **Note circles**: r=6, fill="#666" (neutral grey) - IDENTICAL across all tunings
-- **Bent indicators**: Red dots (●) at string positions, red dashed lines to notes
-- **Text size**: String labels=5px, Note numbers=7px, Headers=8px
-- **Spacing**: No exceptions to 20px per 100 cents rule
-
-### File Naming Convention
-```
-song-name-tuning-analysis.html          // Main comparison
-song-name-timeline-comparison.html      // Timeline view
-song-name-17-strings-complete.html      // Complete string coverage
-```
-
-### Example Implementation: "Bài chòi"
-- **URL**: `truly-consistent-17.html`
-- **Demonstrates**: 5 tunings, 17 strings each, identical notes, global spacing
-- **Proves**: D-E-F-A-B optimal (1 bent) vs others (5-6 bent)
-- **Validates**: Traditional Vietnamese tuning mathematical superiority
-
-### Critical Bug Fixes Applied (v3.5.8)
-
-#### Issue 1: Upward Bending Prevention
-```javascript
-// WRONG: Upward bending (impossible)
-if (sourceString.y > targetNote.y) {
-    // This would be upward bending - FORBIDDEN
-}
-
-// CORRECT: Only downward bending
-function findBendingSource(targetNote, availableStrings) {
-    return availableStrings.filter(string => string.y <= targetNote.y) // Only higher strings
-                          .sort((a, b) => Math.abs(a.pitch - targetNote.pitch))[0];
-}
-```
-
-#### Issue 2: Missing Bent Indicators
-```javascript
-// Must analyze ALL notes in song for bent requirements
-songNotes.forEach((note, index) => {
-    const tuningHasNote = tuningPattern.includes(note.pitchClass);
-    if (!tuningHasNote) {
-        const sourceString = findBendingSource(note, tuningStrings);
-        if (sourceString) {
-            addBentIndicator(sourceString.position, note.position);
-        } else {
-            markAsImpossible(note);
-        }
-    }
-});
-```
-
-#### Issue 3: Visual Consistency Enforcement
+#### Primary Note Types (4 Colors)
 ```css
-/* STRICT styling rules - no variations allowed */
-.bent-indicator {
-    fill: #FF0000;
-    font-size: 10px;  /* Bigger for visibility */
-}
-.bent-line {
-    stroke: #FF0000;
-    stroke-width: 1.5;
-    stroke-dasharray: 3,2;
-}
-.note-head {
-    r: 6;
-    fill: #666;  /* Neutral grey - identical across all tunings */
-}
+/* Main Notes - Teal Family */
+--main-note-fill: #008080;        /* Teal - stable, foundational */
+--main-note-stroke: #005959;      /* Dark teal - defines boundaries */
+--main-note-text: #FFFFFF;        /* White - high contrast */
+
+/* Grace Notes - Gold Family */
+--grace-note-fill: #FFD700;       /* Gold - ornamental, attention-drawing */
+--grace-note-stroke: #CC9900;     /* Dark gold - maintains definition */
+--grace-note-text: #4A3C00;       /* Dark brown - readable on gold */
+
+/* Tone Markings - Purple Family */
+--tone-fill: #9B59B6;             /* Purple - tonal indicators */
+--tone-stroke: #7D3C98;           /* Dark purple - boundaries */
+--tone-text: #FFFFFF;             /* White - readable on purple */
+
+/* Melisma - Red Family */
+--melisma-fill: #E74C3C;          /* Red - flowing ornamentations */
+--melisma-stroke: #C0392B;        /* Dark red - definition */
+--melisma-text: #FFFFFF;          /* White - high contrast */
 ```
 
-#### Issue 4: Pattern Completion Logic
+#### Pattern Categories (8 Colors)
+```css
+/* KPIC (Pitch) Patterns - Blue Gradient */
+--kpic-1: #0066CC;                /* Deep blue - primary */
+--kpic-2: #3498DB;                /* Medium blue - secondary */
+--kpic-3: #5DADE2;                /* Sky blue - tertiary */
+--kpic-4: #85C1E9;                /* Pale blue - quaternary */
+
+/* KRIC (Rhythm) Patterns - Green Gradient */
+--kric-1: #27AE60;                /* Forest green - primary */
+--kric-2: #52BE80;                /* Medium green - secondary */
+--kric-3: #76D7A4;                /* Mint green - tertiary */
+--kric-4: #A9DFBF;                /* Pale green - quaternary */
+```
+
+### 4-Level Glow System
+
+```css
+/* Glow Intensities - Applied via filter or box-shadow */
+--glow-level-1: 0 0 10px rgba(color, 0.4);    /* Soft - subtle indication */
+--glow-level-2: 0 0 20px rgba(color, 0.6);    /* Medium - clear highlight */
+--glow-level-3: 0 0 30px rgba(color, 0.8);    /* Strong - emphasis */
+--glow-level-4: 0 0 40px rgba(color, 1.0);    /* Pulse - active/animated */
+
+/* Application Examples */
+.note-hover { filter: drop-shadow(var(--glow-level-1)); }
+.note-selected { filter: drop-shadow(var(--glow-level-2)); }
+.note-playing { filter: drop-shadow(var(--glow-level-3)); }
+.note-active { filter: drop-shadow(var(--glow-level-4)); }
+```
+
+### Texture Pattern System
+
+#### Pattern Types
 ```javascript
-// EVERY tuning must have exactly 17 strings - no exceptions
-function generateComplete17StringPattern(tuningPattern) {
-    const strings = [];
-    let stringNumber = 1;
-    let octave = 3;
-    let patternIndex = 0;
+const texturePatterns = {
+  // Solid colors for identical patterns
+  solid: {
+    description: "No texture - indicates identical repetition",
+    usage: "Opening, Signature, Closing sections"
+  },
 
-    while (stringNumber <= 17) {  // STRICT: exactly 17
-        const note = tuningPattern[patternIndex % tuningPattern.length];
-        const fullNote = note + octave;
-
-        strings.push({
-            number: stringNumber,
-            note: fullNote,
-            y: calculateGlobalPosition(fullNote)  // GLOBAL spacing
-        });
-
-        stringNumber++;
-        patternIndex++;
-        if (patternIndex % tuningPattern.length === 0) octave++;
+  // Polka dot variations for different patterns
+  polkaDots: {
+    pattern1: {
+      base: "#FFA500",           // Orange base
+      dots: ["#FFFFFF", "#CC6600"], // White/dark orange dots
+      usage: "Development Section 1"
+    },
+    pattern2: {
+      base: "#FFA500",           // Orange base
+      dots: ["#27AE60", "#FFFFFF"], // Green/white dots
+      usage: "Development Section 2"
+    },
+    pattern3: {
+      base: "#FFA500",           // Orange base
+      dots: ["#3498DB", "#E74C3C"], // Blue/red dots
+      usage: "Development Section 3"
     }
-    return strings;
+  }
+};
+```
+
+### Background Options (White to Black)
+
+```css
+/* User-selectable backgrounds */
+.theme-white {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F9FA;
+  --text-primary: #2C3E50;
+  --text-secondary: #7F8C8D;
+}
+
+.theme-light {
+  --bg-primary: #F0F0F0;
+  --bg-secondary: #E0E0E0;
+  --text-primary: #34495E;
+  --text-secondary: #95A5A6;
+}
+
+.theme-dark {
+  --bg-primary: #2C3E50;
+  --bg-secondary: #34495E;
+  --text-primary: #ECF0F1;
+  --text-secondary: #BDC3C7;
+}
+
+.theme-black {
+  --bg-primary: #000000;
+  --bg-secondary: #1A1A1A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #CCCCCC;
 }
 ```
 
-### Verified Results: "Bài chòi" Analysis
-- **D-E-F-A-B (Original)**: 1 bent note - Mathematically proven optimal
-- **C-D-E-G-A (Traditional)**: 5 bent notes - Significantly less efficient
-- **C-D-E-F-G (Natural)**: 6 bent notes - Poor for this modal song
-- **Eb-G-Ab-Bb-Cb (Exotic)**: 6 bent notes - Very poor
-- **C#-D#-F#-G-G# (Japanese)**: 6+ bent notes - Extremely poor
+## String Configuration (Standard 17-String Dan Tranh)
 
-**Conclusion**: Modal Vietnamese songs require modal tunings for mathematical efficiency.
+### Global Configuration
+The Dan Tranh uses a **standard 17-string configuration** starting at E3, following the traditional Vietnamese pentatonic tuning system. This configuration is used globally across all visualizations.
 
-### Final Complete Implementation (v3.5.8)
+### Standard 17-String Layout
+| String | Note | Y Position | Interval from Previous |
+|--------|------|------------|------------------------|
+| 1      | E3   | 50         | - |
+| 2      | G3   | 110        | Minor 3rd (300 cents) |
+| 3      | A3   | 140        | Major 2nd (200 cents) |
+| 4      | C4   | 200        | Minor 3rd (300 cents) |
+| 5      | D4   | 230        | Major 2nd (200 cents) |
+| 6      | E4   | 260        | Major 2nd (200 cents) |
+| 7      | G4   | 320        | Minor 3rd (300 cents) |
+| 8      | A4   | 350        | Major 2nd (200 cents) |
+| 9      | C5   | 410        | Minor 3rd (300 cents) |
+| 10     | D5   | 440        | Major 2nd (200 cents) |
+| 11     | E5   | 470        | Major 2nd (200 cents) |
+| 12     | G5   | 530        | Minor 3rd (300 cents) |
+| 13     | A5   | 560        | Major 2nd (200 cents) |
+| 14     | C6   | 620        | Minor 3rd (300 cents) |
+| 15     | D6   | 650        | Major 2nd (200 cents) |
+| 16     | E6   | 680        | Major 2nd (200 cents) |
+| 17     | G6   | 740        | Minor 3rd (300 cents) |
 
-#### Reference File: `final-all-17-strings.html`
-**Complete "Bài chòi" analysis demonstrating all framework principles**
+### Configuration Details
+- **Tuning System**: Pentatonic (5-note scale: C, D, E, G, A)
+- **Starting Note**: E3 (lowest string)
+- **Octave Range**: E3 to G6 (3.5 octaves)
+- **Total Strings**: 17 (standard), configurable 1-30
+- **Spacing Calculation**: Proportional based on musical intervals (0.3 pixels per cent)
+- **Display Logic**:
+  - Always show all 17 strings in tablature
+  - Used strings shown in black
+  - Unused strings shown in grey (#999)
+  - Minimum 5 strings displayed even if fewer are used
 
-```html
-<!-- 5 tuning panels side-by-side -->
-<div class="tuning-grid">
-    <!-- Each panel shows exactly 17 strings -->
-    <!-- Pattern: S1-S17 following tuning repetition -->
-    <!-- Example: D-E-F-A-B repeats until 17 strings total -->
-</div>
-```
-
-#### Verified Implementation Results
-- **All 5 tunings**: Exactly 17 strings each (S1-S17)
-- **Global spacing**: 20px per 100 cents applied consistently
-- **Identical notes**: Same grey circles at same X,Y positions
-- **Red bent indicators**: Visible dots (●) and dashed lines
-- **Only downward bending**: All red dots positioned on higher strings
-- **Accurate counts**: Bent note totals verified for each tuning
-
-#### Mathematical Validation Complete
-```
-"Bài chòi" Efficiency Analysis:
-- D-E-F-A-B (Original): 1 bent note (2.4%) - OPTIMAL
-- C-D-E-G-A (Traditional): 5 bent notes (11.9%) - Less efficient
-- C-D-E-F-G (Natural): 6 bent notes (14.3%) - Poor for modal song
-- Eb-G-Ab-Bb-Cb (Exotic): 8 bent notes (19.0%) - Very poor
-- C#-D#-F#-G-G# (Japanese): 8 bent notes (19.0%) - Extremely poor
-```
-
-**Scientific Conclusion**: Traditional Vietnamese tuning choices are **mathematically optimal** for their respective songs, not arbitrary cultural preferences.
-
-#### Framework Status: COMPLETE
-- **Documentation**: Hard-coded in CLAUDE.md ✅
-- **Implementation**: Reference file with all 17 strings ✅
-- **Validation**: Mathematical proof of optimality ✅
-- **Bug fixes**: All upward bending eliminated ✅
-- **Consistency**: Strict rules enforced ✅
-
-**The DanTranhTuningAnalyzer Framework v3.5.8 is production-ready for analysis of any Vietnamese Dan Tranh song with any tuning system.**
-
-### CRITICAL: Systematic Processing Required
-
-#### Machine vs Human Error Pattern Identified
-**Problem**: Manual tracking of bent indicators leads to missing notes (e.g., missing B4 notes 3,8 in Japanese tuning)
-**Solution**: ALWAYS use systematic algorithmic approach
-
-#### Mandatory Systematic Algorithm
+### Technical Implementation
 ```javascript
-// REQUIRED: Process EVERY note systematically - no manual shortcuts
-function addAllBentIndicators(songNotes, tuningPattern, tuningStrings) {
-    songNotes.forEach((note, index) => {
-        // Check if note pitch class is in tuning
-        const pitchClass = note.pitch.replace(/[0-9]/g, '');
-        const isInTuning = tuningPattern.includes(pitchClass);
+// Standard 17-string generation starting at E3
+const STRING_CONFIG = generatePentatonicStrings('E', 3, 17);
 
-        if (!isInTuning) {
-            // Find nearest downward string systematically
-            const availableStrings = tuningStrings.filter(s => s.y <= note.y);
-            const nearestString = availableStrings.reduce((nearest, current) => {
-                const nearestDiff = Math.abs(nearest.cents - note.cents);
-                const currentDiff = Math.abs(current.cents - note.cents);
-                return currentDiff < nearestDiff ? current : nearest;
-            });
-
-            if (nearestString) {
-                addBentIndicator(index, nearestString.y, note.x, note.y);
-                console.log(`Note ${index + 1}: ${note.pitch} bent from ${nearestString.note}`);
-            } else {
-                markAsImpossible(note, index);
-                console.log(`Note ${index + 1}: ${note.pitch} IMPOSSIBLE - no suitable string`);
-            }
-        }
-    });
-}
+// Generates: E3, G3, A3, C4, D4, E4, G4, A4, C5, D5, E5, G5, A5, C6, D6, E6, G6
 ```
 
-#### Systematic Verification Checklist
-```javascript
-// MANDATORY: Verify completeness after implementation
-function verifyBentIndicators(songNotes, tuningPattern) {
-    const bentNotes = songNotes.filter(note => !tuningPattern.includes(note.pitchClass));
-    const drawnIndicators = document.querySelectorAll('.bent-indicator').length;
-
-    console.log(`Expected bent notes: ${bentNotes.length}`);
-    console.log(`Drawn bent indicators: ${drawnIndicators}`);
-
-    if (bentNotes.length !== drawnIndicators) {
-        console.error('INCOMPLETE: Missing bent indicators detected');
-        bentNotes.forEach((note, i) => {
-            console.log(`Check note ${i + 1}: ${note.pitch} at position ${note.x},${note.y}`);
-        });
-    }
-}
-```
-
-#### Implementation Rule: NO MANUAL SHORTCUTS
-- **Process every note**: Use forEach() or for() loops, never manual selection
-- **Verify completeness**: Check expected vs actual bent indicator counts
-- **Document each decision**: Log which notes bend from which strings
-- **Test edge cases**: Ensure no upward bending, handle impossible notes
-- **Algorithmic consistency**: Same logic applied to every note without exception
-
-#### Error Prevention: Human-Like Mistakes Forbidden
-- ❌ **Manual identification**: "I see B4 at positions 1,2..."
-- ✅ **Systematic processing**: `notes.filter(n => n.pitch === "B4")`
-- ❌ **Assumption-based**: "This should work for most notes..."
-- ✅ **Verification-based**: Count expected vs actual, log all decisions
-- ❌ **Shortcuts**: "The obvious ones are..."
-- ✅ **Complete analysis**: Process every single note without exception
-
-**MACHINE SUPERIORITY RULE**: Always leverage systematic processing capabilities over human-like intuitive shortcuts.
-
----
-  - D4 to G4: 500 cents (Perfect 4th) = 150px gap
-  - G4 to A4: 200 cents (Major 2nd) = 60px gap
-  - A4 to C5: 300 cents (Minor 3rd) = 90px gap
-- **Total Height Range**: 110px to 620px (17 semitones = 510px total)
-- **Default Y-Zoom**: 67% (0.67x) to match comfortable viewing
-
-### Coordinate System
-- **X-axis**: Represents time/position in the piece (0 to 11400)
-- **Y-axis**: Represents string positions (110 to 625)
-- **Origin**: Top-left corner of the SVG canvas
+- **Default zoom**: 67% for comfortable viewing
+- **Coordinate system**: SVG (top=0, increases downward)
 
 ## Pattern Analysis Systems
 
 ### KPIC (Kinetic Pitch Contour)
-- Analyzes pitch patterns across notes
-- KPIC-2: Two-note pitch transitions
-- KPIC-3: Three-note pitch sequences
-- etc.
+- **KPIC-2**: Two-note pitch transitions (e.g., D4→G4)
+- **KPIC-3**: Three-note pitch sequences (e.g., D4→G4→A4)
+- **Visual**: Blue color family with 4 intensity levels
 
 ### KRIC (Kinetic Rhythm Contour)
-- Analyzes rhythm patterns across notes
-- KRIC-2: Two-note rhythm transitions
-- KRIC-3: Three-note rhythm sequences
-- etc.
+- **KRIC-2**: Two-note rhythm transitions
+- **KRIC-3**: Three-note rhythm sequences
+- **Visual**: Green color family with 4 intensity levels
 
-## Visualization Features
+### Pattern Efficiency Metrics
+- **Learn Only**: Minimum notes needed to master (V1-style calculation)
+- **Total Notes**: Complete song length
+- **Efficiency Gain**: Percentage saved through pattern recognition
+- **Unique Pitches**: Number of different musical notes used
 
-### Individual Song Viewer (v3.1.6)
-Each song has a dedicated viewer page with:
+## Implementation Guidelines
 
-**Compact Header Metrics (Minimalist Design)**:
-- **Tuning**: Song-specific pentatonic scale (e.g., "C-D-E-G-A")
-- **Total Notes**: Complete note count for the song
-- **Open-String Notes**: Notes played on open strings (no bending)
-- **Bent Strings / Bent Notes Button**:
-  - Clickable toggle button with clear on/off states
-  - **OFF state**: Green border, white background, green text
-  - **ON state**: Red background, white text, all bent notes highlighted in red
-  - Shows count of bent strings and bent notes
-- **Patterns**: Number of unique patterns to learn
+### State Management
+```javascript
+const visualStates = {
+  opacity: {
+    normal: 0.8,      // Default visibility
+    hover: 0.9,       // Slight emphasis
+    selected: 1.0,    // Full opacity
+    dimmed: 0.4,      // Background/unselected
+    inactive: 0.3     // Clearly inactive
+  },
 
-**Interactive Features**:
-- **Theme Selector**: 4 themes (White, Light Grey, Dark Grey, Black) in top-right corner
-- **Back to Library**: Button next to theme selector
-- **Zoom Controls**:
-  - X-Zoom slider with Fit Width button
-  - Y-Zoom slider with Fit Height button
-- **Bent Notes Highlighting**: Click button to toggle red highlighting of all bent notes
-
-**Button Toggle Behavior**:
-- All clickable buttons must have clear ON and OFF states
-- Visual feedback shows current state (color change, background change)
-- Second click returns to original state
-
-### Library Interface
-**Thumbnail Cards Display**:
-- **Tuning**: "Tuning: C-D-E-G-A" (green text, monospace font)
-- **Strings Used**: "X strings used" (actual strings played in song)
-- **Bent Notes**: "X bent strings, Y bent notes" (only shown if > 0)
-- **Other Tags**: Time signature, lyrics indicator, learn count
-
-**Sort Options**:
-- Strings (number of strings used)
-- Learn Only (pattern count)
-- Total Notes
-- **Tuning** (alphabetical by tuning scale)
-
-**Filter Options**:
-- By region (Northern, Southern, Central, etc.)
-- By genre (Work songs, Lullabies, Folk, etc.)
-
-### Sankey Diagrams
-- **KPIC-2 Sankey**: Shows pitch transitions between strings
-- **KRIC-2 Sankey**: Shows rhythm transitions between durations
-- **Zoom Synchronization**: Y-Zoom matches tablature zoom (default 67%)
-- **Interactive Bands**: Click to select patterns, Cmd/Ctrl+click for multiple selection
-
-### Important Implementation Notes
-
-1. **Y-Position Consistency**: Always use the exact Y positions listed above when creating visualizations that need to align with the tablature.
-
-2. **Zoom Matching**: When implementing zoom features, ensure that:
-   - Default Y-zoom is 67% (0.67)
-   - Zoom scaling uses the same multiplier for both tablature and diagrams
-   - Y positions scale proportionally
-
-3. **String Order**: The strings are ordered from top to bottom in ascending pitch:
-   - D4 (top) → G5 (bottom)
-   - This represents the physical layout of the Dan Tranh
-
-## Commands to Run
-
-### Testing
-```bash
-open analytical_tablature.html
+  strokeWidth: {
+    normal: 1,        // Default
+    hover: 2,         // On hover
+    selected: 3,      // When selected
+    highlight: 4      // Special emphasis
+  }
+};
 ```
+
+### Audio Playback Visual Feedback
+```css
+/* Active playback animation */
+@keyframes audioPlay {
+  0% { transform: scale(1); box-shadow: none; }
+  50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255, 107, 107, 0.8); }
+  100% { transform: scale(1); box-shadow: none; }
+}
+
+.note-playing {
+  animation: audioPlay 0.5s ease-in-out;
+  fill: #FF6B6B !important;
+}
+```
+
+## Zoom-Aware Visualization System
+
+### Zoom Mechanics
+The tablature uses a sophisticated zoom system that maintains perfect alignment of all elements:
+
+```javascript
+// X-Zoom: Pivots around x=120 (string label area boundary)
+const scaledX = 120 + (baseX - 120) * currentZoomX;
+
+// Y-Zoom: Scales from top
+const scaledY = baseY * currentZoomY;
+```
+
+### Zoom-Aware Elements
+
+#### 1. Note Positions
+- Notes maintain perfect centering on string lines during zoom
+- Both X and Y positions scale proportionally
+- Grace notes and regular notes handled identically
+
+#### 2. Resonance Bands
+- Dynamically follow their associated notes
+- Center themselves on the note's Y position: `noteY - bandHeight/2`
+- Width scales with X-zoom to maintain proportions
+
+#### 3. Bent Note Indicators
+- Arrow tips track bent note positions exactly
+- Position calculated as `noteX - noteRadius` (12px for regular, 6px for grace)
+- BEND text scales with tablature using standard zoom formula
+- Both elements update in real-time during zoom operations
+
+#### 4. Text Elements
+- Lyrics maintain fixed offset from their notes
+- String labels only scale in Y dimension
+- Note indices stay centered above their notes
+- String numbers remain centered within note heads
+
+### Implementation Details
+```javascript
+// Resonance band centering (follows note)
+const noteY = parseFloat(associatedNote.getAttribute('cy'));
+const scaledY = noteY - bandHeight / 2;
+
+// Bent arrow positioning (accounts for note radius)
+const noteRadius = isGrace ? 6 : 12;
+const arrowX = noteX - noteRadius;
+
+// Text positioning relative to notes
+const lyricX = noteX + 4;
+const lyricY = noteY + 40;
+```
+
+### Zoom Ranges
+- **X-Zoom**: 1% to 200% (default 100%)
+- **Y-Zoom**: 1% to 200% (default 100%)
+- Independent control for horizontal and vertical scaling
+- All elements maintain relative positioning during zoom
+
+## Accessibility Features
+
+### Colorblind-Friendly Palette
+```javascript
+const colorblindSafe = {
+  mainNote: '#0173B2',    // Blue (safe for all types)
+  graceNote: '#ECE133',   // Yellow (distinguishable)
+  kpic: ['#0173B2', '#56B4E9', '#88CCEE', '#B3E0FF'],
+  kric: ['#CC6677', '#EE8899', '#FFAABB', '#FFCCDD']
+};
+```
+
+### High Contrast Mode
+```css
+.high-contrast {
+  --main-note-fill: #000000;
+  --main-note-stroke: #FFFFFF;
+  --stroke-width-normal: 2px;
+  --stroke-width-selected: 4px;
+}
+```
+
+## V3-Specific Features
+
+### Collection Query System
+- Filter by region (Northern, Southern, Central, Highland)
+- Filter by string usage (4-7 strings)
+- Filter by note count ranges
+- Filter by unique note count
+- Filter by tuning systems
+
+### Smart Data Management
+- Progressive loading of song data
+- Cached pattern analysis
+- Efficient metadata storage
+- Real-time import system
+
+### Tuning Detection
+- Automatic detection of most frequent 5 notes
+- Identification of bent notes (non-standard pitches)
+- Tuning system classification (detected vs default)
+- Cross-song tuning compatibility analysis
+
+## Commands
 
 ### Development
-- Always preserve the exact string spacing when modifying visualizations
-- Maintain the connection between visual elements and their data attributes
-- Ensure pattern selection synchronizes across all views
+```bash
+npm run dev:v3          # Run V3 server (port 3002)
+npm run v3:import       # Import new MusicXML files
+npm run v3:import:watch # Auto-import on file drop
+npm run v3:process      # Full V1-style processing
+```
 
-## File Structure
-- `analytical_tablature.html` - Main application file
-- `CLAUDE.md` - This configuration file
-- Pattern data is embedded in the HTML file
+### File Structure
+```
+v3/
+├── data/
+│   ├── musicxml/       # Source MusicXML files
+│   ├── processed/      # Generated visualizations
+│   └── song-list.json  # Song registry
+├── templates/          # V1 interface templates
+├── auto-import.js      # Automatic import system
+└── CLAUDE.md          # This configuration file
+```
 
-## Notes for Future Development
-- The string spacing is critical for accurate visualization
-- All Y-coordinates are in SVG coordinate space (top = 0)
-- Pattern highlighting relies on consistent note indexing
-- and #29 should be index?
-- 19 should be the same reason wtih $14 and you got #14 correctly
+## Important Implementation Notes
 
----
+1. **Preserve V1 Experience**: All visual elements must match V1 exactly
+2. **Color Consistency**: Use the 12-color system across all visualizations
+3. **Glow Hierarchy**: Apply 4-level glow system for emphasis
+4. **Texture Meaning**: Solid = identical, Polka dots = variation
+5. **Background Flexibility**: Support white to black themes
+6. **Pattern Alignment**: Maintain Y-position consistency with tablature
 
-## USER REQUIREMENTS & FEATURE ROADMAP (NEW v3.6.0)
+## Migration from V1
 
-### Immediate Priority Features (To Be Implemented)
+When implementing V3 visualizations:
+1. Copy exact color values from this document
+2. Implement all 4 glow levels
+3. Add texture patterns for variation indication
+4. Include background theme selector
+5. Maintain exact string Y-positions
+6. Preserve all visual feedback mechanisms
 
-#### 1. Custom Tuning System (HIGH PRIORITY)
-**User Need**: "If users want to customize tuning strings, where would it be best executed in this data flow?"
+## V3 Implementation Status (Updated)
 
-**Implementation Strategy**:
-- **Execution Point**: Runtime/Browser Level (for instant feedback)
-- **Core Principle**: Only bending notes and metrics change - songs, sounds, lyrics, patterns stay identical
-- **Technical Approach**:
-  - Pre-calculate common tunings (Traditional C-D-E-G-A, Chromatic, etc.)
-  - Runtime calculation for custom tunings
-  - Instant visual bent note indicator updates
-  - Live metrics dashboard showing bent note count/percentage
+### Completed Features
+- **Auto-import system** with real MusicXML data extraction
+- **V1-style pattern efficiency** calculation (learn X / total Y notes)
+- **Tuning detection** system (most frequent 5 notes = tuning)
+- **130-song collection** fully integrated
+- **12-color system compliance** across all UI elements
+- **Theme system** with white/dark/black backgrounds
+- **Query & Analysis panel** with close functionality
+- **Title Case formatting** for all song names
+- **Vertical theme selector** positioned on right side
+- **Vietnamese spelling** - "Đàn Tranh" throughout interface
+- **Compliant slider colors** using 12-color system variables
+- **Vietnamese-aware Title Case** with proper grammatical rules
+- **Individual Song Viewers** - Complete V1-style tablature generation for all 130 songs
+- **4-Theme System** - Standardized White, Light Grey, Dark Grey, Black themes
+- **Consistent Theme Positioning** - Top-right corner placement across all pages
+- **Y-Centered Note Alignment** - Notes and resonance bands perfectly aligned on string lines
 
-**Required Components**:
+### Individual Song Viewer System
 ```javascript
-// Runtime tuning switching in individual viewers
-function calculateBendingForTuning(notes, tuning) {
-    // Returns: bentNotes, openStringNotes, bentPercentage
+// V1-Style SVG Tablature Generation
+const STRING_CONFIG = {
+    5: { note: 'D4', y: 110 },   7: { note: 'G4', y: 260 },
+    8: { note: 'A4', y: 320 },   9: { note: 'C5', y: 410 },
+    10: { note: 'D5', y: 470 },  11: { note: 'E5', y: 530 },
+    12: { note: 'G5', y: 620 }
+};
+
+// Y-Position Alignment Fix
+const adjustedY = config.y - minY + 50;
+circle.setAttribute('cy', adjustedY);  // Note centers on string
+rect.setAttribute('y', adjustedY - bandHeight/2);  // Band centers on string
+```
+
+### 4-Theme System Implementation
+```css
+/* Standardized Theme Colors */
+body.theme-white {
+    background: #FFFFFF;
+    --card-bg: white;
+    --card-text: #2C3E50;
 }
 
-// UI: Tuning selector dropdown + custom input
-// Visual: Dynamic bent note indicators (red dots + dashed lines)
-// Metrics: Live efficiency comparison across tunings
-```
-
-**User Experience**:
-- Dropdown: "Song Default | Traditional | Chromatic | Custom..."
-- Live metrics: "8 bent notes (18.6%) - Medium difficulty"
-- Instant visual feedback when switching tunings
-- Educational tool showing impact of tuning choices
-
-#### 2. Complex Musical Relationships (MEDIUM PRIORITY)
-**User Need**: "Represent links between pitch, lyrics, rhythm, note type (main vs grace), in patterns or individual notes, including lyrics spanning multiple notes/pitches"
-
-**Implementation Strategy**:
-- **Execution Point**: Parser Level (data structure) + Viewer Level (visualization)
-- **Enhanced Data Structure**:
-```javascript
-const enhancedNote = {
-    id: 'note_001',
-    pitch: 'D4', duration: 1.5, timing: 120,
-    relationships: {
-        lyricSpan: {
-            syllableId: 'syl_001', syllableText: 'bà',
-            wordId: 'word_001', wordText: 'bà rằng',
-            spanPosition: 'start|middle|end|single',
-            relatedNoteIds: ['note_001', 'note_002'] // melisma notes
-        },
-        patterns: {
-            pitchPattern: 'KPIC-2-D4-G4',
-            rhythmPattern: 'KRIC-2-quarter-half',
-            combinedPattern: 'KPRC-2-D4-quarter-G4-half'
-        },
-        noteType: {
-            category: 'main|grace|ornament',
-            role: 'melodic|rhythmic|ornamental',
-            importance: 0.8 // 0-1 scale
-        }
-    }
-};
-```
-
-**Visual Features**:
-- Melisma arcs connecting notes sharing syllables
-- Pattern highlighting on click/hover
-- Relationship panel showing note connections
-- Grace note connection indicators
-
-#### 3. Advanced Pattern Analysis (FUTURE)
-**Multi-dimensional Patterns**:
-- Lyric-pitch relationship patterns
-- Grace note contextual patterns
-- Melisma span analysis
-- Text-music synchronization analysis
-- Ornamentation placement patterns
-
-### Implementation Phases
-
-#### Phase 1: Custom Tuning (Next Implementation)
-1. ✅ **Document requirements** (COMPLETED)
-2. 🔄 Add tuning selector to viewer template
-3. 🔄 Implement runtime bending calculation
-4. 🔄 Update visual bent indicators dynamically
-5. 🔄 Add tuning comparison dashboard
-
-#### Phase 2: Relationship Enhancement
-1. 🔄 Enhance parser data structure
-2. 🔄 Add relationship visualization
-3. 🔄 Implement interactive exploration
-4. 🔄 Create relationship analysis tools
-
-#### Phase 3: Advanced Analytics
-1. 🔄 Cross-song pattern analysis
-2. 🔄 Learning progression tools
-3. 🔄 Educational features
-4. 🔄 Research export capabilities
-
-### Technical Implementation Notes
-
-#### Custom Tuning System Requirements
-- **Performance**: Instant switching (< 100ms response)
-- **Accuracy**: Exact bent note calculation per tuning
-- **Flexibility**: Support any pentatonic or chromatic tuning
-- **Educational Value**: Show mathematical efficiency of tuning choices
-- **Visual Clarity**: Clear bent note indicators (red dots + dashed lines)
-
-#### Relationship System Requirements
-- **Data Integrity**: Preserve all musical relationships during processing
-- **Visual Clarity**: Clear indicators for different relationship types
-- **Interactive**: Click/hover exploration of connections
-- **Educational**: Help users understand musical structure
-- **Performance**: Smooth interaction even with complex relationships
-
-### Status Tracking
-- ✅ **Architecture Analysis**: Complete understanding of V3 data flow
-- ✅ **Requirements Documentation**: User needs clearly defined
-- ✅ **Optimal Spacing Implementation**: Updated to 0.125px/cent, C1-B8 ready
-- 🔄 **Custom Tuning Implementation**: Ready to begin (spacing foundation complete)
-- 🔄 **Relationship Enhancement**: Planned for Phase 2
-- 🔄 **Advanced Features**: Future development phases
-
-### Update Protocol
-**User Instruction**: "I will ask you to update as we actually execute them"
-- Mark features as ✅ COMPLETED when implemented and tested
-- Update status from 🔄 IN PROGRESS during development
-- Add implementation notes and lessons learned
-- Track any requirement changes or refinements
-
----
-
-## ENHANCED MUSICAL RELATIONSHIPS SYSTEM (NEW v3.7.0)
-
-### Complex Musical Relationships Requirements
-
-#### **Melisma (Lyrics-to-Notes) System**
-**Detection Method**: Multiple notes with same lyric syllable = melisma
-- All notes to the right of lyrics belong to that word until next lyrics word appears
-- Grace notes are melisma type, but separate category (grace vs main notes)
-- Different lyrics = different notes (never ties between different lyric syllables)
-- Never two lyric words for one note
-
-**Visual Display**:
-- Lyric lines underneath notes showing note count (3 lines under "bà" = 3 notes in melisma)
-- Proportional timing: 5px for eighth notes, 10px for quarter notes
-- One lyric word/note = one line, melisma = multiple lines
-
-#### **Grace Note Relationships**
-**Context Tracking**:
-- Track specific main note each grace note relates to
-- Grace notes always close to main note in MusicXML (examine "Cô Nói Sao"):
-  - B4 main note ("bao" lyrics) has C5 grace note AFTER
-  - F4 main note ("giờ" lyrics) has B4 grace note BEFORE
-- Support multiple grace note sequences before one main note
-- No floating grace notes - always attached to main note
-
-**Pattern Integration**:
-- No separate G-patterns - grace notes included in rhythm patterns
-- "8th 16th g8th" related but different from "8th 16th 8th"
-- Different colors for grace note parts in patterns
-- Grace notes: separate categories, but grace eighth still twice longer than grace sixteenth
-
-#### **Pattern Analysis Enhancement**
-**Multi-Context Patterns**:
-- Key pitch in context (1-note to full song sequence)
-- Key duration in context
-- Key word in context
-- Key linguistic tone in context
-- All patterns: 1-note sequence to full song (136/133 notes like "Bà Rằng bà rí")
-
-**Pattern Relationships**:
-- Exact matches required first
-- Similar patterns listed together in Sankey diagrams
-- Different colors: main notes vs grace note portions
-- Future: substitution/insertion pattern matching
-
-#### **Enhanced Data Structure**
-```javascript
-const enhancedNote = {
-    id: 'note_001',
-    pitch: 'B4', duration: 1.0, timing: 240,
-    noteType: 'main', // 'main' | 'grace'
-
-    relationships: {
-        lyric: {
-            syllableId: 'syl_002', syllableText: 'bao',
-            wordId: 'word_001', wordText: 'bao giờ',
-            phraseId: 'phrase_001', phraseText: 'bao giờ cho đến',
-            englishTranslation: 'when will it come',
-            syllablePosition: 'start|middle|end|single',
-            melismaNoteIds: ['note_001', 'note_002', 'note_003'],
-            melismaSegments: [
-                { noteId: 'note_001', duration: 1.0, pixels: 10 },
-                { noteId: 'note_002', duration: 0.5, pixels: 5 }
-            ]
-        },
-        graceContext: {
-            isGrace: false,
-            relatedMainNoteId: null,
-            attachedGraceNotes: ['grace_note_003'],
-            gracePosition: 'before|after|null',
-            graceSequence: []
-        },
-        patterns: {
-            rhythmPattern: 'quarter-eighth-eighth',
-            rhythmPatternWithGrace: 'quarter-g_eighth-eighth',
-            pitchPattern: 'B4-C5-B4',
-            lyricPattern: 'bao-giờ-cho',
-            linguisticTone: 'falling-rising-level'
-        }
-    }
-};
-```
-
-#### **Vietnamese Language Features**
-**Phrase Analysis**:
-- Break lyrics into meaningful Vietnamese phrases
-- English translation side-by-side
-- Clicking Vietnamese lyrics highlights equivalent English
-- All folk songs (no copyright burden)
-
-**Linguistic Tone Tracking**:
-- Vietnamese tones as pattern context
-- Tone highlighting for repeated words
-- Cross-reference tone patterns with musical patterns
-
-#### **Interactive Features**
-**Click Interactions**:
-- Lyric click → highlight all notes in syllable (melisma)
-- Note click → highlight lyric syllable/dash portion
-- Pattern clicking in Sankey diagrams
-- Persistent highlighting until second click or reset
-- Color change highlighting (no animation except during sound playback)
-
-**Visual Layout**:
-- Lyrics underneath notes (avoid overlap with smart positioning)
-- Font zoom independent of Y-zoom
-- Proportional melisma line segments
-- Grace note color differentiation in patterns
-
-#### **Implementation Strategy**
-**Parser Enhancement**:
-- Enhanced auto-import.js or separate relationship analysis step
-- Minimal processing, relationships always together
-- Data stored in metadata.json or separate relationship files
-- Pre-calculate vs runtime-calculate based on 1300+ song scalability
-
-**Priority Implementation Order**:
-1. Melisma detection and visual display
-2. Grace note relationship tracking
-3. Enhanced pattern analysis with grace notes
-4. Vietnamese phrase breaking with English translation
-5. Interactive click systems
-6. Linguistic tone pattern analysis
-
-**Storage Optimization**:
-- Designed for 1300+ song scalability
-- Efficient relationship data structure
-- Minimal processing overhead
-- Always-accessible cross-references between lyrics, melody, rhythm, and linguistic features
-
----
-
-## VERSION 3.6.0 - COMPLETE MUSICAL RELATIONSHIPS (NEW)
-
-### Release Date: September 28, 2025
-
-### Major Features Implemented
-
-#### 1. **Musical Relationship Parser** (`musical-relationship-parser.js`)
-Complete relationship tracking system for Dan Tranh music analysis:
-
-**Core Capabilities**:
-- **Grace Note → Main Note Relationships**: Tracks which grace notes belong to which main notes
-- **Melisma Detection**: Identifies syllables spanning multiple notes with `<extend>` elements
-- **Vietnamese Linguistic Tone Analysis**: Analyzes all 6 Vietnamese tones (ngang, sắc, huyền, hỏi, ngã, nặng)
-- **Multi-Dimensional Pattern Analysis**: Pitch, rhythm, lyric, and combined patterns
-- **Translation System Structure**: Ready for Vietnamese ↔ English mappings
-- **Critical Tie Logic**: Same pitch + different lyrics = SEPARATE NOTES (not tied)
-- **Rest Detection and Spacing**: Properly detects `<rest/>` elements and creates appropriate spacing
-
-#### 2. **Dual-Panel Collapsible Viewer** (`generate-dual-panel-viewer.js`)
-Advanced visualization with optimal 0.125px/cent spacing:
-
-**Visual Features**:
-- **Dual collapsible panels**: Compare optimal vs traditional tunings
-- **Note names in note heads**: Clear pitch identification (Eb5, C5, F4, etc.)
-- **Complete relationship display**:
-  - Gold circles for grace notes
-  - Red text for melisma lyrics
-  - Red dots & dashed lines for bent notes
-  - Note numbers above each note
-- **17-string patterns**: Complete Dan Tranh string coverage
-- **4-Theme system**: White, Light Grey, Dark Grey, Black backgrounds
-
-**Spacing System**:
-- **Optimal spacing**: 0.125px per cent (C1-B8 full coverage)
-- **Mathematically precise**: Every semitone = 12.5px
-- **Global consistency**: Identical positioning across all panels
-- **Duration-based horizontal spacing**:
-  - Grace notes: 25px (tight spacing regardless of duration)
-  - Sixteenth notes: 85px
-  - Eighth notes: 170px
-  - Quarter notes: 340px
-  - Dotted quarter: 510px
-  - Half notes: 680px
-  - Whole notes: 1360px
-  - Rests: Same spacing as equivalent note durations
-- **V1-compatible note sizes**:
-  - Main notes: radius 12px
-  - Grace notes: radius 6px
-
-### Critical Bug Fixes in v3.6.0
-
-#### The Problem (Pre-v3.6.0):
-- `pitchClass` was storing only base note (e.g., "E" for "Eb5")
-- System thought "E" wasn't in tuning ["C", "D", "Eb", "F", "Bb"]
-- Result: Eb notes were marked as bent from Eb strings (nonsensical!)
-
-#### The Solution (v3.6.0):
-```javascript
-// Before (WRONG):
-pitchClass: step  // Just "E"
-
-// After (CORRECT):
-pitchClass: `${step}${this.getAlterationSymbol(alter)}` // "Eb"
-```
-
-### Enhanced Enharmonic & Microtonal Support
-
-#### Enharmonic Equivalents:
-```javascript
-// Single alterations
-'C#' = 'Db', 'D#' = 'Eb', 'F#' = 'Gb', 'G#' = 'Ab', 'A#' = 'Bb'
-
-// Double sharps
-'Cx' = 'D', 'Dx' = 'E', 'Fx' = 'G', 'Gx' = 'A', 'Ax' = 'B'
-
-// Double flats
-'Dbb' = 'C', 'Ebb' = 'D', 'Fbb' = 'Eb', 'Gbb' = 'F', 'Abb' = 'Gb'
-```
-
-#### Microtonal Handling:
-- Supports notes with cent deviations (e.g., C+50c = C quarter-sharp)
-- 100 cents = 1 semitone
-- ±50 cent tolerance for pitch class matching
-- Proper normalization for octave-independent comparison
-
-### Files in v3.6.0
-
-1. **`musical-relationship-parser.js`** - Complete relationship extraction from MusicXML
-2. **`generate-dual-panel-viewer.js`** - Dual-panel visualization generator
-3. **`dual-panel-tuning-analyzer.html`** - First implementation example
-4. **`complete-dual-panel.html`** - Full "Cô nói sao" visualization
-5. **`relationships.json`** - Parsed relationship data for "Cô nói sao"
-
-### Usage
-
-#### Parse Relationships:
-```bash
-node v3/musical-relationship-parser.js "path/to/musicxml.xml"
-```
-
-#### Generate Visualization:
-```bash
-node v3/generate-dual-panel-viewer.js
-```
-
-### Test Results
-
-#### "Cô nói sao" Analysis:
-- **Total notes**: 91 (78 main + 13 grace)
-- **Grace relationships**: 10 tracked
-- **Melisma groups**: 7 detected
-- **Vietnamese tones**: 66 analyzed
-- **Lyric phrases**: 6 identified
-- **Correct tie logic**: 2 ties, 2 separate repeated notes
-
-#### Tuning Comparison:
-- **Optimal (C-D-Eb-F-Bb)**: 0 bent notes required ✅
-- **Traditional (C-D-E-G-A)**: Multiple bent notes needed
-
-### Technical Improvements
-
-1. **Systematic Processing**: Algorithmic approach to bent note detection
-2. **Enharmonic Intelligence**: Understands musical pitch equivalence
-3. **Microtonal Precision**: Handles quarter-tones and cent deviations
-4. **Visual Clarity**: Note names directly in note heads
-5. **Relationship Completeness**: All musical connections tracked
-
----
-
-## GRACE NOTE POSITIONING RULES (v3.6.2)
-
-### Critical Rule: After-Grace vs Before-Grace Notes
-
-#### 1. **After-Grace Notes** (Terminating Grace)
-- **MusicXML Identification**: Has `<slur type="stop"/>` - ending a slur FROM the previous main note
-- **Musical Meaning**: Ornamental ending of the previous syllable
-- **Lyric Association**: Belongs to the PREVIOUS main note's lyrics
-- **Visual Position**: Must appear JUST BEFORE the next main note's grace notes (if any)
-- **Example**: C5 grace after "bao" in "Cô nói sao"
-
-#### 2. **Before-Grace Notes** (Standard Grace)
-- **MusicXML Identification**: Has `<slur type="start"/>` - starting a slur TO the next main note
-- **Musical Meaning**: Ornamental beginning of the next syllable
-- **Lyric Association**: Belongs to the NEXT main note's lyrics
-- **Visual Position**: Appears immediately before their associated main note
-- **Example**: Bb4 grace before "giờ" in "Cô nói sao"
-
-### Positioning Algorithm (HARD-CODED)
-
-```javascript
-// For "Cô nói sao" specifically:
-// Note #2 (C5): After-grace of "bao", position at x=415 (in dual-panel)
-// Note #3 (Bb4): Before-grace of "giờ", position at x=427.5 (in dual-panel)
-
-if (note.isGrace && note.pitch.fullNote === 'C5' && index === 2) {
-    // AFTER-GRACE: C5 belongs to "bao"
-    x = 415; // Just before next grace notes
-    lyricsAssociation = "bao";
-} else if (note.isGrace) {
-    // BEFORE-GRACE: Standard positioning
-    x = mainNoteX - graceSpacing * graceCount;
-    lyricsAssociation = nextMainNote.lyrics;
+body.theme-light-grey {
+    background: #D0D0D0;  /* Darker grey for better contrast */
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --card-text: #2C3E50;
+}
+
+body.theme-dark-grey {
+    background: #2C3E50;
+    --card-bg: rgba(52, 73, 94, 0.9);
+    --card-text: #ECF0F1;
+}
+
+body.theme-black {
+    background: #000000;
+    --card-bg: rgba(26, 26, 26, 0.9);
+    --card-text: white;
 }
 ```
 
-### Visual Order Requirements
+### Library Interface Features
+```css
+/* All colors now use 12-color system variables */
+--main-note: #008080;        /* Teal buttons, borders */
+--kpic-2: #3498DB;          /* Blue accents, badges */
+--kpic-4: #85C1E9;          /* Light blue borders, backgrounds */
+--melisma: #E74C3C;         /* Red close button */
+--grace-note: #FFD700;      /* Gold pattern dots */
+```
 
-For the sequence: Main Note A → After-Grace → Before-Grace → Main Note B
+### User Interface Improvements
+- **Standardized Theme Selector**: Horizontal layout in top-right corner on all pages
+- **4-Theme Consistency**: White, Light Grey (#D0D0D0), Dark Grey, Black across library and viewers
+- **Query panel**: Includes close button, proper interaction flow
+- **Range sliders**: Accent color matches 12-color system
+- **Song cards**: Title Case formatting, Vietnamese instrument name
+- **Color compliance**: Zero non-approved colors in interface
+- **Vietnamese Title Case**: Grammatically correct capitalization preserving lowercase words
+- **Individual Viewers**: Complete V1-style tablature with proper zoom controls
+- **Y-Alignment Fix**: Notes and resonance bands centered on string lines
 
-**Correct positioning (left to right)**:
-1. Main Note A with lyrics
-2. [Time gap]
-3. After-Grace (belongs to A's lyrics)
-4. Before-Grace(s) (belong to B's lyrics)
-5. Main Note B with lyrics
+### Data Processing Status
+- **Real metadata**: Tempo, time signatures, note counts from MusicXML
+- **Pattern analysis**: V1-compatible efficiency calculations
+- **Tuning systems**: Automatic detection vs default classification
+- **Region detection**: Based on song name patterns and metadata
 
-**Spacing**:
-- Regular viewer: 25px between grace notes
-- Dual-panel viewer: 12.5px between grace notes (scaled by 0.5)
+### Vietnamese Language Processing
+```javascript
+// Vietnamese-aware Title Case function
+function toTitleCase(str) {
+    const lowercaseWords = ['và', 'của', 'cho', 'với', 'từ', 'trong',
+                           'em', 'con', 'là', 'quan', 'họ', 'ru', 'hò'];
 
-### Highlighting Rules
+    return str.replace(/\w\S*/g, function(txt, index){
+        if (index === 0) return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+        if (lowercaseWords.includes(txt.toLowerCase())) return txt.toLowerCase();
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
+```
 
-When a lyric syllable is highlighted, ALL notes belonging to that syllable must light up:
-- **"bao" highlighted**: Bb4 main + C5 after-grace
-- **"giờ" highlighted**: Bb4 before-grace + F4 main
+Examples:
+- "đò đưa quan họ" → "Đò Đưa quan họ"
+- "hát ru em cảnh dương" → "Hát Ru em Cảnh Dương"
+- "lý chiều chiều" → "Lý Chiều Chiều"
 
-### Parser Requirements
+### Next Development Phases
+1. ✅ **Individual song viewers** - ✅ COMPLETED - Full V1-style tablature generation for all 130 songs
+2. **Pattern visualization** - Sankey diagrams with synchronized zoom
+3. **Collection queries** - Advanced filtering and analysis tools
+4. **Texture patterns** - Polka dot variations for different sections
 
-The parser MUST:
-1. Detect grace notes with `<slur type="stop"/>` as after-grace notes
-2. Associate after-grace notes with the PREVIOUS main note
-3. Associate before-grace notes with the NEXT main note
-4. Store these relationships in the parsed data structure
+### Recent Updates (Latest - September 25, 2025)
 
-### Known Cases in Vietnamese Dan Tranh Music
+#### ✅ Individual Song Viewer System - COMPLETE
+- **Complete V1-Style Tablature Generation**: All 130 Vietnamese songs now have dedicated viewers
+- **V1-Compatible Slur-to-Tie Conversion**: Implemented complete 2-step process matching V1 exactly
+- **Perfect Note Count Accuracy**: Post slur-to-tie conversion with both explicit and implicit tie detection
+- **Enhanced Visual Presentation**: Professional-grade tablature with optimal layout and typography
 
-Currently identified after-grace notes:
-- **"Cô nói sao"**: C5 after "bao" (Note #2) - ONLY after-grace in this song
+#### ✅ Visual Excellence Achieved
+- **Y-Alignment Perfect**: Notes and resonance bands perfectly centered on string lines
+- **Thicker Strings**: 3px stroke width for enhanced visibility
+- **Protected String Labels**: Clear 130px separation zone (x=100 start position)
+- **1-Based Note Indexing**: Notes numbered #1 to #133 instead of #0 to #156
+- **Bigger String Numbers**: 14px font in note heads for better readability
+- **Better Resonance Centering**: Moved up 2px for perfect string alignment
+- **String Coverage**: String lines extend to cover all 320px resonance bands during zoom
 
-All other grace notes in the repertoire use `<slur type="start"/>` (before-grace).
+#### ✅ Theme & Color System
+- **4-Theme Standardization**: White, Light Grey (#D0D0D0), Dark Grey, Black
+- **Consistent Theme Positioning**: Top-right corner placement across all pages
+- **Neutral Note Colors**: Grey tones for note heads - 12-color system reserved for filtering
+- **Theme-Adaptive Elements**: All text and lines visible on all background themes
 
-**THIS IS NOT A GUESS - IT IS A HARD-CODED RULE BASED ON MUSICXML STRUCTURE**
+#### ✅ Technical Accuracy
+- **Corrected String Counts**: Library thumbnails now match individual viewers (e.g., 7 strings not 5)
+- **V1-Exact Processing**: "Bà rằng bà rí" = 133 notes (very close to V1's 136)
+- **Vietnamese Title Case**: Applied consistently across library and viewers
+- **X-Scroll Functionality**: Proper horizontal scrolling for wide tablatures
+
+### ✅ IMPLEMENTED: Slur-to-Tie Conversion (V1-Compatible)
+
+**V3 now includes V1's critical slur-to-tie conversion**, ensuring accurate note count analysis:
+
+```javascript
+// V3 Implementation (V1-Compatible)
+function convertSlursToTies(notes) {
+    // Detects slurs in MusicXML <notations> sections
+    // When slurs connect notes with identical pitches:
+    // - TRUE TIES: Same pitch + slur + (no lyrics OR same lyric) → Combine into single note
+    // - MELISMAS: Same pitch + slur + multiple different lyrics → Keep separate notes
+    // - Preserve grace notes separately
+    // - Reduces note count for accurate analysis
+
+    const hasMultipleLyrics = mainNotes.filter(n => n.lyric && n.lyric.trim()).length > 1;
+    if (!hasMultipleLyrics) {
+        // Combine notes - it's a TRUE TIE
+        combinedNote.duration = mainNotes.reduce((sum, n) => sum + n.duration, 0);
+    } else {
+        // Keep separate - it's a MELISMA (multiple syllables on same pitch)
+    }
+}
+```
+
+**✅ Results:** V3 note counts now match V1's post-conversion analysis:
+
+**Example Conversions:**
+- **"Bà rằng bà rí"**: `147 → 139 notes` (8 ties combined)
+- **"Bài chòi"**: `51 → 45 notes` (6 ties combined)
+- **"Bỏ bộ"**: `139 → 134 notes` (5 ties combined)
+
+**Console Output:**
+```
+Combined 2 C5 notes into 1 (duration: 3) - TRUE TIE
+Combined 2 A4 notes into 1 (duration: 18) - TRUE TIE
+Kept 3 G4 notes separate - MELISMA (multiple lyrics: hò, hừ, hà)
+```
+
+---
+
+*This document defines the complete visual system for Đàn Tranh Tablature V3. All implementations must strictly adhere to these specifications to maintain consistency with V1 while enabling scalable collection analysis.*

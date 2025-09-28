@@ -230,7 +230,7 @@ const visualStates = {
 }
 ```
 
-## Professional Zoom-Aware Visualization System (v3.7.2)
+## Professional Zoom-Aware Visualization System (v3.7.5)
 
 ### Advanced Independent Axis Zoom Mechanics
 The tablature uses a professional-grade zoom system with true axis independence, ensuring perfect element positioning and consistent text/note head sizing:
@@ -316,13 +316,68 @@ svg.querySelectorAll('*').forEach(element => {
 });
 ```
 
+### Universal Auto-Zoom System (v3.7.5)
+```javascript
+// Smart Auto-Zoom Calculation
+function calculateDefaultZoom() {
+    const svg = document.querySelector('svg');
+    const tablatureWidth = parseFloat(svg.getAttribute('width') || 0);
+    const tablatureHeight = parseFloat(svg.getAttribute('height') || 0);
+
+    // Direct ratio calculation
+    const screenWidth = window.innerWidth - 40;
+    const screenHeight = (window.innerHeight - 300) / 2;
+
+    // Universal formula with 3% minimum for very long songs
+    const xZoomPercent = Math.min(Math.max((screenWidth / tablatureWidth) * 100, 3), 200);
+    const yZoomPercent = Math.min(Math.max((screenHeight / tablatureHeight) * 100, 20), 200);
+
+    return { x: xZoomPercent, y: yZoomPercent };
+}
+```
+
+### International Tuning System Integration (v3.7.4-v3.7.5)
+```javascript
+// Hierarchical tuning database loading
+loadTuningSystems() {
+    const tuningData = JSON.parse(fs.readFileSync('data/tuning-systems.json'));
+
+    // Organize by categories: Vietnamese, Pentatonic, Hexatonic, Heptatonic
+    const tuningSystems = {};
+    Object.entries(tuningData.scales).forEach(([category, tunings]) => {
+        tuningSystems[category] = [];
+        Object.entries(tunings).forEach(([name, notes]) => {
+            tuningSystems[category].push({
+                value: notes.join('-'),
+                label: name
+            });
+        });
+    });
+
+    return tuningSystems;
+}
+
+// Preserve user zoom when switching tunings (v3.7.5)
+function changeTuning(selectedTuning) {
+    // Update SVG content
+    updateSVGContent(selectedTuning);
+
+    // Preserve current zoom levels - no recalculation
+    if (xZoom !== 1 || yZoom !== 1) {
+        updateZoom('x', xZoom * 100);
+        updateZoom('y', yZoom * 100);
+    }
+}
+```
+
 ### Professional Zoom Behavior
-- **X-Zoom Range**: 1% to 200% (horizontal spacing only)
-- **Y-Zoom Range**: 1% to 200% (vertical spacing only)
+- **X-Zoom Range**: 3% to 200% (horizontal spacing only) - handles 28,080px songs
+- **Y-Zoom Range**: 20% to 200% (vertical spacing only)
 - **True independence**: Each axis operates completely separately
 - **Professional accuracy**: Note heads never leave their string lines
 - **Consistent readability**: Text stays at optimal size across all zoom levels
 - **Dual-panel consistency**: Both Optimal and Traditional panels behave identically
+- **User-centric**: Preserves zoom preferences during tuning switches
 
 ## Accessibility Features
 
@@ -472,7 +527,66 @@ body.theme-black {
 }
 ```
 
-### Library Interface Features
+### Library Interface Features (v3.7.5)
+```css
+/* Minimal Text-Only Cards */
+.song-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 1rem;
+    background: #f8f9fa;
+    height: 80px; /* 56% smaller than previous thumbnails */
+}
+
+.metric-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+}
+
+/* Color-coded metrics using 12-color system */
+.metric-notes { color: var(--main-note); }      /* Teal - note count */
+.metric-strings { color: var(--kpic-2); }       /* Blue - string count */
+.metric-tuning { color: var(--tone-fill); }     /* Purple - bent notes */
+```
+
+### International Tuning Database Structure (v3.7.4)
+```javascript
+// Comprehensive tuning systems from tuning-systems.json
+const tuningCategories = {
+    "Vietnamese": {
+        "Dan Tranh Standard": ["C", "D", "E", "G", "A"],
+        "Dan Tranh Northern": ["C", "D", "E", "G", "A"],
+        "Dan Tranh Southern": ["C", "D", "F", "G", "A"],
+        "Ru Con": ["C", "Eb", "F", "G", "Bb"],
+        "Nam Ai": ["D", "F", "G", "A", "C"]
+    },
+    "Pentatonic": {
+        "Major": ["C", "D", "E", "G", "A"],
+        "Minor": ["A", "C", "D", "E", "G"],
+        "Japanese Hirajoshi": ["C", "D", "Eb", "G", "Ab"],
+        "Japanese Iwato": ["C", "Db", "F", "Gb", "Bb"],
+        "Chinese Gong": ["C", "D", "E", "G", "A"]
+    },
+    "Hexatonic": {
+        "Blues Major": ["C", "D", "Eb", "E", "G", "A"],
+        "Whole Tone": ["C", "D", "E", "F#", "G#", "A#"]
+    },
+    "Heptatonic": {
+        "Major": ["C", "D", "E", "F", "G", "A", "B"],
+        "Natural Minor": ["A", "B", "C", "D", "E", "F", "G"],
+        "Dorian": ["D", "E", "F", "G", "A", "B", "C"]
+    }
+};
+```
+
+### Legacy Library Features
 ```css
 /* All colors now use 12-color system variables */
 --main-note: #008080;        /* Teal buttons, borders */
@@ -525,7 +639,22 @@ Examples:
 3. **Collection queries** - Advanced filtering and analysis tools
 4. **Texture patterns** - Polka dot variations for different sections
 
-### Recent Updates (Latest - September 25, 2025)
+### Recent Updates (Latest - September 28, 2025)
+
+#### ✅ v3.7.5: Universal Auto-Zoom & International Tuning Systems - COMPLETE
+- **International Tuning Dropdown**: Hierarchical menu with Vietnamese, Japanese, Chinese, Arabic, Indian, and Western tuning systems
+- **Universal Auto-Zoom**: Direct formula (screen width / tablature width) with 3% minimum for very long songs
+- **Zoom Preservation**: User zoom levels maintained when switching tunings (no jarring recalculation)
+- **Minimal Library Thumbnails**: Text-only cards with essential metrics, 56% space reduction
+- **Complete Coverage**: All 254 songs including "Đò đưa quan họ" (28,080px) get proper full-width overview
+
+#### ✅ v3.7.4: Enhanced Tuning Integration - COMPLETE
+- **Tuning Database Integration**: Loads comprehensive international scales from tuning-systems.json
+- **Category Organization**: Dropdown with optgroup headers for Vietnamese, Pentatonic, Hexatonic, Heptatonic
+- **Dynamic Switching**: Instant tuning changes with bent note count updates
+- **Professional UI**: Integrated dropdown in panel header with proper styling
+
+### Previous Updates (September 25, 2025)
 
 #### ✅ Individual Song Viewer System - COMPLETE
 - **Complete V1-Style Tablature Generation**: All 130 Vietnamese songs now have dedicated viewers

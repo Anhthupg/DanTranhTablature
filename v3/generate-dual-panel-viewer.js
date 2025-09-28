@@ -199,6 +199,9 @@ class DualPanelGenerator {
         const usedStrings = this.determineUsedStrings(notes, strings);
 
         let svg = '';
+        let svgDefs = ''; // Store gradient definitions
+        const gradientIds = new Set(); // Track unique gradient IDs
+
         // Calculate width based on last note's timing plus duration plus one whole note
         const lastNote = notes[notes.length - 1];
         // Duration-based spacing in the dual-panel viewer (scaled down)
@@ -325,6 +328,19 @@ class DualPanelGenerator {
                     }
                 }
 
+                // Draw resonance band before note (half-note fixed length)
+                const halfNoteLength = 160; // Fixed length for half note (320px full note / 2)
+                const bandHeight = 12;
+                const bandY = y - bandHeight / 2; // Center band on note Y position
+
+                // Use inline CSS gradient for better persistence
+                const gradientStyle = `background: linear-gradient(to right, ${this.colors.mainNote}99, ${this.colors.mainNote}33, transparent); opacity: 0.8;`;
+
+                svg += `<foreignObject x="${x}" y="${bandY}" width="${halfNoteLength}" height="${bandHeight}" class="resonance-band"
+                        data-base-x="${x}" data-base-y="${y}" data-base-width="${halfNoteLength}" data-band-height="${bandHeight}">
+                        <div style="width: 100%; height: 100%; ${gradientStyle}"></div>
+                        </foreignObject>`;
+
                 // Draw note
                 svg += `<circle cx="${x}" cy="${y}" r="8" fill="${this.colors.mainNote}"
                         stroke="#333" stroke-width="1" class="note-circle"/>`;
@@ -347,7 +363,8 @@ class DualPanelGenerator {
                     }
 
                     svg += `<text x="${x}" y="${y + 25}" text-anchor="middle" font-size="10"
-                            fill="${lyricColor}">${note.lyrics.text}</text>`;
+                            fill="${lyricColor}" class="lyric-text"
+                            data-base-x="${x}" data-base-y="${y}" data-lyric-offset="25">${note.lyrics.text}</text>`;
 
                     // Draw melisma line if extending
                     if (note.lyrics.extendType === 'start') {
@@ -365,7 +382,10 @@ class DualPanelGenerator {
             }
         });
 
-        return { svg, bentNoteCount, width, height };
+        // Wrap SVG with defs section for gradients - ensure proper formatting
+        const completeSvg = svgDefs ? `<defs>${svgDefs}</defs>${svg}` : svg;
+
+        return { svg: completeSvg, bentNoteCount, width, height };
     }
 
     /**
@@ -820,8 +840,7 @@ class DualPanelGenerator {
 
             // Update the SVG
             const container = document.getElementById('traditionalContainer');
-            container.innerHTML = '<svg width="' + svgData.width + '" height="' + svgData.height + '" id="traditionalSVG">' +
-                                svgData.svg + '</svg>';
+            container.innerHTML = '<svg width="' + svgData.width + '" height="' + svgData.height + '" id="traditionalSVG">' + svgData.svg + '</svg>';
 
             // Preserve current zoom level - don't change user's view
             const svg = document.getElementById('traditionalSVG');
@@ -955,6 +974,34 @@ class DualPanelGenerator {
                     if (baseY2 !== null && element.hasAttribute('y2')) {
                         const newY2 = baseY2 * yZoom;
                         element.setAttribute('y2', newY2);
+                    }
+
+                    // Handle resonance band scaling with zoom
+                    if (element.classList.contains('resonance-band')) {
+                        // X-zoom: scale width
+                        if (element.dataset.baseWidth) {
+                            const baseWidth = parseFloat(element.dataset.baseWidth);
+                            const newWidth = baseWidth * xZoom;
+                            element.setAttribute('width', newWidth);
+                        }
+
+                        // Y-zoom: recalculate Y position to keep band centered on note
+                        if (element.dataset.baseY && element.dataset.bandHeight) {
+                            const noteBaseY = parseFloat(element.dataset.baseY);
+                            const bandHeight = parseFloat(element.dataset.bandHeight);
+                            const newNoteY = noteBaseY * yZoom;
+                            const newBandY = newNoteY - bandHeight / 2;
+                            element.setAttribute('y', newBandY);
+                        }
+                    }
+
+                    // Handle lyric text positioning to maintain constant distance from note
+                    if (element.classList.contains('lyric-text') && element.dataset.baseY && element.dataset.lyricOffset) {
+                        const noteBaseY = parseFloat(element.dataset.baseY);
+                        const lyricOffset = parseFloat(element.dataset.lyricOffset);
+                        const newNoteY = noteBaseY * yZoom;
+                        const newLyricY = newNoteY + lyricOffset; // Fixed offset regardless of zoom
+                        element.setAttribute('y', newLyricY);
                     }
 
                     // Keep text and circles at consistent size

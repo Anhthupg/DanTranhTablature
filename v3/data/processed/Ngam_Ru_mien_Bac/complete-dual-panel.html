@@ -1286,8 +1286,83 @@
             else yZoom = zoom;
 
             document.querySelectorAll('svg').forEach(svg => {
-                svg.style.transform = `scaleX(${xZoom}) scaleY(${yZoom})`;
-                svg.style.transformOrigin = '0 0';
+                // Reset SVG transform
+                svg.style.transform = '';
+
+                // Apply zoom by transforming individual elements
+                svg.querySelectorAll('*').forEach(element => {
+                    if (!element.dataset.baseX) {
+                        // Store original positions on first zoom
+                        element.dataset.baseX = element.getAttribute('x') || element.getAttribute('cx') || element.getAttribute('x1') || '0';
+                        element.dataset.baseY = element.getAttribute('y') || element.getAttribute('cy') || element.getAttribute('y1') || '0';
+                        element.dataset.baseX2 = element.getAttribute('x2') || '';
+                        element.dataset.baseY2 = element.getAttribute('y2') || '';
+                    }
+
+                    const baseX = parseFloat(element.dataset.baseX);
+                    const baseY = parseFloat(element.dataset.baseY);
+                    const baseX2 = element.dataset.baseX2 ? parseFloat(element.dataset.baseX2) : null;
+                    const baseY2 = element.dataset.baseY2 ? parseFloat(element.dataset.baseY2) : null;
+
+                    // Apply X-zoom (horizontal scaling from x=120 pivot point)
+                    if (element.hasAttribute('x') || element.hasAttribute('cx') || element.hasAttribute('x1')) {
+                        const pivotX = 120; // String label boundary
+                        let newX;
+                        if (baseX <= pivotX) {
+                            newX = baseX; // Don't scale string labels area
+                        } else {
+                            newX = pivotX + (baseX - pivotX) * xZoom;
+                        }
+
+                        if (element.hasAttribute('x')) element.setAttribute('x', newX);
+                        if (element.hasAttribute('cx')) element.setAttribute('cx', newX);
+                        if (element.hasAttribute('x1')) element.setAttribute('x1', newX);
+                    }
+
+                    // Apply X-zoom to x2 coordinates (for lines)
+                    if (baseX2 !== null && element.hasAttribute('x2')) {
+                        const pivotX = 120;
+                        let newX2;
+                        if (baseX2 <= pivotX) {
+                            newX2 = baseX2;
+                        } else {
+                            newX2 = pivotX + (baseX2 - pivotX) * xZoom;
+                        }
+                        element.setAttribute('x2', newX2);
+                    }
+
+                    // Apply Y-zoom (vertical scaling from top)
+                    if (element.hasAttribute('y') || element.hasAttribute('cy') || element.hasAttribute('y1')) {
+                        const newY = baseY * yZoom;
+
+                        if (element.hasAttribute('y')) element.setAttribute('y', newY);
+                        if (element.hasAttribute('cy')) element.setAttribute('cy', newY);
+                        if (element.hasAttribute('y1')) element.setAttribute('y1', newY);
+                    }
+
+                    // Apply Y-zoom to y2 coordinates (for lines)
+                    if (baseY2 !== null && element.hasAttribute('y2')) {
+                        const newY2 = baseY2 * yZoom;
+                        element.setAttribute('y2', newY2);
+                    }
+
+                    // Keep text and circles at consistent size
+                    if (element.tagName === 'text' || element.tagName === 'circle') {
+                        element.style.transform = '';
+                        element.style.fontSize = element.tagName === 'text' ? '10px' : '';
+                    }
+                });
+
+                // Update SVG dimensions for proper scrolling
+                const baseWidth = parseFloat(svg.dataset.baseWidth || svg.getAttribute('width'));
+                const baseHeight = parseFloat(svg.dataset.baseHeight || svg.getAttribute('height'));
+                if (!svg.dataset.baseWidth) {
+                    svg.dataset.baseWidth = svg.getAttribute('width');
+                    svg.dataset.baseHeight = svg.getAttribute('height');
+                }
+
+                svg.setAttribute('width', baseWidth * xZoom);
+                svg.setAttribute('height', baseHeight * yZoom);
             });
         }
 

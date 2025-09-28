@@ -322,35 +322,104 @@
             background: #fafafa;
         }
 
-        /* Controls */
-        .controls {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+
+        /* Floating Zoom Controls - Bottom Left Corner */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
             display: flex;
-            gap: 20px;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+            pointer-events: none;
+        }
+
+        .zoom-controls > * {
+            pointer-events: auto;
+        }
+
+        .x-zoom-group {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            gap: 5px;
         }
 
-        button {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
+        .y-zoom-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .x-zoom-slider {
+            width: 200px;
+            height: 8px;
+            background: #E5E7EB;
             border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .x-zoom-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498DB;
             cursor: pointer;
-            font-size: 14px;
-            transition: background 0.2s;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+            margin-top: -6px;
         }
 
-        button:hover {
-            background: #2980b9;
+        /* Blue fill effect for X-slider */
+        .x-zoom-slider::-webkit-slider-runnable-track {
+            background: linear-gradient(to right, #3498DB 0%, #3498DB var(--fill-percent, 50%), #E5E7EB var(--fill-percent, 50%), #E5E7EB 100%);
+            height: 8px;
+            border-radius: 5px;
         }
 
-        .zoom-slider {
-            width: 150px;
+        .y-zoom-slider {
+            width: 8px;
+            height: 200px;
+            background: linear-gradient(180deg, #85C1E9, #3498DB);
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: slider-vertical;
+            writing-mode: bt-lr;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .y-zoom-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498DB;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .zoom-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #2C3E50;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+        }
+
+        .zoom-value {
+            font-size: 11px;
+            font-weight: bold;
+            color: #3498DB;
+            min-width: 40px;
+            text-align: center;
+            text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
         }
 
         /* Relationship Indicators */
@@ -445,14 +514,22 @@
             </div>
         </div>
 
-        <!-- Controls -->
-        <div class="controls">
-            <label>X-Zoom:</label>
-            <input type="range" class="zoom-slider" min="10" max="200" value="100"
-                   onchange="updateZoom('x', this.value)">
-            <label>Y-Zoom:</label>
-            <input type="range" class="zoom-slider" min="10" max="200" value="100"
-                   onchange="updateZoom('y', this.value)">
+        <!-- Floating Zoom Controls -->
+        <div class="zoom-controls">
+            <div class="y-zoom-group">
+                <div class="zoom-label">Y</div>
+                <input type="range" class="y-zoom-slider" min="10" max="200" value="100"
+                       onchange="updateZoom('y', this.value); updateZoomDisplay('y', this.value)"
+                       oninput="updateZoomDisplay('y', this.value)">
+                <div class="zoom-value" id="y-zoom-value">100%</div>
+            </div>
+            <div class="x-zoom-group">
+                <div class="zoom-label">X-Zoom</div>
+                <input type="range" class="x-zoom-slider" min="10" max="200" value="100"
+                       onchange="updateZoom('x', this.value); updateZoomDisplay('x', this.value)"
+                       oninput="updateZoomDisplay('x', this.value)">
+                <div class="zoom-value" id="x-zoom-value">100%</div>
+            </div>
         </div>
 
         <!-- Optimal Tuning Panel -->
@@ -2265,6 +2342,22 @@
             };
         }
 
+        function updateZoomDisplay(axis, value) {
+            const displayElement = document.getElementById(axis + '-zoom-value');
+            if (displayElement) {
+                displayElement.textContent = Math.round(value) + '%';
+            }
+
+            // Update X-slider blue fill percentage
+            if (axis === 'x') {
+                const xSlider = document.querySelector('.x-zoom-slider');
+                if (xSlider) {
+                    const fillPercent = ((value - 10) / (200 - 10)) * 100; // Map 10-200 to 0-100%
+                    xSlider.style.setProperty('--fill-percent', fillPercent + '%');
+                }
+            }
+        }
+
         function updateZoom(axis, value) {
             const zoom = value / 100;
             if (axis === 'x') xZoom = zoom;
@@ -2753,13 +2846,14 @@
                 console.log('Auto-zoom condition check:', defaultZoom.x >= 1, defaultZoom.x < 200, defaultZoom.y >= 1, defaultZoom.y < 200);
                 if (defaultZoom.x >= 1 && defaultZoom.x < 200 && defaultZoom.y >= 1 && defaultZoom.y < 200) { // SAFE AUTO-ZOOM with font preservation
                     console.log('AUTO-ZOOM CONDITION PASSED - Looking for sliders...');
-                    const xSlider = document.querySelectorAll('.zoom-slider')[0];
-                    const ySlider = document.querySelectorAll('.zoom-slider')[1];
+                    const xSlider = document.querySelector('.x-zoom-slider');
+                    const ySlider = document.querySelector('.y-zoom-slider');
                     console.log('Found sliders:', xSlider ? 'X-slider found' : 'X-slider missing', ySlider ? 'Y-slider found' : 'Y-slider missing');
 
                     if (xSlider) {
                         xSlider.value = defaultZoom.x;
                         updateZoom('x', defaultZoom.x);
+                        updateZoomDisplay('x', defaultZoom.x);
                         // SAFE AUTO-ZOOM: Force font preservation after zoom
                         setTimeout(() => {
                             document.querySelectorAll('svg text').forEach(textEl => {
@@ -2774,6 +2868,7 @@
                     if (ySlider) {
                         ySlider.value = defaultZoom.y;
                         updateZoom('y', defaultZoom.y);
+                        updateZoomDisplay('y', defaultZoom.y);
                         // SAFE AUTO-ZOOM: Force font preservation after Y-zoom
                         setTimeout(() => {
                             document.querySelectorAll('svg text').forEach(textEl => {

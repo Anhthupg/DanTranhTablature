@@ -3,86 +3,1036 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytical Đàn Tranh Tablature - V0.10.4</title>
-    <meta http-equiv="refresh" content="3; url=deploy.html">
+    <title>Đàn Tranh Music Library - Scalable v3.7</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
+        :root {
+            /* 12-color system from CLAUDE.md */
+            --main-note: #008080;
+            --main-note-dark: #005959;
+            --grace-note: #FFD700;
+            --grace-note-dark: #CC9900;
+            --tone-marking: #9B59B6;
+            --melisma: #E74C3C;
+            --kpic-1: #0066CC;
+            --kpic-2: #3498DB;
+            --kpic-3: #5DADE2;
+            --kpic-4: #85C1E9;
+            --kric-1: #27AE60;
+            --kric-2: #52BE80;
+
+            /* Theme variables */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #2C3E50;
+            --text-secondary: #7F8C8D;
+            --border-color: #e0e0e0;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
         }
-        .version {
-            color: #e74c3c;
-            font-size: 28px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        .features {
-            text-align: left;
-            margin: 20px 0;
-        }
-        .feature {
-            color: #3498db;
-            font-size: 16px;
-            margin: 8px 0;
-            padding-left: 20px;
-        }
-        .redirect-link {
-            display: inline-block;
-            background: #3498db;
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--main-note), var(--main-note-dark));
             color: white;
-            padding: 15px 30px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
-            margin-top: 20px;
-            transition: background 0.3s ease;
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .redirect-link:hover {
-            background: #2980b9;
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Controls */
+        .controls {
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--main-note);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--main-note);
+            background: var(--bg-secondary);
+        }
+
+        .filter-btn.active {
+            background: var(--main-note);
+            color: white;
+            border-color: var(--main-note);
+        }
+
+        /* Song Grid */
+        .container {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .song-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            min-height: 500px;
+        }
+
+        .song-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .song-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .song-card.loading {
+            opacity: 0.7;
+        }
+
+        .song-card.highlighted {
+            border: 3px solid var(--grace-note);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .thumbnail-container {
+            height: 120px;
+            background: linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%),
+                        linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .thumbnail-container svg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .thumbnail-svg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .thumbnail-placeholder {
+            color: #999;
+            font-size: 3rem;
+        }
+
+        .card-info {
+            padding: 1rem;
+        }
+
+        .song-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .song-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .meta-tag {
+            padding: 0.25rem 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .meta-tag.tuning {
+            background: #e8f5e9;
+            color: var(--kric-1);
+            font-family: monospace;
+        }
+
+        .meta-tag.bent {
+            background: #ffebee;
+            color: var(--melisma);
+        }
+
+        .meta-tag.patterns {
+            background: #e3f2fd;
+            color: var(--kpic-2);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding: 1rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            background: var(--main-note);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: var(--main-note-dark);
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #pageInfo {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Performance Monitor */
+        .perf-monitor {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            display: none;
+            z-index: 1000;
+        }
+
+        .perf-monitor.active {
+            display: block;
+        }
+
+        .perf-stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .perf-label {
+            opacity: 0.8;
+        }
+
+        .perf-value {
+            font-weight: bold;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--main-note);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Audio Visual Feedback */
+        @keyframes audioPlay {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .song-card.playing {
+            animation: audioPlay 0.5s ease-in-out infinite;
+        }
+
+        .audio-wave {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 24px;
+            height: 24px;
+            display: none;
+        }
+
+        .song-card.playing .audio-wave {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎼 Analytical Đàn Tranh Tablature</h1>
-        <p class="version">Version 0.10.6 - KPIC-2 & KRIC-2 Sankey Integration</p>
-
-        <div class="features">
-            <h3>✨ Latest Features:</h3>
-            <div class="feature">📈 Interactive KPIC-2 & KRIC-2 Sankey Diagrams</div>
-            <div class="feature">🎯 Clickable Transition Bands with Pattern Selection</div>
-            <div class="feature">📊 Complete Pattern Analysis (Including Single Occurrences)</div>
-            <div class="feature">🔍 X-zoom and Y-zoom Controls with Tablature Sync</div>
-            <div class="feature">⌘ Cmd/Ctrl+Click for Multiple Pattern Selection</div>
-            <div class="feature">🎨 Thicker Visual Elements for Better Visibility</div>
-        </div>
-
-        <p>Redirecting to deployment page...</p>
-        <a href="deploy.html" class="redirect-link">
-            → View Deployment Options ←
-        </a>
-        <a href="https://github.com/Anhthupg/DanTranhTablature/raw/main/analytical_tablature.html" class="redirect-link" download style="background: #e74c3c;">
-            📥 Download App
-        </a>
-
-        <p style="color: #7f8c8d; margin-top: 30px; font-size: 12px;">
-            Generated: 2025-09-18 (Updated)<br>
-            Commit: 46ef69c (V0.10.6-KPIC2Sankey)<br>
-            <strong>If you see this page, V0.10.6 is successfully deployed!</strong>
-        </p>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
     </div>
+
+    <div class="header">
+        <h1>🎵 Đàn Tranh Music Library - Scalable v3.7</h1>
+        <div class="stats">
+            <div class="stat-item">
+                <span id="totalSongs">Loading...</span>
+            </div>
+            <div class="stat-item">
+                <span id="loadedSongs">0 loaded</span>
+            </div>
+            <div class="stat-item">
+                <span>Load time: <span id="loadTime">0</span>ms</span>
+            </div>
+            <div class="stat-item">
+                <span>Cached: <span id="cachedCount">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="search-container">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search songs by name, tuning, or region...">
+            <button class="filter-btn" onclick="clearSearch()">Clear</button>
+        </div>
+        <div class="filter-buttons">
+            <button class="filter-btn active" data-filter="all">All Songs</button>
+            <button class="filter-btn" data-filter="northern">Northern</button>
+            <button class="filter-btn" data-filter="southern">Southern</button>
+            <button class="filter-btn" data-filter="central">Central</button>
+            <button class="filter-btn" data-filter="pentatonic">Pentatonic</button>
+            <button class="filter-btn" data-filter="bent">Has Bent Notes</button>
+            <button class="filter-btn" data-filter="short">< 50 Notes</button>
+            <button class="filter-btn" data-filter="medium">50-100 Notes</button>
+            <button class="filter-btn" data-filter="long">> 100 Notes</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="song-grid" id="songGrid"></div>
+        <div class="pagination">
+            <button id="prevBtn" onclick="previousPage()">← Previous</button>
+            <span id="pageInfo">Page 1 of 1</span>
+            <button id="nextBtn" onclick="nextPage()">Next →</button>
+        </div>
+    </div>
+
+    <div class="perf-monitor" id="perfMonitor">
+        <div class="perf-stat">
+            <span class="perf-label">FPS:</span>
+            <span class="perf-value" id="fps">60</span>
+        </div>
+        <div class="perf-stat">
+            <span class="perf-label">DOM Nodes:</span>
+            <span class="perf-value" id="domNodes">0</span>
+        </div>
+        <div class="perf-stat">
+            <span class="perf-label">Memory:</span>
+            <span class="perf-value" id="memory">0 MB</span>
+        </div>
+        <div class="perf-stat">
+            <span class="perf-label">Cache Hit:</span>
+            <span class="perf-value" id="cacheHit">0%</span>
+        </div>
+    </div>
+
+    <script>
+        class MusicLibrary {
+            constructor() {
+                this.songs = [];
+                this.filteredSongs = [];
+                this.currentPage = 0;
+                this.songsPerPage = 50;
+                this.searchIndex = new Map();
+                this.thumbnailCache = new Map();
+                this.loadedThumbnails = new Set();
+                this.audioContext = null;
+                this.activeHighlights = new Set();
+                this.intersectionObserver = null;
+
+                this.initIntersectionObserver();
+                this.loadSongs();
+                this.setupEventListeners();
+                this.setupPerformanceMonitor();
+            }
+
+            initIntersectionObserver() {
+                this.intersectionObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && !this.loadedThumbnails.has(entry.target.dataset.songId)) {
+                            this.loadThumbnail(entry.target);
+                        }
+                    });
+                }, {
+                    rootMargin: '100px'
+                });
+            }
+
+            setupPerformanceMonitor() {
+                this.performanceMonitor = () => {
+                    // Monitor FPS
+                    let lastTime = performance.now();
+                    let frames = 0;
+                    const measureFPS = () => {
+                        frames++;
+                        const currentTime = performance.now();
+                        if (currentTime >= lastTime + 1000) {
+                            document.getElementById('fps').textContent = Math.round(frames * 1000 / (currentTime - lastTime));
+                            frames = 0;
+                            lastTime = currentTime;
+                        }
+                        if (document.getElementById('perfMonitor').classList.contains('active')) {
+                            requestAnimationFrame(measureFPS);
+                        }
+                    };
+                    measureFPS();
+
+                    // Monitor DOM nodes
+                    setInterval(() => {
+                        if (document.getElementById('perfMonitor').classList.contains('active')) {
+                            document.getElementById('domNodes').textContent = document.getElementsByTagName('*').length;
+
+                            // Memory usage (if available)
+                            if (performance.memory) {
+                                const mb = Math.round(performance.memory.usedJSHeapSize / 1048576);
+                                document.getElementById('memory').textContent = mb + ' MB';
+                            }
+
+                            // Cache hit rate
+                            const cacheHitRate = this.thumbnailCache.size > 0
+                                ? Math.round((this.thumbnailCache.size / this.songs.length) * 100)
+                                : 0;
+                            document.getElementById('cacheHit').textContent = cacheHitRate + '%';
+                            document.getElementById('cachedCount').textContent = this.thumbnailCache.size;
+                        }
+                    }, 1000);
+                };
+            }
+
+            async loadSongs() {
+                const startTime = performance.now();
+
+                try {
+                    // Get list of processed directories (using actual directory names with spaces)
+                    const allSongDirs = [
+    "Ba_rang_ba_ri",
+    "Bai_choi",
+    "Bat_bong_nhat_tro_xuan_nu",
+    "Bengu_Adai",
+    "Bo_Cac_la_bac_chim_Ri",
+    "Bo_bo",
+    "Buoc_lung_con_ech",
+    "Cap_bu_ke",
+    "Cau_khoa_oi",
+    "Chang_di_san",
+    "Co_la",
+    "Co_noi_sao",
+    "Dang_ruou",
+    "Det_cui",
+    "Do_Dua",
+    "Do_dua_quan_ho",
+    "Do_hoa",
+    "Dum_xep",
+    "Gia_ca",
+    "Giam_Duc_Son",
+    "Giam_Duc_son_2",
+    "Giao_trong",
+    "Hai_gia_xung",
+    "Hat_Bong_Mac",
+    "Hat_chuc_tet",
+    "Hat_ru_210_1",
+    "Hat_ru_Co_vac_nong",
+    "Hat_ru_Song_Cau_Phu_Yen",
+    "Hat_ru_Thua_thien_-_Hue",
+    "Hat_ru_con",
+    "Hat_ru_em_276",
+    "Hat_ru_em_quang_binh",
+    "Hat_ru_loi_Giam",
+    "Hat_ru_luc_van_tien_210",
+    "Hat_ru_nam_bo",
+    "Hat_ru_trich",
+    "Hat_trach",
+    "Hau_Mi_Xeo",
+    "Ho_Ba_ly",
+    "Ho_Ba_ly_trich",
+    "Ho_Boi_thuyen",
+    "Ho_Dap_De",
+    "Ho_Do_khoan_Do_huay_Ho_cheo_thuyen",
+    "Ho_Ru_ngu",
+    "Ho_cap_ben",
+    "Ho_cheo_ghe_dong_thap",
+    "Ho_cong_chua",
+    "Ho_do_doc",
+    "Ho_doi_dap",
+    "Ho_dua_linh",
+    "Ho_duong_truong",
+    "Ho_gia_gao",
+    "Ho_giat_chi",
+    "Ho_hai_cui",
+    "Ho_keo_thac",
+    "Ho_mai_ba_go_cong",
+    "Ho_mai_dua",
+    "Ho_mai_nhi",
+    "Ho_nen",
+    "Ho_qua_song_hai_cui",
+    "Ho_ru_em_canh_duong_quang_binh",
+    "Ho_xuoi_nhip_mot_doi",
+    "Khau_xia",
+    "Khong_mi_nhua",
+    "Ky_da_la_cha_cac_ke",
+    "La_non_do",
+    "Luon_coi",
+    "Luon_quan_lang",
+    "Ly_binh_voi",
+    "Ly_cay_da",
+    "Ly_chieu_chieu",
+    "Ly_con_cua",
+    "Ly_con_sao_Quang",
+    "Ly_hoai_nam",
+    "Ly_hoai_xuan",
+    "Ly_thien_thai",
+    "Ly_tinh_tang",
+    "Moi_Lau",
+    "Mua_sap",
+    "Mua_vui",
+    "Muoi_thuong",
+    "Ngam_Ru_mien_Bac",
+    "Ngam_kieu_sa_mac",
+    "Ngay_mua",
+    "Ngoi_tua_man_thuyen",
+    "Noi_tho_Sau_trong",
+    "Nuoc_song_giang",
+    "Phong_ong",
+    "Ru_con",
+    "Ru_con_Binh_Dinh",
+    "Ru_con_Ha_Tinh",
+    "Ru_con_Quang_Nam",
+    "Ru_con_Quang_Tri",
+    "Ru_em_Canh_Duong",
+    "Rucon_Nghe_An",
+    "TI_DOONG_TI",
+    "Thap_den",
+    "Thien_dang_dia_nguc",
+    "Trich_ngam_tho_Hue",
+    "Trong_Quan",
+    "Trong_bong_luong_dau",
+    "Trong_com",
+    "Trong_quan_duc_bac",
+    "Untitled1",
+    "Ve_Quang",
+    "Ve_con_ca",
+    "Vi_du_32",
+    "Vi_phuong_vai",
+    "Vi_xep",
+    "Xang_Xe",
+    "Xe_Chi",
+    "Xe_Van",
+    "Xia_ca_Me",
+    "Xin_kin_lau",
+    "Xoe_hoa",
+    "chi_chi_chanh_chanh",
+    "chieu_chieu",
+    "giam_ve",
+    "hat_cheo_tau",
+    "hat_cuoc",
+    "hat_ru_mien_bac",
+    "hat_ru_mien_trung_du",
+    "ly_thuong_nhau",
+    "nhan_co_ben_song",
+    "tampot",
+    "thang_am",
+    "tum_lum_1",
+    "vi_du"
+];
+
+                    // Load metadata for each song
+                    this.songs = [];
+                    for (const dirName of allSongDirs) {
+                        try {
+                            const metaResponse = await fetch(`data/processed/${dirName}/metadata.json`);
+                            if (metaResponse.ok) {
+                                const metadata = await metaResponse.json();
+                                this.songs.push({
+                                    id: dirName,
+                                    name: metadata.songName || this.formatSongName(dirName), // Use Vietnamese name from metadata
+                                    dirName: dirName, // URL-safe directory name
+                                    noteCount: metadata.totalNotes || metadata.noteCount || 0,
+                                    tuning: metadata.tuning || 'Unknown',
+                                    strings: metadata.stringsUsed || 0,
+                                    bentNotes: metadata.bentNotes || 0,
+                                    bentStrings: metadata.bentStrings || 0,
+                                    patterns: metadata.uniquePatterns || 0,
+                                    region: metadata.region || this.detectRegion(metadata.songName || dirName)
+                                });
+                            }
+                        } catch (e) {
+                            console.log(`Skipping ${dirName}:`, e);
+                        }
+                    }
+
+                    this.filteredSongs = [...this.songs];
+                    this.buildSearchIndex();
+
+                    const loadTime = Math.round(performance.now() - startTime);
+                    document.getElementById('loadTime').textContent = loadTime;
+                    document.getElementById('totalSongs').textContent = `${this.songs.length} songs`;
+
+                    // Hide loading overlay
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+
+                    // Render first page
+                    this.renderPage();
+
+                } catch (error) {
+                    console.error('Error loading song data:', error);
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                }
+            }
+
+            formatSongName(dirName) {
+                // Convert URL-safe directory names back to readable format
+                return dirName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            }
+
+            detectRegion(name) {
+                const nameLower = name.toLowerCase();
+                if (nameLower.includes('bắc') || nameLower.includes('hà tĩnh')) return 'Northern';
+                if (nameLower.includes('nam') || nameLower.includes('đồng tháp')) return 'Southern';
+                if (nameLower.includes('trung') || nameLower.includes('quảng') || nameLower.includes('huế')) return 'Central';
+                if (nameLower.includes('highland')) return 'Highland';
+                return 'Unknown';
+            }
+
+            buildSearchIndex() {
+                // Build inverted index for fast searching
+                this.songs.forEach((song, index) => {
+                    // Index by name
+                    const words = song.name.toLowerCase().split(/\s+/);
+                    words.forEach(word => {
+                        if (!this.searchIndex.has(word)) {
+                            this.searchIndex.set(word, new Set());
+                        }
+                        this.searchIndex.get(word).add(index);
+                    });
+
+                    // Index by tuning
+                    if (song.tuning) {
+                        const tuningKey = `tuning:${song.tuning}`;
+                        if (!this.searchIndex.has(tuningKey)) {
+                            this.searchIndex.set(tuningKey, new Set());
+                        }
+                        this.searchIndex.get(tuningKey).add(index);
+                    }
+
+                    // Index by region
+                    if (song.region) {
+                        const regionKey = `region:${song.region.toLowerCase()}`;
+                        if (!this.searchIndex.has(regionKey)) {
+                            this.searchIndex.set(regionKey, new Set());
+                        }
+                        this.searchIndex.get(regionKey).add(index);
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                // Search input with debouncing
+                let searchTimeout;
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.search(e.target.value);
+                    }, 300);
+                });
+
+                // Filter buttons
+                document.querySelectorAll('.filter-btn[data-filter]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.filterSongs(btn.dataset.filter);
+
+                        // Update active state
+                        document.querySelectorAll('.filter-btn[data-filter]').forEach(b => {
+                            b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                    });
+                });
+            }
+
+            search(query) {
+                if (!query) {
+                    this.filteredSongs = [...this.songs];
+                } else {
+                    const queryLower = query.toLowerCase();
+
+                    // Simple text search
+                    this.filteredSongs = this.songs.filter(song => {
+                        return song.name.toLowerCase().includes(queryLower) ||
+                               song.tuning.toLowerCase().includes(queryLower) ||
+                               song.region.toLowerCase().includes(queryLower);
+                    });
+                }
+
+                this.currentPage = 0;
+                this.renderPage();
+            }
+
+            filterSongs(filter) {
+                switch(filter) {
+                    case 'all':
+                        this.filteredSongs = [...this.songs];
+                        break;
+                    case 'northern':
+                    case 'southern':
+                    case 'central':
+                        const region = filter.charAt(0).toUpperCase() + filter.slice(1);
+                        this.filteredSongs = this.songs.filter(s => s.region === region);
+                        break;
+                    case 'pentatonic':
+                        this.filteredSongs = this.songs.filter(s =>
+                            s.tuning && s.tuning.split('-').length === 5
+                        );
+                        break;
+                    case 'bent':
+                        this.filteredSongs = this.songs.filter(s => s.bentNotes > 0);
+                        break;
+                    case 'short':
+                        this.filteredSongs = this.songs.filter(s => s.noteCount < 50);
+                        break;
+                    case 'medium':
+                        this.filteredSongs = this.songs.filter(s => s.noteCount >= 50 && s.noteCount <= 100);
+                        break;
+                    case 'long':
+                        this.filteredSongs = this.songs.filter(s => s.noteCount > 100);
+                        break;
+                }
+
+                this.currentPage = 0;
+                this.renderPage();
+            }
+
+            renderPage() {
+                const grid = document.getElementById('songGrid');
+                grid.innerHTML = '';
+
+                const start = this.currentPage * this.songsPerPage;
+                const end = Math.min(start + this.songsPerPage, this.filteredSongs.length);
+                const pageSongs = this.filteredSongs.slice(start, end);
+
+                pageSongs.forEach(song => {
+                    const card = this.createSongCard(song);
+                    grid.appendChild(card);
+
+                    // Observe for lazy loading
+                    this.intersectionObserver.observe(card);
+                });
+
+                // Update pagination
+                this.updatePagination();
+
+                // Update stats
+                document.getElementById('loadedSongs').textContent = `${end - start} loaded`;
+            }
+
+            createSongCard(song) {
+                const card = document.createElement('div');
+                card.className = 'song-card loading highlight-ready';
+                card.dataset.songId = song.id;
+
+                // Prepare for audio playback
+                card.dataset.audioUrl = `data/audio/${song.id}.mp3`;
+
+                // Prepare for highlighting
+                card.dataset.highlights = JSON.stringify(song.highlights || []);
+
+                card.innerHTML = `
+                    <div class="thumbnail-container">
+                        <div class="thumbnail-placeholder">♪</div>
+                    </div>
+                    <div class="card-info">
+                        <div class="song-title">${song.name}</div>
+                        <div class="song-meta">
+                            ${song.tuning ? `<span class="meta-tag tuning">Tuning: ${song.tuning}</span>` : ''}
+                            <span class="meta-tag">${song.noteCount || 0} notes</span>
+                            ${song.bentNotes > 0 ? `<span class="meta-tag bent">${song.bentNotes} bent</span>` : ''}
+                            ${song.patterns > 0 ? `<span class="meta-tag patterns">${song.patterns} patterns</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="audio-wave">🎵</div>
+                `;
+
+                card.onclick = () => this.openSong(song.id);
+
+                return card;
+            }
+
+            async loadThumbnail(card) {
+                const songId = card.dataset.songId;
+
+                if (this.loadedThumbnails.has(songId)) {
+                    return;
+                }
+
+                this.loadedThumbnails.add(songId);
+
+                // Check cache first
+                if (this.thumbnailCache.has(songId)) {
+                    this.displayThumbnail(card, this.thumbnailCache.get(songId));
+                    return;
+                }
+
+                try {
+                    // Try to load actual thumbnail SVG
+                    const response = await fetch(`data/processed/${songId}/thumbnail.svg`);
+                    if (response.ok) {
+                        const svgText = await response.text();
+                        this.thumbnailCache.set(songId, svgText);
+                        this.displayThumbnail(card, svgText);
+                    } else {
+                        // Fallback to generated thumbnail
+                        const song = this.songs.find(s => s.id === songId);
+                        if (song) {
+                            const thumbnail = this.generateSimpleThumbnail(song);
+                            this.thumbnailCache.set(songId, thumbnail);
+                            this.displayThumbnail(card, thumbnail);
+                        }
+                    }
+                } catch (error) {
+                    // Generate simple thumbnail as fallback
+                    const song = this.songs.find(s => s.id === songId);
+                    if (song) {
+                        const thumbnail = this.generateSimpleThumbnail(song);
+                        this.thumbnailCache.set(songId, thumbnail);
+                        this.displayThumbnail(card, thumbnail);
+                    }
+                }
+
+                card.classList.remove('loading');
+            }
+
+            displayThumbnail(card, svgContent) {
+                const container = card.querySelector('.thumbnail-container');
+                container.innerHTML = svgContent;
+                card.classList.remove('loading');
+            }
+
+            generateSimpleThumbnail(song) {
+                // Generate a simple visual representation
+                const strings = song.strings || 7;
+                const noteCount = Math.min(song.noteCount || 10, 20); // Show max 20 notes
+
+                let svg = `
+                    <svg class="thumbnail-svg" viewBox="0 0 300 120" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="300" height="120" fill="#f8f9fa"/>
+                `;
+
+                // Draw string lines
+                for (let i = 0; i < strings; i++) {
+                    const y = 20 + (i * (80 / strings));
+                    svg += `<line x1="10" y1="${y}" x2="290" y2="${y}" stroke="#ccc" stroke-width="1"/>`;
+                }
+
+                // Draw some notes
+                for (let i = 0; i < noteCount; i++) {
+                    const x = 20 + (i * 13);
+                    const y = 20 + Math.random() * 80;
+                    const isBent = Math.random() < (song.bentNotes / song.noteCount);
+                    const color = isBent ? '#E74C3C' : '#008080';
+                    svg += `<circle cx="${x}" cy="${y}" r="3" fill="${color}" opacity="0.8"/>`;
+                }
+
+                svg += `</svg>`;
+                return svg;
+            }
+
+            openSong(songId) {
+                // Open dual-panel viewer
+                window.location.href = `data/processed/${songId}/complete-dual-panel.html`;
+            }
+
+            updatePagination() {
+                const totalPages = Math.ceil(this.filteredSongs.length / this.songsPerPage);
+
+                document.getElementById('pageInfo').textContent =
+                    `Page ${this.currentPage + 1} of ${totalPages}`;
+
+                document.getElementById('prevBtn').disabled = this.currentPage === 0;
+                document.getElementById('nextBtn').disabled = this.currentPage >= totalPages - 1;
+            }
+
+            // Audio System Preparation
+            initAudio() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            async playAudio(songId) {
+                // Prepared for future audio implementation
+                const card = document.querySelector(`[data-song-id="${songId}"]`);
+                if (card) {
+                    card.classList.add('playing');
+                    // Audio playback logic here
+                    setTimeout(() => {
+                        card.classList.remove('playing');
+                    }, 3000); // Demo animation
+                }
+            }
+
+            // Highlighting System
+            highlightElements(songId, elementIds) {
+                // Prepared for cross-element highlighting
+                const card = document.querySelector(`[data-song-id="${songId}"]`);
+                if (card) {
+                    card.classList.add('highlighted');
+                    this.activeHighlights.add(songId);
+                }
+            }
+
+            clearHighlights() {
+                this.activeHighlights.forEach(songId => {
+                    const card = document.querySelector(`[data-song-id="${songId}"]`);
+                    if (card) {
+                        card.classList.remove('highlighted');
+                    }
+                });
+                this.activeHighlights.clear();
+            }
+        }
+
+        // Global instance
+        let library;
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            library = new MusicLibrary();
+        });
+
+        // Pagination controls
+        function previousPage() {
+            if (library.currentPage > 0) {
+                library.currentPage--;
+                library.renderPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(library.filteredSongs.length / library.songsPerPage);
+            if (library.currentPage < totalPages - 1) {
+                library.currentPage++;
+                library.renderPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            library.search('');
+        }
+
+        // Performance monitor toggle (press P key)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'p' || e.key === 'P') {
+                const monitor = document.getElementById('perfMonitor');
+                monitor.classList.toggle('active');
+                if (monitor.classList.contains('active') && library.performanceMonitor) {
+                    library.performanceMonitor();
+                }
+            }
+        });
+    </script>
 </body>
 </html>

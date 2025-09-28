@@ -230,63 +230,99 @@ const visualStates = {
 }
 ```
 
-## Zoom-Aware Visualization System
+## Professional Zoom-Aware Visualization System (v3.7.2)
 
-### Zoom Mechanics
-The tablature uses a sophisticated zoom system that maintains perfect alignment of all elements:
+### Advanced Independent Axis Zoom Mechanics
+The tablature uses a professional-grade zoom system with true axis independence, ensuring perfect element positioning and consistent text/note head sizing:
 
 ```javascript
-// X-Zoom: Pivots around x=120 (string label area boundary)
-const scaledX = 120 + (baseX - 120) * currentZoomX;
+// v3.7.2: Individual Element Transformation System
+function updateZoom(axis, value) {
+    const zoom = value / 100;
 
-// Y-Zoom: Scales from top
-const scaledY = baseY * currentZoomY;
+    // Store base positions on first zoom to prevent accumulation
+    if (!element.dataset.baseX) {
+        element.dataset.baseX = element.getAttribute('x') || element.getAttribute('cx') || '0';
+        element.dataset.baseY = element.getAttribute('y') || element.getAttribute('cy') || '0';
+    }
+
+    // X-Zoom: Horizontal scaling with x=120 pivot (preserves string labels)
+    if (axis === 'x') {
+        const pivotX = 120;
+        const newX = baseX <= pivotX ? baseX : pivotX + (baseX - pivotX) * xZoom;
+        element.setAttribute('cx', newX);
+    }
+
+    // Y-Zoom: Vertical scaling from top (maintains string line alignment)
+    if (axis === 'y') {
+        const newY = baseY * yZoom;
+        element.setAttribute('cy', newY);
+    }
+
+    // Text and note heads maintain consistent size at all zoom levels
+    if (element.tagName === 'text') element.style.fontSize = '10px';
+}
 ```
 
-### Zoom-Aware Elements
+### Perfect Element Positioning
 
-#### 1. Note Positions
-- Notes maintain perfect centering on string lines during zoom
-- Both X and Y positions scale proportionally
-- Grace notes and regular notes handled identically
+#### 1. Note Head Alignment (v3.7.2 Fixed)
+- **Y-Zoom**: Notes stay perfectly centered on string lines during vertical scaling
+- **X-Zoom**: Only affects horizontal spacing, zero vertical movement
+- **String line tracking**: Note heads never drift from their designated strings
+- **Size consistency**: Note heads maintain constant visual size regardless of zoom
 
-#### 2. Resonance Bands
-- Dynamically follow their associated notes
-- Center themselves on the note's Y position: `noteY - bandHeight/2`
-- Width scales with X-zoom to maintain proportions
+#### 2. Text Element Independence
+- **String labels**: Fixed position and size, unaffected by zoom operations
+- **Note head labels**: Consistent 10px font size at all zoom levels
+- **Lyrics**: Maintain readable size while following note positioning
+- **Index numbers**: Stay centered above notes with consistent sizing
 
-#### 3. Bent Note Indicators
-- Arrow tips track bent note positions exactly
-- Position calculated as `noteX - noteRadius` (12px for regular, 6px for grace)
-- BEND text scales with tablature using standard zoom formula
-- Both elements update in real-time during zoom operations
+#### 3. Axis Independence (v3.7.2 Core Feature)
+- **X-Zoom**: Only horizontal scaling, preserves all Y-positions
+- **Y-Zoom**: Only vertical scaling, preserves all X-positions
+- **No cross-axis interference**: Moving one slider never affects the other axis
+- **Pivot point system**: X-Zoom pivots at x=120 (string label boundary)
 
-#### 4. Text Elements
-- Lyrics maintain fixed offset from their notes
-- String labels only scale in Y dimension
-- Note indices stay centered above their notes
-- String numbers remain centered within note heads
+#### 4. Professional Element Scaling
+- **Base position caching**: Prevents accumulation errors during multiple zooms
+- **Individual element transformation**: No SVG-wide scaling that distorts everything
+- **Dynamic SVG resizing**: Proper scrolling behavior maintained
+- **Consistent visual hierarchy**: All elements maintain relative importance
 
-### Implementation Details
+### Implementation Excellence (v3.7.2)
 ```javascript
-// Resonance band centering (follows note)
-const noteY = parseFloat(associatedNote.getAttribute('cy'));
-const scaledY = noteY - bandHeight / 2;
+// Professional zoom system with perfect alignment
+svg.querySelectorAll('*').forEach(element => {
+    // Cache original positions to prevent drift
+    const baseX = parseFloat(element.dataset.baseX);
+    const baseY = parseFloat(element.dataset.baseY);
 
-// Bent arrow positioning (accounts for note radius)
-const noteRadius = isGrace ? 6 : 12;
-const arrowX = noteX - noteRadius;
+    // Apply axis-specific transformations
+    if (xZoomChanged) {
+        const pivotX = 120; // String label boundary
+        const newX = baseX <= pivotX ? baseX : pivotX + (baseX - pivotX) * xZoom;
+        element.setAttribute('cx', newX);
+    }
 
-// Text positioning relative to notes
-const lyricX = noteX + 4;
-const lyricY = noteY + 40;
+    if (yZoomChanged) {
+        element.setAttribute('cy', baseY * yZoom);
+    }
+
+    // Maintain consistent text and note head sizing
+    if (element.tagName === 'text' || element.tagName === 'circle') {
+        element.style.fontSize = element.tagName === 'text' ? '10px' : '';
+    }
+});
 ```
 
-### Zoom Ranges
-- **X-Zoom**: 1% to 200% (default 100%)
-- **Y-Zoom**: 1% to 200% (default 100%)
-- Independent control for horizontal and vertical scaling
-- All elements maintain relative positioning during zoom
+### Professional Zoom Behavior
+- **X-Zoom Range**: 1% to 200% (horizontal spacing only)
+- **Y-Zoom Range**: 1% to 200% (vertical spacing only)
+- **True independence**: Each axis operates completely separately
+- **Professional accuracy**: Note heads never leave their string lines
+- **Consistent readability**: Text stays at optimal size across all zoom levels
+- **Dual-panel consistency**: Both Optimal and Traditional panels behave identically
 
 ## Accessibility Features
 

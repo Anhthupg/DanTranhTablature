@@ -13,6 +13,9 @@ class DualPanelGenerator {
         this.PIXELS_PER_CENT = 0.125;
         this.BASE_Y = 100; // Base position for C3
 
+        // Load tuning systems from database
+        this.tuningSystems = this.loadTuningSystems();
+
         // Note to cents mapping (including double sharps/flats)
         this.noteToCents = {
             'C': 0, 'C#': 100, 'Db': 100, 'D': 200, 'D#': 300, 'Eb': 300,
@@ -84,6 +87,47 @@ class DualPanelGenerator {
             string: '#000000',        // Black for used strings
             unusedString: '#999999'   // Grey for unused strings
         };
+    }
+
+    /**
+     * Load tuning systems from JSON database
+     */
+    loadTuningSystems() {
+        try {
+            const tuningPath = path.join(__dirname, 'data', 'tuning-systems.json');
+            const tuningData = JSON.parse(fs.readFileSync(tuningPath, 'utf8'));
+
+            // Create hierarchical structure with categories
+            const tuningSystems = {};
+
+            // Add each category of tunings
+            Object.entries(tuningData.scales).forEach(([category, tunings]) => {
+                tuningSystems[category] = [];
+                Object.entries(tunings).forEach(([name, notes]) => {
+                    const tuningString = notes.join('-');
+                    tuningSystems[category].push({
+                        value: tuningString,
+                        label: name
+                    });
+                });
+            });
+
+            return tuningSystems;
+        } catch (error) {
+            console.error('Error loading tuning systems:', error);
+            // Return default structure if file can't be loaded
+            return {
+                'Vietnamese': [
+                    { value: 'C-D-E-G-A', label: 'Traditional' }
+                ],
+                'Japanese': [
+                    { value: 'D-E-F#-A-B', label: 'Hirajoshi' }
+                ],
+                'Arabic': [
+                    { value: 'C-D-Eb-F#-G', label: 'Maqam' }
+                ]
+            };
+        }
     }
 
     /**
@@ -358,9 +402,25 @@ class DualPanelGenerator {
             relationshipData.metadata.tuning.split('-') :
             ['C', 'D', 'E', 'G', 'A']; // Default pentatonic if not specified
 
+        // Get all available tunings from loaded tuning systems
+        const tuningSystems = this.tuningSystems;
+
         // Generate SVGs for both panels
         const optimalSVG = this.generateTuningSVG(notes, originalTuning, songName, 'optimal');
-        const traditionalSVG = this.generateTuningSVG(notes, ['C', 'D', 'E', 'G', 'A'], songName, 'traditional');
+
+        // Generate all traditional tuning SVGs for the dropdown
+        const traditionalSVGs = {};
+        Object.entries(tuningSystems).forEach(([category, tunings]) => {
+            tunings.forEach(tuningObj => {
+                const tuningNotes = tuningObj.value.split('-');
+                traditionalSVGs[tuningObj.value] = this.generateTuningSVG(notes, tuningNotes, songName, 'traditional');
+            });
+        });
+
+        // Default to C-D-E-G-A for initial display
+        const defaultTraditionalTuning = 'C-D-E-G-A';
+        const traditionalSVG = traditionalSVGs[defaultTraditionalTuning] ||
+                              traditionalSVGs[tuningSystems[Object.keys(tuningSystems)[0]][0].value];
 
         const html = `<!DOCTYPE html>
 <html lang="en">
@@ -703,18 +763,37 @@ class DualPanelGenerator {
             </div>
         </div>
 
-        <!-- Traditional Tuning Panel -->
+        <!-- Traditional Tuning Panel with Dropdown -->
         <div class="tuning-panel">
             <div class="panel-header" onclick="togglePanel('traditional')">
-                <h3>🔍 Traditional Tuning: C-D-E-G-A</h3>
+                <h3>🔍 <select id="tuningSelector" onclick="event.stopPropagation()" onchange="changeTuning(this.value)" style="
+                    background: transparent;
+                    border: 1px solid rgba(255,255,255,0.3);
+                    color: inherit;
+                    font-size: inherit;
+                    font-weight: inherit;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    margin: 0 5px;
+                    max-width: 400px;
+                ">
+                    ${Object.entries(tuningSystems).map(([category, tunings]) => `
+                        <optgroup label="── ${category} ──" style="font-weight: bold; color: #666;">
+                            ${tunings.map(tuningObj =>
+                                `<option value="${tuningObj.value}" ${tuningObj.value === defaultTraditionalTuning ? 'selected' : ''}>${tuningObj.label}</option>`
+                            ).join('')}
+                        </optgroup>
+                    `).join('')}
+                </select></h3>
                 <span class="collapse-indicator">▼</span>
             </div>
             <div class="panel-content expanded" id="traditionalContent">
                 <div class="tuning-info">
-                    <span class="tuning-display">C-D-E-G-A</span>
-                    <span class="bent-notes-count">${traditionalSVG.bentNoteCount} bent notes</span>
+                    <span class="tuning-display" id="tuningDisplay">${defaultTraditionalTuning}</span>
+                    <span class="bent-notes-count" id="bentNotesCount">${traditionalSVG.bentNoteCount} bent notes</span>
                 </div>
-                <div class="tablature-container">
+                <div class="tablature-container" id="traditionalContainer">
                     <svg width="${traditionalSVG.width}" height="${traditionalSVG.height}" id="traditionalSVG">
                         ${traditionalSVG.svg}
                     </svg>
@@ -724,6 +803,44 @@ class DualPanelGenerator {
     </div>
 
     <script>
+        // Store all pre-generated traditional tuning SVGs
+        const traditionalSVGs = ${JSON.stringify(traditionalSVGs)};
+
+        // Function to change tuning
+        function changeTuning(selectedTuning) {
+            const svgData = traditionalSVGs[selectedTuning];
+            if (!svgData) {
+                console.error('Tuning not found:', selectedTuning);
+                return;
+            }
+
+            // Update the display
+            document.getElementById('tuningDisplay').textContent = selectedTuning;
+            document.getElementById('bentNotesCount').textContent = svgData.bentNoteCount + ' bent notes';
+
+            // Update the SVG
+            const container = document.getElementById('traditionalContainer');
+            container.innerHTML = '<svg width="' + svgData.width + '" height="' + svgData.height + '" id="traditionalSVG">' +
+                                svgData.svg + '</svg>';
+
+            // Reapply zoom to new SVG
+            const svg = document.getElementById('traditionalSVG');
+            if (svg && (xZoom !== 1 || yZoom !== 1)) {
+                // Apply zoom to all elements in the new SVG
+                svg.querySelectorAll('*').forEach(element => {
+                    // Store base positions
+                    element.dataset.baseX = element.getAttribute('x') || element.getAttribute('cx') || element.getAttribute('x1') || '0';
+                    element.dataset.baseY = element.getAttribute('y') || element.getAttribute('cy') || element.getAttribute('y1') || '0';
+                    element.dataset.baseX2 = element.getAttribute('x2') || '';
+                    element.dataset.baseY2 = element.getAttribute('y2') || '';
+                });
+
+                // Apply current zoom levels
+                updateZoom('x', xZoom * 100);
+                updateZoom('y', yZoom * 100);
+            }
+        }
+
         // Panel collapse functionality
         function togglePanel(panelType) {
             const content = document.getElementById(panelType + 'Content');
@@ -745,6 +862,51 @@ class DualPanelGenerator {
 
         // Zoom functionality
         let xZoom = 1, yZoom = 1;
+
+        // Calculate default zoom to fit content
+        function calculateDefaultZoom() {
+            // Get the first SVG to measure content
+            const svg = document.querySelector('svg');
+            if (!svg) return { x: 100, y: 100 };
+
+            // Get actual SVG dimensions from attributes
+            const svgWidth = parseFloat(svg.getAttribute('width') || 0);
+            const svgHeight = parseFloat(svg.getAttribute('height') || 0);
+
+            if (svgWidth === 0 || svgHeight === 0) return { x: 100, y: 100 };
+
+            // Calculate available viewport space
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            // Reserve space for UI elements
+            const uiReservedWidth = 40; // Margins and padding
+            const uiReservedHeight = 300; // Headers, controls, etc.
+
+            // Available space for content
+            const availableWidth = viewportWidth - uiReservedWidth;
+            const availableHeight = (viewportHeight - uiReservedHeight) / 2; // Two panels
+
+            // Calculate zoom to fit entire song width
+            const xZoomValue = availableWidth / svgWidth;
+
+            // Calculate zoom to fit panel height comfortably
+            const yZoomValue = availableHeight / svgHeight;
+
+            // Convert to percentage values for sliders
+            // For X: ensure we can see the full song width (minimum 20% for very long songs)
+            const xZoomPercent = Math.min(Math.max(xZoomValue * 100, 20), 200);
+
+            // For Y: ensure content fits in panel (minimum 30% for very tall content)
+            const yZoomPercent = Math.min(Math.max(yZoomValue * 100, 30), 200);
+
+            console.log('Auto-zoom calculated: X=' + xZoomPercent.toFixed(1) + '%, Y=' + yZoomPercent.toFixed(1) + '% (SVG: ' + svgWidth + '×' + svgHeight + ', Viewport: ' + availableWidth + '×' + availableHeight + ')');
+
+            return {
+                x: xZoomPercent,
+                y: yZoomPercent
+            };
+        }
 
         function updateZoom(axis, value) {
             const zoom = value / 100;
@@ -1016,8 +1178,27 @@ class DualPanelGenerator {
         const audioPlayer = new AudioPlayer();
         const highlightManager = new HighlightManager();
 
-        // Setup click handlers for lyrics
+        // Setup click handlers for lyrics and apply default zoom
         document.addEventListener('DOMContentLoaded', () => {
+            // Apply default zoom to fit content - delay to ensure SVG is loaded
+            setTimeout(() => {
+                const defaultZoom = calculateDefaultZoom();
+
+                // Update X-zoom slider and apply
+                const xSlider = document.querySelectorAll('.zoom-slider')[0];
+                if (xSlider) {
+                    xSlider.value = defaultZoom.x;
+                    updateZoom('x', defaultZoom.x);
+                }
+
+                // Update Y-zoom slider and apply
+                const ySlider = document.querySelectorAll('.zoom-slider')[1];
+                if (ySlider) {
+                    ySlider.value = defaultZoom.y;
+                    updateZoom('y', defaultZoom.y);
+                }
+            }, 250); // Longer delay to ensure SVG dimensions are available
+
             // Lyric click highlighting
             document.querySelectorAll('.lyric-text').forEach(lyric => {
                 lyric.addEventListener('click', () => {

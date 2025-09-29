@@ -723,4 +723,232 @@ Kept 3 G4 notes separate - MELISMA (multiple lyrics: hò, hừ, hà)
 
 ---
 
-*This document defines the complete visual system for Đàn Tranh Tablature V3. All implementations must strictly adhere to these specifications to maintain consistency with V1 while enabling scalable collection analysis.*
+## 🚨 MANDATORY FEATURE DEVELOPMENT PROTOCOL
+
+### ⚡ Alert System
+**CRITICAL**: Claude must alert immediately when either user or Claude deviates from this protocol. This prevents architectural breakdown and maintains system integrity.
+
+### 🎯 Required Commands for New Features
+
+#### 1. Adding New Sections
+```bash
+"Add a new [Section Name] section to the template that displays [specific data]"
+```
+
+#### 2. Modifying Existing Sections
+```bash
+"Update the [Section Name] section to include [new feature/data]"
+```
+
+#### 3. Interactive Features
+```bash
+"Add [interactive feature] to the [Section Name] section"
+```
+
+### 📋 Mandatory Development Process
+
+#### Step 1: Define Requirements FIRST
+```
+"I want to add [feature] that will [purpose/benefit].
+It should:
+- Requirement 1
+- Requirement 2
+- Requirement 3"
+```
+
+#### Step 2: Template-First Architecture (NEVER BYPASS)
+1. **Edit Template**: `templates/dual-panel-viewer-template.html`
+   - Add HTML structure
+   - Include placeholder variables `{{NEW_DATA}}`
+
+2. **Update Generator**: `generate-dual-panel-viewer.js`
+   - Add data processing logic
+   - Map data to template placeholders
+
+3. **Test & Deploy**:
+   ```bash
+   # Test with one song FIRST
+   node generate-dual-panel-viewer.js "Song Name"
+
+   # ONLY THEN regenerate all
+   node regenerate-all.js
+   ```
+
+### 🏗️ Architecture Patterns
+
+#### Static Content:
+```javascript
+// Template:
+<div class="new-section">
+  <h3>{{SECTION_TITLE}}</h3>
+  <div class="content">{{SECTION_DATA}}</div>
+</div>
+
+// Generator:
+.replace(/{{SECTION_TITLE}}/g, sectionTitle)
+.replace(/{{SECTION_DATA}}/g, processedData)
+```
+
+#### Interactive Content:
+```javascript
+// Template:
+<div id="dynamic-section"></div>
+<script>
+  const sectionData = {{SECTION_JSON}};
+  // JavaScript for interactivity
+</script>
+
+// Generator:
+.replace(/{{SECTION_JSON}}/g, JSON.stringify(data))
+```
+
+### 📝 Complete Feature Request Template
+
+```
+"Please add a new feature to the Dan Tranh Tablature system:
+
+FEATURE: [Name of feature]
+SECTION: [Which section it belongs to]
+PURPOSE: [Why this feature is needed]
+
+REQUIREMENTS:
+1. [Specific requirement 1]
+2. [Specific requirement 2]
+3. [Specific requirement 3]
+
+DATA SOURCE: [Where the data comes from]
+USER INTERACTION: [How users will interact with it]
+VISUAL DESIGN: [Any specific design requirements]
+
+Please implement this using the template-driven architecture."
+```
+
+### ⚠️ VIOLATION ALERTS
+
+Claude must immediately alert when:
+- User bypasses template-first architecture
+- Direct HTML manipulation is suggested
+- Generator logic is mixed with template structure
+- Testing is skipped before full regeneration
+- Requirements are not defined before implementation
+
+### 🔒 Core Principles (NEVER COMPROMISE)
+
+1. **Template is single source of truth** for HTML structure
+2. **Generator handles data processing only**
+3. **Test with one song before regenerating all**
+4. **Keep complex logic in generator, not template**
+5. **Use consistent CSS classes across sections**
+6. **Document new placeholders in template comments**
+
+## 🧩 MODULAR TEMPLATE COMPONENT SYSTEM
+
+### ⚡ **New Architecture: Component-Based Templates**
+
+To prevent merge conflicts and enable precise feature control, V3 now uses **modular template components**:
+
+```
+templates/
+├── dual-panel-viewer-template.html     # Main container template
+├── components/
+│   ├── header-template.html           # Section headers with move buttons
+│   └── move-buttons-template.html     # Reusable ▲ ▼ button pairs
+```
+
+### 🎯 **Component Templates**
+
+#### **Header Component** (`components/header-template.html`)
+```html
+<!-- Variables: {{SECTION_ID}}, {{SECTION_TITLE}}, {{SECTION_ICON}}, {{MOVE_BUTTONS_COMPONENT}} -->
+<div class="panel-header" onclick="togglePanel('{{SECTION_ID}}')">
+    {{MOVE_BUTTONS_COMPONENT}}
+    <h3>{{SECTION_ICON}} {{SECTION_TITLE}}</h3>
+    <span class="collapse-indicator" id="{{SECTION_ID}}Collapse">▼</span>
+</div>
+```
+
+#### **Move Buttons Component** (`components/move-buttons-template.html`)
+```html
+<!-- Variables: {{PANEL_ID}} -->
+<div class="move-controls">
+    <button class="move-arrow" onclick="moveSection('{{PANEL_ID}}', 'up'); event.stopPropagation();">▲</button>
+    <button class="move-arrow" onclick="moveSection('{{PANEL_ID}}', 'down'); event.stopPropagation();">▼</button>
+</div>
+```
+
+### 🔧 **Generator Integration**
+
+The `generate-dual-panel-viewer.js` loads and processes components:
+
+```javascript
+// Load component templates
+const headerTemplate = fs.readFileSync('templates/components/header-template.html', 'utf8');
+const moveButtonsTemplate = fs.readFileSync('templates/components/move-buttons-template.html', 'utf8');
+
+// Generate move buttons for specific panel
+function generateMoveButtons(panelId) {
+    return moveButtonsTemplate.replace(/{{PANEL_ID}}/g, panelId);
+}
+
+// Generate header with or without move buttons
+function generateHeader(sectionId, title, icon, hasMoveButtons) {
+    const moveButtons = hasMoveButtons ? generateMoveButtons(sectionId + 'Panel') : '';
+    return headerTemplate
+        .replace(/{{SECTION_ID}}/g, sectionId)
+        .replace(/{{SECTION_TITLE}}/g, title)
+        .replace(/{{SECTION_ICON}}/g, icon)
+        .replace(/{{MOVE_BUTTONS_COMPONENT}}/g, moveButtons);
+}
+```
+
+### 🎨 **Component CSS Standards**
+
+**Move Button Styling** (Ultra-Visible):
+```css
+.move-arrow {
+    background: #2c3e50 !important;
+    border: 2px solid #34495e !important;
+    border-radius: 6px;
+    color: white !important;
+    cursor: pointer;
+    padding: 4px 10px;
+    font-size: 16px;
+    font-weight: bold;
+    min-width: 28px;
+    text-align: center;
+}
+
+.move-arrow:hover {
+    background: #1a252f !important;
+    transform: scale(1.1);
+}
+```
+
+### 🚀 **Benefits of Modular System**
+
+1. **No More Merge Conflicts** - Edit button styling in one place
+2. **Consistent Headers** - All sections use same component
+3. **Easy Feature Addition** - Create new components, plug them in
+4. **Maintainable Code** - Small, focused template files
+5. **Reusable Components** - Use move buttons anywhere
+
+### 📋 **Future Component Expansion**
+
+**Planned Components:**
+- `zoom-controls-template.html` - v3.7.12 floating zoom sliders
+- `section-content-template.html` - Standardized content containers
+- `tablature-container-template.html` - SVG tablature wrappers
+
+### ⚠️ **Development Protocol Update**
+
+**When adding new features:**
+1. **Check if component exists** for the UI element
+2. **Create new component** if needed (don't modify main template)
+3. **Update generator** to use component
+4. **Test with one song** before full regeneration
+
+This modular approach ensures **surgical precision** in feature development and prevents the massive template conflicts we experienced during v3.7.12 merging.
+
+---
+
+*This document defines the complete visual system, development protocol, and modular component architecture for Đàn Tranh Tablature V3. All implementations must strictly adhere to these specifications to maintain consistency with V1 while enabling scalable collection analysis.*

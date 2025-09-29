@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid 3: Split-Screen Toggle</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Split-Screen Container */
+        .split-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Tablature Area (22% height) */
+        .tablature-area {
+            height: 22vh;
+            background: white;
+            border-bottom: 2px solid #3498db;
+            padding: 8px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+
+        .tablature-title {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .tablature-content {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            padding: 6px;
+            height: calc(100% - 25px);
+            overflow-x: auto;
+        }
+
+        /* Mode Controls */
+        .mode-controls {
+            background: #34495e;
+            color: white;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-button {
+            background: transparent;
+            border: 2px solid #7f8c8d;
+            color: #ecf0f1;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .mode-button.active {
+            border-color: #3498db;
+            background: #3498db;
+            color: white;
+        }
+
+        .mode-button:hover {
+            border-color: #3498db;
+        }
+
+        /* Analysis Area (75% height) */
+        .analysis-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Single Column Mode (Default - like Tabbed Environment) */
+        .single-column-mode {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .single-column-mode.hidden {
+            display: none;
+        }
+
+        .single-tabs {
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+            display: flex;
+            overflow-x: auto;
+            padding: 0 8px;
+        }
+
+        .single-tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #2c3e50;
+            font-size: 13px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .single-tab:hover {
+            background: #d5dbdb;
+        }
+
+        .single-tab.active {
+            background: white;
+            border-bottom-color: #3498db;
+            color: #3498db;
+        }
+
+        .single-content {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        /* Split-Screen Mode (like Focused Sections) */
+        .split-screen-mode {
+            width: 100%;
+            display: none;
+            overflow: hidden;
+        }
+
+        .split-screen-mode.active {
+            display: flex;
+        }
+
+        /* Left Panel: Section Selector */
+        .section-selector {
+            width: 200px;
+            background: #ecf0f1;
+            border-right: 2px solid #bdc3c7;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .selector-section {
+            border-bottom: 1px solid #bdc3c7;
+        }
+
+        .selector-header {
+            background: #34495e;
+            color: white;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .selector-items {
+            background: white;
+            display: none;
+        }
+
+        .selector-items.expanded {
+            display: block;
+        }
+
+        .selector-item {
+            padding: 6px 15px;
+            cursor: pointer;
+            font-size: 11px;
+            border-bottom: 1px solid #f1f2f6;
+            transition: background 0.2s;
+        }
+
+        .selector-item:hover {
+            background: #f8f9fa;
+        }
+
+        .selector-item.selected {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Right Panel: Expandable Sections */
+        .expandable-sections {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .expandable-section {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .expandable-section.highlighted {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+        }
+
+        .expandable-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            padding: 6px 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .expandable-content {
+            padding: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .expandable-content.collapsed {
+            display: none;
+        }
+
+        /* Horizontal Scroll Mode (like Focused Sections endless scroll) */
+        .horizontal-scroll-mode {
+            width: 100%;
+            display: none;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 8px;
+        }
+
+        .horizontal-scroll-mode.active {
+            display: flex;
+            gap: 8px;
+        }
+
+        .scroll-section {
+            min-width: 280px;
+            max-width: 350px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+            height: fit-content;
+            max-height: calc(100vh - 200px);
+        }
+
+        .scroll-header {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .scroll-content {
+            padding: 10px;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        /* Compact Metrics for all modes */
+        .mode-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .mode-metric-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mode-metric-card:hover {
+            border-color: #3498db;
+            background: #e8f4f8;
+        }
+
+        .mode-metric-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 2px;
+        }
+
+        .mode-metric-label {
+            font-size: 9px;
+            color: #6c757d;
+            line-height: 1.1;
+        }
+
+        /* Cross-Reference System */
+        .mode-cross-refs {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 3px;
+            padding: 4px 6px;
+            margin: 6px 0;
+            font-size: 10px;
+            color: #856404;
+        }
+
+        .mode-cross-link {
+            background: #3498db;
+            color: white;
+            padding: 1px 4px;
+            margin: 1px;
+            border-radius: 2px;
+            text-decoration: none;
+            font-size: 9px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="split-container">
+
+        <!-- Compact Tablature -->
+        <div class="tablature-area">
+            <h2 class="tablature-title">Hybrid 3: Split-Screen Toggle (3 View Modes)</h2>
+            <div class="tablature-content">
+                <svg width="380" height="70" style="background: white;">
+                    <line x1="25" y1="20" x2="355" y2="20" stroke="#ddd" stroke-width="2"/>
+                    <line x1="25" y1="35" x2="355" y2="35" stroke="#ddd" stroke-width="2"/>
+                    <line x1="25" y1="50" x2="355" y2="50" stroke="#ddd" stroke-width="2"/>
+
+                    <circle cx="55" cy="35" r="6" fill="#008080"/>
+                    <circle cx="80" cy="50" r="4" fill="#FFD700"/>
+                    <circle cx="105" cy="20" r="6" fill="#008080"/>
+                    <circle cx="130" cy="35" r="6" fill="#008080"/>
+
+                    <text x="8" y="25" font-size="8" fill="#666">G4</text>
+                    <text x="8" y="40" font-size="8" fill="#666">D4</text>
+                    <text x="8" y="55" font-size="8" fill="#666">A3</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Mode Controls -->
+        <div class="mode-controls">
+            <span style="font-size: 12px; margin-right: 10px;">View Mode:</span>
+            <button class="mode-button active" onclick="switchMode('tabbed', this)">📑 Tabbed</button>
+            <button class="mode-button" onclick="switchMode('sections', this)">📋 Sections</button>
+            <button class="mode-button" onclick="switchMode('scroll', this)">↔️ Horizontal Scroll</button>
+        </div>
+
+        <!-- Analysis Area -->
+        <div class="analysis-area">
+
+            <!-- Mode 1: Single Column (Tabbed Style) -->
+            <div class="single-column-mode" id="tabbedMode">
+                <div class="single-tabs">
+                    <button class="single-tab active" onclick="switchSingleTab('pitch', this)">🎵 Pitch</button>
+                    <button class="single-tab" onclick="switchSingleTab('rhythm', this)">🥁 Rhythm</button>
+                    <button class="single-tab" onclick="switchSingleTab('tones', this)">🗣️ Tones</button>
+                    <button class="single-tab" onclick="switchSingleTab('melisma', this)">🎶 Melisma</button>
+                    <button class="single-tab" onclick="switchSingleTab('correlations', this)">🔗 Correlations</button>
+                </div>
+
+                <div class="single-content">
+                    <div class="tab-panel active" id="pitch-panel">
+                        <h3 style="margin: 0 0 10px 0; color: #2c3e50;">🎵 Pitch Analysis</h3>
+                        <p style="margin: 0 0 15px 0; color: #7f8c8d; font-size: 12px;">Pure melodic contour without rhythm consideration</p>
+
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('unique-pitches')">
+                                <div class="mode-metric-value">5</div>
+                                <div class="mode-metric-label">Unique Pitches</div>
+                            </div>
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('ascending')">
+                                <div class="mode-metric-value">34.2%</div>
+                                <div class="mode-metric-label">Ascending</div>
+                            </div>
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('descending')">
+                                <div class="mode-metric-value">41.7%</div>
+                                <div class="mode-metric-label">Descending</div>
+                            </div>
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('static')">
+                                <div class="mode-metric-value">24.1%</div>
+                                <div class="mode-metric-label">Static</div>
+                            </div>
+                        </div>
+
+                        <div class="mode-cross-refs">
+                            <strong>Cross-References:</strong>
+                            <a class="mode-cross-link" onclick="switchToRelatedTab('tones')">Tone Correlations</a>
+                            <a class="mode-cross-link" onclick="switchToRelatedTab('melisma')">Melodic Patterns</a>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="tones-panel">
+                        <h3 style="margin: 0 0 10px 0; color: #2c3e50;">🗣️ Vietnamese Tones</h3>
+                        <p style="margin: 0 0 15px 0; color: #7f8c8d; font-size: 12px;">Diacritical tone markers and musical correlations</p>
+
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">23.5%</div>
+                                <div class="mode-metric-label">Ngang</div>
+                            </div>
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('nga-melisma')">
+                                <div class="mode-metric-value">12.5%</div>
+                                <div class="mode-metric-label">Ngã</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">78.4%</div>
+                                <div class="mode-metric-label">Correlation</div>
+                            </div>
+                        </div>
+
+                        <div class="mode-cross-refs">
+                            <strong>Key Finding:</strong> Ngã tone appears in 80% of melismas on rank #17 notes
+                            <br><a class="mode-cross-link" onclick="switchToRelatedTab('melisma')">See Melisma Analysis</a>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" id="melisma-panel">
+                        <h3 style="margin: 0 0 10px 0; color: #2c3e50;">🎶 Melisma & Grace Notes</h3>
+                        <p style="margin: 0 0 15px 0; color: #7f8c8d; font-size: 12px;">Multiple notes per syllable analysis</p>
+
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">8</div>
+                                <div class="mode-metric-label">Groups</div>
+                            </div>
+                            <div class="mode-metric-card" onclick="highlightCrossReferences('nga-correlation')">
+                                <div class="mode-metric-value">80%</div>
+                                <div class="mode-metric-label">Ngã Link</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">14.0%</div>
+                                <div class="mode-metric-label">Grace %</div>
+                            </div>
+                        </div>
+
+                        <div class="mode-cross-refs">
+                            <strong>Cross-References:</strong>
+                            <a class="mode-cross-link" onclick="switchToRelatedTab('tones')">Back to Tones</a>
+                            <a class="mode-cross-link" onclick="switchToRelatedTab('patterns')">Pattern Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode 2: Split-Screen with Section Selector -->
+            <div class="split-screen-mode" id="sectionsMode">
+                <div class="section-selector">
+                    <div class="selector-section">
+                        <div class="selector-header" onclick="toggleSelector('musical')">🎵 Musical</div>
+                        <div class="selector-items" id="musical-items">
+                            <div class="selector-item" onclick="selectSection('pitch')">Pitch Analysis</div>
+                            <div class="selector-item" onclick="selectSection('rhythm')">Rhythm Analysis</div>
+                            <div class="selector-item" onclick="selectSection('melody')">Melody Interplay</div>
+                        </div>
+                    </div>
+
+                    <div class="selector-section">
+                        <div class="selector-header" onclick="toggleSelector('linguistic')">🗣️ Linguistic</div>
+                        <div class="selector-items" id="linguistic-items">
+                            <div class="selector-item" onclick="selectSection('tones')">Vietnamese Tones</div>
+                            <div class="selector-item" onclick="selectSection('phrases')">Phrase Positions</div>
+                            <div class="selector-item" onclick="selectSection('semantics')">Semantic Fields</div>
+                        </div>
+                    </div>
+
+                    <div class="selector-section">
+                        <div class="selector-header" onclick="toggleSelector('patterns')">🔄 Patterns</div>
+                        <div class="selector-items" id="patterns-items">
+                            <div class="selector-item" onclick="selectSection('melisma')">Melisma & Grace</div>
+                            <div class="selector-item" onclick="selectSection('motifs')">Recurring Motifs</div>
+                            <div class="selector-item" onclick="selectSection('development')">Development</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="expandable-sections" id="expandableSections">
+                    <!-- Selected sections will appear here as expandable panels -->
+                    <div style="padding: 20px; text-align: center; color: #666; font-size: 12px;">
+                        Select sections from the left panel to compare side-by-side
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode 3: Horizontal Scroll (Endless Sideways Scroll) -->
+            <div class="horizontal-scroll-mode" id="scrollMode">
+
+                <div class="scroll-section">
+                    <div class="scroll-header">🎵 Pitch Analysis</div>
+                    <div class="scroll-content">
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">5</div>
+                                <div class="mode-metric-label">Unique</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">34.2%</div>
+                                <div class="mode-metric-label">Ascending</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">41.7%</div>
+                                <div class="mode-metric-label">Descending</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scroll-section">
+                    <div class="scroll-header">🗣️ Vietnamese Tones</div>
+                    <div class="scroll-content">
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">23.5%</div>
+                                <div class="mode-metric-label">Ngang</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">12.5%</div>
+                                <div class="mode-metric-label">Ngã</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">78.4%</div>
+                                <div class="mode-metric-label">Correlation</div>
+                            </div>
+                        </div>
+                        <div class="mode-cross-refs">
+                            <strong>Key:</strong> Ngã in 80% of melismas
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scroll-section">
+                    <div class="scroll-header">🎶 Melisma & Grace</div>
+                    <div class="scroll-content">
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">8</div>
+                                <div class="mode-metric-label">Groups</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">80%</div>
+                                <div class="mode-metric-label">Ngã Link</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">14.0%</div>
+                                <div class="mode-metric-label">Grace %</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scroll-section">
+                    <div class="scroll-header">🔄 Pattern Analysis</div>
+                    <div class="scroll-content">
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">12</div>
+                                <div class="mode-metric-label">Exact</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">5</div>
+                                <div class="mode-metric-label">Transposed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scroll-section">
+                    <div class="scroll-header">🔗 Correlations</div>
+                    <div class="scroll-content">
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">78.4%</div>
+                                <div class="mode-metric-label">Tone-Melody</div>
+                            </div>
+                            <div class="mode-metric-card">
+                                <div class="mode-metric-value">65.2%</div>
+                                <div class="mode-metric-label">Word-Pitch</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- More scroll sections can be added infinitely -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Split-Screen State
+        const splitState = {
+            currentMode: 'tabbed',
+            selectedSections: new Set(),
+            crossHighlights: new Map()
+        };
+
+        // Switch View Mode
+        function switchMode(mode, buttonElement) {
+            // Update button appearance
+            document.querySelectorAll('.mode-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            buttonElement.classList.add('active');
+
+            // Hide all modes
+            document.getElementById('tabbedMode').classList.add('hidden');
+            document.getElementById('sectionsMode').classList.remove('active');
+            document.getElementById('scrollMode').classList.remove('active');
+
+            // Show selected mode
+            if (mode === 'tabbed') {
+                document.getElementById('tabbedMode').classList.remove('hidden');
+            } else if (mode === 'sections') {
+                document.getElementById('sectionsMode').classList.add('active');
+            } else if (mode === 'scroll') {
+                document.getElementById('scrollMode').classList.add('active');
+            }
+
+            splitState.currentMode = mode;
+        }
+
+        // Switch Single Tab (Tabbed Mode)
+        function switchSingleTab(tabId, tabElement) {
+            // Update tab appearance
+            document.querySelectorAll('.single-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(tabId + '-panel').classList.add('active');
+        }
+
+        // Switch to Related Tab (Cross-Reference)
+        function switchToRelatedTab(tabId) {
+            const tabButton = document.querySelector(`[onclick*="${tabId}"]`);
+            if (tabButton) {
+                switchSingleTab(tabId, tabButton);
+            }
+        }
+
+        // Toggle Selector (Sections Mode)
+        function toggleSelector(category) {
+            const items = document.getElementById(category + '-items');
+            items.classList.toggle('expanded');
+        }
+
+        // Select Section (Sections Mode)
+        function selectSection(sectionId) {
+            // Update selector appearance
+            document.querySelectorAll('.selector-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+
+            // Add section to expandable area
+            addExpandableSection(sectionId);
+        }
+
+        // Add Expandable Section
+        function addExpandableSection(sectionId) {
+            const container = document.getElementById('expandableSections');
+
+            // Check if section already exists
+            const existingSection = document.getElementById(`expandable-${sectionId}`);
+            if (existingSection) {
+                existingSection.scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+
+            const sectionData = getSectionData(sectionId);
+
+            const section = document.createElement('div');
+            section.className = 'expandable-section';
+            section.id = `expandable-${sectionId}`;
+
+            section.innerHTML = `
+                <div class="expandable-header" onclick="toggleExpandableSection('${sectionId}')">
+                    <span>${sectionData.title}</span>
+                    <span class="compact-toggle">▼</span>
+                </div>
+                <div class="expandable-content">
+                    ${sectionData.content}
+                </div>
+            `;
+
+            container.appendChild(section);
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Get Section Data
+        function getSectionData(sectionId) {
+            const data = {
+                'pitch': {
+                    title: '🎵 Pitch Analysis',
+                    content: `
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card"><div class="mode-metric-value">5</div><div class="mode-metric-label">Unique</div></div>
+                            <div class="mode-metric-card"><div class="mode-metric-value">34.2%</div><div class="mode-metric-label">Ascending</div></div>
+                        </div>
+                    `
+                },
+                'tones': {
+                    title: '🗣️ Vietnamese Tones',
+                    content: `
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card"><div class="mode-metric-value">23.5%</div><div class="mode-metric-label">Ngang</div></div>
+                            <div class="mode-metric-card"><div class="mode-metric-value">12.5%</div><div class="mode-metric-label">Ngã</div></div>
+                        </div>
+                        <div class="mode-cross-refs"><strong>Key:</strong> Ngã in 80% of melismas</div>
+                    `
+                },
+                'melisma': {
+                    title: '🎶 Melisma & Grace',
+                    content: `
+                        <div class="mode-metric-grid">
+                            <div class="mode-metric-card"><div class="mode-metric-value">8</div><div class="mode-metric-label">Groups</div></div>
+                            <div class="mode-metric-card"><div class="mode-metric-value">80%</div><div class="mode-metric-label">Ngã Link</div></div>
+                        </div>
+                    `
+                }
+            };
+
+            return data[sectionId] || { title: sectionId, content: '<div>Content loading...</div>' };
+        }
+
+        // Toggle Expandable Section
+        function toggleExpandableSection(sectionId) {
+            const section = document.getElementById(`expandable-${sectionId}`);
+            const content = section.querySelector('.expandable-content');
+            const toggle = section.querySelector('.compact-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼';
+            } else {
+                content.classList.add('collapsed');
+                toggle.textContent = '▶';
+            }
+        }
+
+        // Highlight Cross-References
+        function highlightCrossReferences(metricId) {
+            console.log(`Highlighting cross-references for: ${metricId}`);
+            alert(`${metricId} cross-references highlighted across all visible sections`);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Hybrid 3: Split-Screen Toggle initialized');
+            console.log('Features: 3 view modes - Tabbed clarity + Section comparison + Endless scroll');
+        });
+
+    </script>
+
+</body>
+</html>

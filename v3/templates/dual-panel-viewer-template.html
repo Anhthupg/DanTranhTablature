@@ -10,14 +10,15 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* Remove all body padding for true full width */
             background: #f8f9fa;
             min-height: 100vh;
         }
 
         .container {
-            max-width: 1600px;
-            margin: 0 auto;
+            max-width: none; /* Full width instead of 1600px limit */
+            margin: 0;
+            padding: 0 20px; /* Add horizontal padding for readability */
         }
 
         header {
@@ -154,6 +155,8 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             overflow: hidden;
             order: 0; /* Enable flexbox ordering */
+            width: 100%; /* Full width for all panels */
+            margin: 0 0 20px 0; /* Remove side margins, add bottom spacing */
         }
 
         .panel-header {
@@ -611,87 +614,152 @@
             }
         }
 
-        // Section movement functionality - make globally accessible
-        function moveSection(panelId, direction) {
-            console.log(`=== MOVE SECTION DEBUG START ===`);
-            console.log(`Attempting to move: ${panelId} ${direction}`);
+        // Working moveSection function (from fix-move-comprehensive.js)
+        window.moveSection = function(panelId, direction) {
+            console.log(`\n=== moveSection called ===`);
+            console.log(`Panel ID: ${panelId}`);
+            console.log(`Direction: ${direction}`);
 
+            // Find the panel
             const panel = document.getElementById(panelId);
             if (!panel) {
-                console.error(`Panel not found: ${panelId}`);
-                return;
+                console.error(`✗ Panel not found: ${panelId}`);
+                return false;
             }
-            console.log(`Panel found:`, panel);
+            console.log(`✓ Panel found:`, panel);
 
-            // Get all moveable panels (exclude optimal panel)
+            // Get parent container - should be the direct parent
             const container = panel.parentElement;
-            console.log(`Container:`, container);
-            console.log(`Container display:`, window.getComputedStyle(container).display);
-            console.log(`Container flex-direction:`, window.getComputedStyle(container).flexDirection);
+            if (!container) {
+                console.error('✗ Parent container not found');
+                return false;
+            }
+            console.log(`✓ Parent container found:`, container);
 
-            const allPanels = Array.from(container.querySelectorAll('.tuning-panel:not(#optimalPanel)'));
-            console.log(`Total moveable panels: ${allPanels.length}`);
-            allPanels.forEach((p, i) => {
-                console.log(`  Panel ${i}: id=${p.id}, data-order=${p.dataset.order}, style.order=${p.style.order}`);
-            });
-
-            const currentIndex = allPanels.indexOf(panel);
-            console.log(`Current panel index: ${currentIndex}`);
-
-            if (direction === 'up' && currentIndex > 0) {
-                console.log(`Moving UP - swapping with panel at index ${currentIndex - 1}`);
-                // Swap order values with previous panel
-                const prevPanel = allPanels[currentIndex - 1];
-                const currentOrder = parseInt(panel.dataset.order);
-                const prevOrder = parseInt(prevPanel.dataset.order);
-
-                console.log(`Before swap: current order=${currentOrder}, prev order=${prevOrder}`);
-
-                panel.dataset.order = prevOrder;
-                prevPanel.dataset.order = currentOrder;
-
-                panel.style.order = prevOrder;
-                prevPanel.style.order = currentOrder;
-
-                console.log(`After swap: panel.style.order=${panel.style.order}, prevPanel.style.order=${prevPanel.style.order}`);
-                console.log(`Panel computed order:`, window.getComputedStyle(panel).order);
-                console.log(`PrevPanel computed order:`, window.getComputedStyle(prevPanel).order);
-            } else if (direction === 'down' && currentIndex < allPanels.length - 1) {
-                console.log(`Moving DOWN - swapping with panel at index ${currentIndex + 1}`);
-                // Swap order values with next panel
-                const nextPanel = allPanels[currentIndex + 1];
-                const currentOrder = parseInt(panel.dataset.order);
-                const nextOrder = parseInt(nextPanel.dataset.order);
-
-                console.log(`Before swap: current order=${currentOrder}, next order=${nextOrder}`);
-
-                panel.dataset.order = nextOrder;
-                nextPanel.dataset.order = currentOrder;
-
-                panel.style.order = nextOrder;
-                nextPanel.style.order = currentOrder;
-
-                console.log(`After swap: panel.style.order=${panel.style.order}, nextPanel.style.order=${nextPanel.style.order}`);
-                console.log(`Panel computed order:`, window.getComputedStyle(panel).order);
-                console.log(`NextPanel computed order:`, window.getComputedStyle(nextPanel).order);
-            } else {
-                console.log(`No move possible: direction=${direction}, currentIndex=${currentIndex}, total panels=${allPanels.length}`);
+            // Check if container has flex display
+            const containerStyle = window.getComputedStyle(container);
+            console.log(`Container display: ${containerStyle.display}`);
+            if (containerStyle.display !== 'flex') {
+                console.log('Setting container to flex display');
+                container.style.display = 'flex';
+                container.style.flexDirection = 'column';
             }
 
-            // Check final state
-            console.log(`Final panel states:`);
+            // Get all tuning panels (excluding optimal which always stays on top)
+            const allPanels = Array.from(container.querySelectorAll('.tuning-panel:not(#optimalPanel)'));
+            console.log(`✓ Found ${allPanels.length} moveable panels`);
+
+            if (allPanels.length === 0) {
+                console.error('✗ No moveable panels found');
+                return false;
+            }
+
+            // Log current state
+            console.log("Current panel order:");
             allPanels.forEach((p, i) => {
-                const computedStyle = window.getComputedStyle(p);
-                console.log(`  Panel ${i}: id=${p.id}, data-order=${p.dataset.order}, style.order=${p.style.order}, computed.order=${computedStyle.order}`);
+                console.log(`  ${i}: ${p.id} (order=${p.style.order || p.dataset.order || 'none'})`);
             });
 
-            // Update button states after move
-            updateMoveButtons();
-            console.log(`=== MOVE SECTION DEBUG END ===`);
-        }
+            // Get current orders and ensure they have values
+            allPanels.forEach((p, i) => {
+                if (!p.style.order && !p.dataset.order) {
+                    // If no order set, use the DOM position
+                    const order = parseInt(p.dataset.order) || (i + 1); // +1 because optimalPanel is 0
+                    p.style.order = order;
+                    p.dataset.order = order;
+                    console.log(`  Set initial order for ${p.id}: ${order}`);
+                }
+            });
 
-        // Make function globally accessible
-        window.moveSection = moveSection;
+            // Create ordered array
+            const orders = allPanels.map(p => ({
+                panel: p,
+                order: parseInt(p.style.order) || parseInt(p.dataset.order) || 0,
+                id: p.id
+            })).sort((a, b) => a.order - b.order);
+
+            // Find current panel in the ordered list
+            const currentIndex = orders.findIndex(o => o.panel === panel);
+            console.log(`Current panel "${panelId}" is at position ${currentIndex} of ${orders.length - 1}`);
+
+            if (currentIndex === -1) {
+                console.error(`✗ Panel ${panelId} not found in moveable panels`);
+                return false;
+            }
+
+            // Perform the move
+            if (direction === 'up' && currentIndex > 0) {
+                console.log(`Moving UP - swapping with ${orders[currentIndex - 1].id}`);
+
+                // Swap order values
+                const currentOrder = orders[currentIndex].order;
+                const prevOrder = orders[currentIndex - 1].order;
+
+                // Apply new orders to both style and dataset
+                orders[currentIndex].panel.style.order = prevOrder;
+                orders[currentIndex].panel.dataset.order = prevOrder;
+                orders[currentIndex - 1].panel.style.order = currentOrder;
+                orders[currentIndex - 1].panel.dataset.order = currentOrder;
+
+                console.log(`✓ Swapped orders: ${panelId}=${prevOrder}, ${orders[currentIndex - 1].id}=${currentOrder}`);
+
+                // Force browser reflow
+                container.style.display = 'none';
+                container.offsetHeight; // Trigger reflow
+                container.style.display = 'flex';
+
+                return true;
+
+            } else if (direction === 'down' && currentIndex < orders.length - 1) {
+                console.log(`Moving DOWN - swapping with ${orders[currentIndex + 1].id}`);
+
+                // Swap order values
+                const currentOrder = orders[currentIndex].order;
+                const nextOrder = orders[currentIndex + 1].order;
+
+                // Apply new orders to both style and dataset
+                orders[currentIndex].panel.style.order = nextOrder;
+                orders[currentIndex].panel.dataset.order = nextOrder;
+                orders[currentIndex + 1].panel.style.order = currentOrder;
+                orders[currentIndex + 1].panel.dataset.order = currentOrder;
+
+                console.log(`✓ Swapped orders: ${panelId}=${nextOrder}, ${orders[currentIndex + 1].id}=${currentOrder}`);
+
+                // Force browser reflow
+                container.style.display = 'none';
+                container.offsetHeight; // Trigger reflow
+                container.style.display = 'flex';
+
+                return true;
+
+            } else {
+                console.log(`✗ Cannot move ${direction}: at boundary`);
+                return false;
+            }
+        };
+
+        // Fix arrow button handlers (from working comprehensive fix)
+        function fixArrowButtons() {
+            console.log("🔧 Fixing arrow button handlers...");
+            let arrowCount = 0;
+            document.querySelectorAll('.move-arrow').forEach(btn => {
+                const onclick = btn.getAttribute('onclick');
+                if (onclick && onclick.includes('moveSection')) {
+                    btn.onclick = null;
+                    btn.addEventListener('click', function(event) {
+                        event.stopPropagation();
+                        event.preventDefault();
+                        const match = onclick.match(/moveSection\('([^']+)',\s*'([^']+)'\)/);
+                        if (match) {
+                            console.log(`Arrow clicked: ${match[1]} ${match[2]}`);
+                            window.moveSection(match[1], match[2]);
+                        }
+                    });
+                    arrowCount++;
+                }
+            });
+            console.log(`✓ Fixed ${arrowCount} arrow buttons`);
+        }
 
         function updateMoveButtons() {
             // Get all moveable panels
@@ -884,6 +952,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize panel ordering
             initializePanelOrder();
+
+            // Fix arrow button handlers
+            fixArrowButtons();
 
             // Set initial zoom
             applyZoom();

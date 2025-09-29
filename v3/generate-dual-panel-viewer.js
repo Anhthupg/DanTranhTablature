@@ -561,6 +561,9 @@ class DualPanelGenerator {
         // Generate modular component headers
         const optimalTuningHeader = this.generateHeader('optimal', 'Optimal Tuning (Song-Specific)', '🎵', false);
         const alternativeTuningHeader = this.generateHeader('comparison', 'Alternative Tuning', '🔍', true);
+        const lyricsHeader = this.generateHeader('lyrics', 'Lyrics', '📝', true);
+        const infoHeader = this.generateHeader('info', 'Additional Information', 'ℹ️', true);
+        const analysisHeader = this.generateHeader('analysis', 'Pattern Analysis', '📊', true);
 
         // Use template with placeholders
         let html = this.htmlTemplate
@@ -576,7 +579,10 @@ class DualPanelGenerator {
             .replace(/{{OPTIMAL_TUNING_ARRAY}}/g, JSON.stringify(originalTuning))
             .replace(/{{COMPARISON_TUNINGS}}/g, JSON.stringify(tuningSystems))
             .replace(/{{OPTIMAL_TUNING_HEADER}}/g, optimalTuningHeader)
-            .replace(/{{ALTERNATIVE_TUNING_HEADER}}/g, alternativeTuningHeader);
+            .replace(/{{ALTERNATIVE_TUNING_HEADER}}/g, alternativeTuningHeader)
+            .replace(/{{LYRICS_HEADER}}/g, lyricsHeader)
+            .replace(/{{INFO_HEADER}}/g, infoHeader)
+            .replace(/{{ANALYSIS_HEADER}}/g, analysisHeader);
 
         return html;
     }

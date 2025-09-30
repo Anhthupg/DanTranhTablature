@@ -43,6 +43,316 @@ v4/
 
 ---
 
+## 🎵 **GRACE NOTE & PHRASE PARSING RULES (V4.1.7-V4.1.8)**
+
+### **Critical MusicXML Grace Note Classification**
+
+**MANDATORY**: All grace notes MUST be classified as pre-slur or post-slur based on MusicXML slur direction markers.
+
+#### **Pre-Slur Grace Notes (Belong to NEXT main note):**
+```xml
+<note>
+  <grace/>
+  <pitch>...</pitch>
+  <notations>
+    <slur type="start"/>  <!-- Slur STARTS here → goes TO next note -->
+  </notations>
+</note>
+```
+
+**Properties:**
+- `hasSlurStart: true` AND `hasSlurStop: false`
+- Belongs to NEXT main note's lyrics
+- Played BEFORE the next main note
+- Visual position: LEFT of next main note
+- **EXCLUDE from current word's noteIds**
+
+#### **Post-Slur Grace Notes (Belong to CURRENT main note):**
+```xml
+<note>
+  <grace/>
+  <pitch>...</pitch>
+  <notations>
+    <slur type="stop"/>  <!-- Slur STOPS here → comes FROM previous note -->
+  </notations>
+</note>
+```
+
+**Properties:**
+- `hasSlurStop: true` AND `hasSlurStart: false`
+- Belongs to CURRENT main note's lyrics
+- Played AFTER the current main note
+- Visual position: RIGHT of current main note
+- **INCLUDE in current word's noteIds**
+
+#### **Parser Implementation (MANDATORY):**
+
+```javascript
+// In generate-v4-relationships.js mapSyllablesToNotes():
+const graceNotesAfter = [];
+for (let i = mainNote.index + 1; i < notes.length; i++) {
+    if (notes[i].isGrace) {
+        if (notes[i].hasSlurStop && !notes[i].hasSlurStart) {
+            // POST-slur: belongs to current main note
+            graceNotesAfter.push(notes[i]);
+        } else if (notes[i].hasSlurStart && !notes[i].hasSlurStop) {
+            // PRE-slur: belongs to NEXT main note
+            console.log(`Skipping ${notes[i].id} (pre-slur for next note)`);
+            break;  // Stop looking
+        } else {
+            // Ambiguous - skip to be safe
+            break;
+        }
+    } else {
+        break;  // Hit next main note
+    }
+}
+```
+
+#### **Validation Checklist:**
+
+Before generating relationships:
+- [ ] Does parser check `hasSlurStart` and `hasSlurStop`?
+- [ ] Are pre-slur graces excluded from current word?
+- [ ] Are post-slur graces included in current word?
+- [ ] Does console log show skipped pre-slur graces?
+- [ ] Do phrase boundaries end on correct notes?
+
+**IF ANY UNCHECKED → FIX PARSER BEFORE PROCEEDING**
+
+---
+
+## 🎮 **SINGLE SOURCE OF TRUTH PATTERN (V4.1.8)**
+
+### **Problem: Duplicate Playback Logic**
+
+When multiple UI sections need same functionality (e.g., phrase playback):
+- ❌ WRONG: Copy-paste playback code into each section
+- ❌ WRONG: Create separate playback functions for each section
+- ❌ WRONG: Different button handlers with similar logic
+
+**Result:** Inconsistency, bugs, maintenance nightmare
+
+### **Solution: Controller Delegation Pattern**
+
+**Step 1: Create Single Controller**
+```javascript
+// lyrics-controller.js
+class LyricsController {
+    playPhrase(phraseId) {
+        // Stop previous playback
+        if (window.audioController) window.audioController.stop();
+
+        // Get note IDs from relationships
+        const noteIds = this.getPhraseNoteIds(phraseId);
+
+        // Play via audio controller
+        window.audioController.playNoteIds(noteIds, false, this.isLooping[phraseId]);
+    }
+
+    toggleLoop(phraseId, buttonElement) {
+        this.isLooping[phraseId] = !this.isLooping[phraseId];
+        // Update button style
+        // Auto-start playback if loop enabled
+    }
+
+    stopPhrase(phraseId) {
+        window.audioController.stop();
+        this.isLooping[phraseId] = false;
+        // Reset all loop buttons for this phrase
+    }
+}
+```
+
+**Step 2: All UI Elements Delegate**
+```javascript
+// Lyrics section (server-generated):
+<button onclick="window.lyricsController.playPhrase(${phraseId})">▶</button>
+
+// Phrase Bars section (client-generated):
+playBtn.onclick = () => {
+    if (window.lyricsController) {
+        window.lyricsController.playPhrase(phraseId);
+    }
+};
+```
+
+**Benefits:**
+- ✅ Update once, works everywhere
+- ✅ Consistent behavior
+- ✅ Easy to debug (single code path)
+- ✅ Testable (one function to test)
+
+### **Checklist for Single Source Pattern:**
+
+- [ ] Is this functionality needed in 2+ places?
+- [ ] Can one controller handle all cases?
+- [ ] Do all callers delegate (not duplicate code)?
+- [ ] Is state managed in one place?
+- [ ] Are UI updates synchronized?
+
+**IF ALL CHECKED → USE THIS PATTERN**
+
+---
+
+## 🔒 **MUTUAL EXCLUSION PLAYBACK PATTERN (V4.1.8)**
+
+### **Problem: Overlapping Audio**
+
+Multiple playback entry points:
+- Phrase playback (Lyrics section)
+- Phrase playback (Phrase Bars section)
+- Single note click
+- Double click (play from note)
+- Loop playback
+
+**Without mutual exclusion:** All can play simultaneously → chaos
+
+### **Solution: Central Stop on All Entry Points**
+
+**Rule:** EVERY playback method MUST call `stop()` first
+
+```javascript
+// In lyricsController.playPhrase():
+playPhrase(phraseId) {
+    // 1. Stop any existing playback
+    if (window.audioController) {
+        window.audioController.stop();
+    }
+
+    // 2. Clear previous phrase state
+    if (this.currentlyPlaying && this.currentlyPlaying !== phraseId) {
+        this.clearPlayingPhrase(this.currentlyPlaying);
+    }
+
+    // 3. Start new playback
+    window.audioController.playNoteIds(noteIds, false, loop);
+    this.currentlyPlaying = phraseId;
+}
+
+// In audioController.playFrom():
+playFrom(startIndex) {
+    this.stop();  // Kill previous playback
+    // ... schedule new playback
+}
+
+// In audioController.playNoteIds():
+playNoteIds(noteIds, mainNotesOnly, loop) {
+    this.stop();  // Kill previous playback
+    // ... schedule new playback
+}
+```
+
+**Bidirectional Cleanup:**
+```javascript
+// When audio stops, clear phrase controller state
+audioController.stop() {
+    this.isPlaying = false;
+
+    // Also clear phrase loop state
+    if (window.lyricsController && window.lyricsController.currentlyPlaying) {
+        window.lyricsController.isLooping[phraseId] = false;
+        // Reset loop button visually
+    }
+}
+```
+
+### **Checklist for Mutual Exclusion:**
+
+- [ ] Does every play method call stop() first?
+- [ ] Does stop() clear all related state (loop, current phrase)?
+- [ ] Are loop buttons reset visually in all sections?
+- [ ] Can only one audio source play at a time?
+- [ ] Does clicking tablature notes stop phrase playback?
+
+**IF ANY UNCHECKED → ADD STOP() CALL**
+
+---
+
+## 📚 **RELATIONSHIP DATA STRUCTURE SPECIFICATION**
+
+### **Canonical Format (Post-Slur-Parsing):**
+
+```javascript
+{
+  phraseId: 2,
+  wordIndex: 3,
+  syllable: "đi",
+  translation: "going",
+  noteIds: ["note_9"],          // ✅ Excludes pre-slur grace note_10
+  mainNoteId: "note_9",
+  hasGraceNotes: false,         // ✅ Correctly false (note_10 excluded)
+  graceNotesBefore: [],
+  graceNotesAfter: [],          // ✅ Empty (note_10 is pre-slur for NEXT note)
+  isMelisma: false,
+  melismaNotes: []
+}
+```
+
+### **Data Flow Pipeline:**
+
+```
+1. MusicXML
+   ↓
+2. generate-v4-relationships.js
+   - Parse slur direction (start/stop)
+   - Classify grace notes (pre/post)
+   - Exclude pre-slur from graceNotesAfter
+   ↓
+3. {songName}-relationships.json
+   - Correct noteIds arrays
+   - Accurate phrase boundaries
+   ↓
+4. Controllers load relationships
+   - phrase-bars-controller.js (visualization)
+   - lyrics-controller.js (playback)
+   ↓
+5. UI renders correctly
+   - Phrase bars end on correct notes
+   - Playback includes correct notes
+```
+
+### **Common Pitfalls:**
+
+#### ❌ Pitfall 1: Including All Grace Notes After Main
+```javascript
+// WRONG: Adds ALL graces, doesn't check slur direction
+for (let i = mainNote.index + 1; i < notes.length; i++) {
+    if (notes[i].isGrace) {
+        graceNotesAfter.push(notes[i]);  // Could be pre-slur!
+    }
+}
+```
+
+#### ✅ Correct: Check Slur Direction
+```javascript
+// RIGHT: Only include post-slur graces
+for (let i = mainNote.index + 1; i < notes.length; i++) {
+    if (notes[i].isGrace) {
+        if (notes[i].hasSlurStop && !notes[i].hasSlurStart) {
+            graceNotesAfter.push(notes[i]);  // Post-slur only
+        } else if (notes[i].hasSlurStart) {
+            break;  // Pre-slur, stop looking
+        }
+    }
+}
+```
+
+#### ❌ Pitfall 2: Using Wrong Note for Phrase End
+```javascript
+// WRONG: Could be pre-slur grace that belongs to next phrase
+const lastNote = lastMapping.noteIds[lastMapping.noteIds.length - 1];
+```
+
+#### ✅ Correct: After Slur Parsing
+```javascript
+// RIGHT: After correct parsing, noteIds only has correct notes
+const lastNote = lastMapping.noteIds[lastMapping.noteIds.length - 1];
+// Safe because parser excluded pre-slur graces
+```
+
+---
+
 ## Project Vision
 Dan Tranh Tablature V4 represents the next evolution in Vietnamese traditional music analysis, featuring sophisticated linguistic-musical pattern recognition and cross-dimensional analysis capabilities. V4 builds upon V3's proven foundation while introducing revolutionary analytical frameworks.
 

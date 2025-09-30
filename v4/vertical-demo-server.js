@@ -334,6 +334,30 @@ app.get('/lyrics-controller.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'lyrics-controller.js'));
 });
 
+// V4.2.5: Phrase Bars Controller
+app.get('/phrase-bars-controller.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'phrase-bars-controller.js'));
+});
+
+// V4.2.5: Relationships API
+app.get('/api/relationships/:songName', (req, res) => {
+    try {
+        const songName = decodeURIComponent(req.params.songName);
+        const relationshipsPath = path.join(__dirname, 'data', 'relationships', `${songName}-relationships.json`);
+
+        if (!fs.existsSync(relationshipsPath)) {
+            return res.status(404).json({ error: 'Relationships not found', song: songName });
+        }
+
+        const relationshipsData = JSON.parse(fs.readFileSync(relationshipsPath, 'utf8'));
+        res.json(relationshipsData);
+    } catch (error) {
+        console.error('Error loading relationships:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // All Tablatures Viewer
 app.get('/tablatures', (req, res) => {
     const tablatureViewerPath = path.join(__dirname, 'templates', 'all-tablatures-viewer.html');

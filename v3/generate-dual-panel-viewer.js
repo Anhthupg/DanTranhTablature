@@ -196,6 +196,24 @@ class DualPanelGenerator {
     }
 
     /**
+     * Generate tuning dropdown options with optgroup categories
+     */
+    generateTuningDropdownOptions() {
+        let html = '';
+
+        // Generate optgroups for each category
+        Object.entries(this.tuningSystems).forEach(([category, tunings]) => {
+            html += `<optgroup label="═══ ${category} ═══">\n`;
+            tunings.forEach(tuning => {
+                html += `                            <option value="${tuning.value}">${tuning.label} (${tuning.value})</option>\n`;
+            });
+            html += `                        </optgroup>\n`;
+        });
+
+        return html;
+    }
+
+    /**
      * Calculate Y position based on note and octave
      */
     calculateYPosition(note, octave) {
@@ -565,6 +583,9 @@ class DualPanelGenerator {
         const infoHeader = this.generateHeader('info', 'Additional Information', 'ℹ️', true);
         const analysisHeader = this.generateHeader('analysis', 'Pattern Analysis', '📊', true);
 
+        // Generate tuning dropdown options
+        const tuningDropdownOptions = this.generateTuningDropdownOptions();
+
         // Use template with placeholders
         let html = this.htmlTemplate
             .replace(/{{SONG_NAME}}/g, songName)
@@ -578,6 +599,7 @@ class DualPanelGenerator {
             .replace(/{{SONG_METADATA}}/g, JSON.stringify(metadata))
             .replace(/{{OPTIMAL_TUNING_ARRAY}}/g, JSON.stringify(originalTuning))
             .replace(/{{COMPARISON_TUNINGS}}/g, JSON.stringify(tuningSystems))
+            .replace(/{{TUNING_DROPDOWN_OPTIONS}}/g, tuningDropdownOptions)
             .replace(/{{OPTIMAL_TUNING_HEADER}}/g, optimalTuningHeader)
             .replace(/{{ALTERNATIVE_TUNING_HEADER}}/g, alternativeTuningHeader)
             .replace(/{{LYRICS_HEADER}}/g, lyricsHeader)

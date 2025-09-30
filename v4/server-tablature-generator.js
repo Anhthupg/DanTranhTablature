@@ -258,7 +258,7 @@ ${this.generateLyrics(notes)}
             const baseClass = isGrace ? 'grace-note' : (isBent ? 'bent-note' : 'note-circle');
             const circleClass = `note ${baseClass}`;  // Always include 'note' class for audio controller
             const pitch = `${note.step}${note.octave}`;  // e.g., "C4", "G5"
-            const noteId = `note-${index}`;
+            const noteId = `note_${index}`;  // V4.2.5: Use underscore (matches relationships.json)
             const graceTypeAttr = note.graceType ? ` data-grace-type="${note.graceType}"` : '';
             svg += `    <circle id="${noteId}" cx="${x}" cy="${y}" r="${noteRadius}" class="${circleClass}"${bentAttr}${graceTypeAttr} data-pitch="${pitch}" data-duration="${note.duration || 1}"/>\n`;
 

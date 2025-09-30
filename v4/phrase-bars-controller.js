@@ -364,15 +364,15 @@ class PhraseBarsController {
         playBtn.onclick = () => this.playPhrase(phraseId);
         container.appendChild(playBtn);
 
-        // Loop button
+        // Loop button - delegates to lyrics controller for consistency
         const loopBtn = document.createElement('button');
         loopBtn.innerHTML = '🔁';
         loopBtn.title = 'Toggle loop';
         loopBtn.style.cssText = buttonStyle;
         loopBtn.onclick = () => {
-            this.isLooping[phraseId] = !this.isLooping[phraseId];
-            loopBtn.style.background = this.isLooping[phraseId] ? '#3498DB' : 'white';
-            loopBtn.style.color = this.isLooping[phraseId] ? 'white' : '#3498DB';
+            if (window.lyricsController) {
+                window.lyricsController.toggleLoop(phraseId, loopBtn);
+            }
         };
         container.appendChild(loopBtn);
 

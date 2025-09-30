@@ -305,4 +305,40 @@ audio-playback-controller-v2.js (sound)
 
 ---
 
-**V4.1.7 Status:** ✅ Production-ready with musicologically correct grace note handling
+## 🎹 Additional Enhancements (V4.1.7b)
+
+### **1. Infinite Loop Playback**
+- Loop button (🔁) now loops phrase infinitely until stopped
+- Auto-starts playback when loop enabled
+- Spacebar keyboard shortcut stops playback
+- Loop state synced across both Lyrics and Phrase Bars sections
+
+### **2. IPA & Pronunciation Guide**
+Enhanced pronunciation popup with:
+- **IPA (International Phonetic Alphabet):** Linguistically accurate transcription
+- **Anglicized pronunciation:** English-friendly phonetic guide
+- **Vietnamese pronunciation tips:** Key rules for learners
+- **Interactive speech button:** Hear native pronunciation
+
+**Example - "Bà Rằng bà Rí":**
+| Vietnamese | IPA | Anglicized | English |
+|------------|-----|------------|---------|
+| Bà | /ɓaː/ | BAH | Mrs. |
+| Rằng | /zaːŋ/ | ZAHNG | Rang |
+| bà | /ɓaː/ | bah | Mrs. |
+| Rí | /zi/ | ZEE | Ri |
+
+### **3. Keyboard Shortcuts**
+- **Spacebar:** Stop current phrase playback
+- Works while any phrase is playing
+- Doesn't interfere with input fields
+
+### **4. Loop Button Synchronization**
+- Clicking loop in Lyrics section → updates Phrase Bars button
+- Clicking loop in Phrase Bars → updates Lyrics section button
+- Stop button resets both loop buttons
+- Single source of truth (`lyricsController.isLooping[]`)
+
+---
+
+**V4.1.7 Status:** ✅ Production-ready with musicologically correct grace note handling + comprehensive pronunciation guides

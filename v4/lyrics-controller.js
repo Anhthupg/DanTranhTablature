@@ -47,7 +47,25 @@ class LyricsController {
         // Attach event listeners to server-generated buttons
         this.attachEventListenersToExistingTable();
 
+        // Add spacebar keyboard shortcut for stop
+        this.attachKeyboardShortcuts();
+
         console.log('[LyricsController] Initialized successfully');
+    }
+
+    attachKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Spacebar: Stop current playback
+            if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
+                e.preventDefault();
+                if (this.currentlyPlaying) {
+                    console.log('[LyricsController] Spacebar pressed - stopping playback');
+                    this.stopPhrase(this.currentlyPlaying);
+                }
+            }
+        });
+
+        console.log('[LyricsController] Keyboard shortcuts attached (Spacebar = Stop)');
     }
 
     async refresh() {
@@ -201,12 +219,20 @@ class LyricsController {
         if (this.isLooping[phraseId]) {
             loopBtn.style.backgroundColor = '#3498DB';
             loopBtn.style.color = 'white';
+            console.log(`[LyricsController] Loop ENABLED for phrase ${phraseId}`);
+
+            // If currently playing this phrase, audio controller will loop automatically
+            // If not playing, start playing with loop
+            if (this.currentlyPlaying !== phraseId) {
+                this.playPhrase(phraseId);
+            }
         } else {
             loopBtn.style.backgroundColor = 'white';
             loopBtn.style.color = '#3498DB';
-        }
+            console.log(`[LyricsController] Loop DISABLED for phrase ${phraseId}`);
 
-        console.log(`[LyricsController] Loop ${phraseId}: ${this.isLooping[phraseId]}`);
+            // Don't stop playback, just disable looping for next cycle
+        }
     }
 
     stopPhrase(phraseId) {
@@ -220,21 +246,198 @@ class LyricsController {
             window.audioController.stop();
         }
 
-        // Reset loop button
-        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
-        const loopBtn = row?.querySelector('.btn-loop');
-        if (loopBtn) {
-            loopBtn.style.backgroundColor = 'white';
-            loopBtn.style.color = '#3498DB';
+        // Reset loop buttons in BOTH sections (Lyrics table + Phrase Bars)
+        // Lyrics table loop button
+        const loopBtnLyrics = document.querySelector(`.loop-btn-${phraseId}`);
+        if (loopBtnLyrics) {
+            loopBtnLyrics.style.backgroundColor = 'white';
+            loopBtnLyrics.style.color = '#3498DB';
+        }
+
+        // Phrase bars loop button (if phrase bars controller exists)
+        if (window.phraseBarsController) {
+            const barData = window.phraseBarsController.phraseBars.find(b => b.container.dataset.phraseId == phraseId);
+            if (barData && barData.buttonsContainer) {
+                const loopBtnPhraseBars = barData.buttonsContainer.querySelector('button[title="Toggle loop"]');
+                if (loopBtnPhraseBars) {
+                    loopBtnPhraseBars.style.backgroundColor = 'white';
+                    loopBtnPhraseBars.style.color = '#3498DB';
+                }
+            }
         }
     }
 
     showPronunciation(phrase) {
-        console.log(`[LyricsController] Speaking Vietnamese: "${phrase.text}"`);
+        console.log(`[LyricsController] Show pronunciation guide for: "${phrase.text}"`);
 
+        // Create modal
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 10000;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        `;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+        `;
+
+        // Generate IPA pronunciation for Vietnamese words
+        const generateIPA = (vnWord) => {
+            // Simplified IPA mapping for common Vietnamese sounds
+            const ipaMap = {
+                'Bà': 'ɓaː', 'bà': 'ɓaː', 'Rằng': 'zaːŋ', 'rằng': 'zaːŋ', 'Rí': 'zi', 'rí': 'zi',
+                'Ới': 'ɤːj', 'ới': 'ɤːj', 'đi': 'ɗi', 'là': 'laː', 'đâu': 'ɗəw',
+                'khắp': 'xɐp̚', 'chốn': 't͡ɕon', 'nối': 'noj', 'dây': 'zəj', 'tơ': 'təː', 'hồng': 'hoŋm',
+                'cái': 'kaj', 'duyên': 'zwiən', 'ông': 'oŋm', 'chồng': 't͡ɕoŋm',
+                'làm': 'laːm', 'khổ': 'xo', 'đời': 'ɗəːj', 'tôi': 'toj', 'ơi': 'əːj',
+                'Chồng': 't͡ɕoŋm', 'gì': 'ziː', 'mà': 'maː', 'bé': 'ɓe', 'tẹo': 'tɛw', 'tèo': 'tɛw', 'teo': 'tɛw',
+                'chân': 't͡ɕən', 'cà': 'kaː', 'kheo': 'xɛw', 'lúc': 'luk̚', 'phải': 'faj', 'cõng': 'koŋm', 'khóc': 'xok̚', 'bồng': 'ɓoŋm',
+                'ngáy': 'ŋaj', 'o': 'ɔ', 'Đêm': 'ɗem', 'thời': 'tʰəːj', 'nằm': 'nɐm', 'co': 'kɔ',
+                'ăn': 'ɐn', 'lười': 'luəj', 'biếng': 'ɓiəŋ', 'chẳng': 't͡ɕaŋ', 'lo': 'lɔ', 'học': 'hɔk̚', 'hành': 'haːŋ'
+            };
+            return ipaMap[vnWord] || '?';
+        };
+
+        // Generate Anglicized pronunciation
+        const generateAnglicized = (vnWord) => {
+            const anglicizedMap = {
+                'Bà': 'BAH', 'bà': 'bah', 'Rằng': 'ZAHNG', 'rằng': 'zahng', 'Rí': 'ZEE', 'rí': 'zee',
+                'Ới': 'ER-ee', 'ới': 'er-ee', 'đi': 'dee', 'là': 'lah', 'đâu': 'dow',
+                'khắp': 'kap', 'chốn': 'chohn', 'nối': 'noy', 'dây': 'zay', 'tơ': 'ter', 'hồng': 'hom',
+                'cái': 'kai', 'duyên': 'zwee-en', 'ông': 'ohm', 'chồng': 'chohm',
+                'làm': 'lahm', 'khổ': 'koh', 'đời': 'der-ee', 'tôi': 'toy', 'ơi': 'er-ee',
+                'Chồng': 'CHOHM', 'gì': 'zee', 'mà': 'mah', 'bé': 'beh', 'tẹo': 'teh-oh', 'tèo': 'teh-oh', 'teo': 'teh-oh',
+                'chân': 'chan', 'cà': 'kah', 'kheo': 'keh-oh', 'lúc': 'look', 'phải': 'fai', 'cõng': 'kohm', 'khóc': 'kok', 'bồng': 'bohm',
+                'ngáy': 'ngai', 'o': 'aw', 'Đêm': 'DEM', 'thời': 'ter-ee', 'nằm': 'nam', 'co': 'kaw',
+                'ăn': 'an', 'lười': 'loo-er-ee', 'biếng': 'bee-eng', 'chẳng': 'chahng', 'lo': 'law', 'học': 'hawk', 'hành': 'hahng'
+            };
+            return anglicizedMap[vnWord] || vnWord.toUpperCase();
+        };
+
+        // Build pronunciation table
+        let pronunciationTable = '';
+        if (phrase.wordMapping && phrase.wordMapping.length > 0) {
+            pronunciationTable = `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">Pronunciation Guide:</div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
+                                <th style="padding: 8px; text-align: left;">Vietnamese</th>
+                                <th style="padding: 8px; text-align: left;">IPA</th>
+                                <th style="padding: 8px; text-align: left;">Anglicized</th>
+                                <th style="padding: 8px; text-align: left;">English</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            phrase.wordMapping.forEach((mapping) => {
+                const ipa = generateIPA(mapping.vn);
+                const anglicized = generateAnglicized(mapping.vn);
+
+                pronunciationTable += `
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 8px; font-weight: 600; color: #2c3e50;">${mapping.vn}</td>
+                        <td style="padding: 8px; font-family: 'Courier New', monospace; color: #3498db;">/${ipa}/</td>
+                        <td style="padding: 8px; color: #666; font-style: italic;">${anglicized}</td>
+                        <td style="padding: 8px; color: #555;">${mapping.en}</td>
+                    </tr>
+                `;
+            });
+
+            pronunciationTable += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Build content
+        let content = `
+            <div style="border-bottom: 2px solid #3498db; padding-bottom: 12px; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #2c3e50;">Pronunciation Guide - Phrase ${phrase.id}</h3>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #7f8c8d; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Vietnamese</div>
+                <div style="font-size: 20px; color: #2c3e50; margin-bottom: 10px; font-weight: 600;">${phrase.text}</div>
+
+                <div style="font-weight: 600; color: #7f8c8d; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">English Translation</div>
+                <div style="font-size: 16px; color: #555; margin-bottom: 10px;">${phrase.english}</div>
+            </div>
+
+            ${pronunciationTable}
+
+            <div style="margin-top: 20px; padding: 12px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #27ae60;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">Listen to Pronunciation</div>
+                <button onclick="this.closest('.modal-container').speakPhrase()" style="background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-size: 14px;">
+                    🗣 Speak Phrase
+                </button>
+            </div>
+
+            <div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #f39c12;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 5px;">Vietnamese Pronunciation Tips:</div>
+                <ul style="margin: 5px 0; padding-left: 20px; color: #666; font-size: 12px; line-height: 1.6;">
+                    <li><strong>Tones matter:</strong> Vietnamese has 6 tones that change word meaning</li>
+                    <li><strong>đ/d:</strong> "đ" = English "d", "d" = English "z" (Northern) or "y" (Southern)</li>
+                    <li><strong>ng/ngh:</strong> Like English "ng" in "sing" (can start words)</li>
+                    <li><strong>Final -t/-p/-c/-ch:</strong> Unreleased stops (don't open mouth at end)</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 15px; text-align: right;">
+                <button onclick="this.closest('.modal-container').closeModal()" style="background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+
+        modal.innerHTML = content;
+        modal.className = 'modal-container';
+
+        // Add speak method to modal
+        modal.speakPhrase = () => {
+            this.speakVietnamese(phrase.text);
+        };
+
+        // Add close method
+        modal.closeModal = () => {
+            document.body.removeChild(overlay);
+            document.body.removeChild(modal);
+        };
+
+        // Close on overlay click
+        overlay.onclick = () => modal.closeModal();
+
+        // Append to body
+        document.body.appendChild(overlay);
+        document.body.appendChild(modal);
+    }
+
+    speakVietnamese(text) {
         // Use Web Speech API with Vietnamese voice
         if (!('speechSynthesis' in window)) {
             console.error('Speech synthesis not supported');
+            alert('Speech synthesis is not supported in your browser');
             return;
         }
 
@@ -246,9 +449,9 @@ class LyricsController {
             const voices = window.speechSynthesis.getVoices();
             console.log(`[LyricsController] Available voices: ${voices.length}`);
 
-            const utterance = new SpeechSynthesisUtterance(phrase.text);
+            const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'vi-VN';
-            utterance.rate = 0.8;
+            utterance.rate = 0.7;  // Slower for learning
             utterance.pitch = 1.0;
             utterance.volume = 1.0;
 
@@ -259,28 +462,22 @@ class LyricsController {
 
             if (vietnameseVoice) {
                 utterance.voice = vietnameseVoice;
-                console.log(`[LyricsController] Using voice: ${vietnameseVoice.name} (${vietnameseVoice.lang})`);
+                console.log(`[LyricsController] Using voice: ${vietnameseVoice.name}`);
             } else {
-                console.warn('[LyricsController] No Vietnamese voice found, using default voice');
+                console.warn('[LyricsController] No Vietnamese voice found, using default');
             }
-
-            // Event listeners for debugging
-            utterance.onstart = () => console.log('[LyricsController] Speech started');
-            utterance.onend = () => console.log('[LyricsController] Speech ended');
-            utterance.onerror = (e) => console.error('[LyricsController] Speech error:', e);
 
             window.speechSynthesis.speak(utterance);
         };
 
-        // Load voices first (Chrome requires this)
+        // Load voices first
         const voices = window.speechSynthesis.getVoices();
         if (voices.length > 0) {
             speak();
         } else {
-            // Wait for voices to load
             window.speechSynthesis.onvoiceschanged = () => {
                 speak();
-                window.speechSynthesis.onvoiceschanged = null;  // Remove listener
+                window.speechSynthesis.onvoiceschanged = null;
             };
         }
     }

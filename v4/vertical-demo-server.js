@@ -94,6 +94,12 @@ app.get('/static/client-tablature-generator.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'client-tablature-generator.js'));
 });
 
+// V4.0.5: Serve the zoom controller
+app.get('/zoom-controller.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'zoom-controller.js'));
+});
+
 // All Tablatures Viewer
 app.get('/tablatures', (req, res) => {
     const tablatureViewerPath = path.join(__dirname, 'templates', 'all-tablatures-viewer.html');

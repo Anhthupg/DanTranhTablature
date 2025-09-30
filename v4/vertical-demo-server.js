@@ -15,8 +15,12 @@ const tablatureGen = new ServerTablatureGenerator();
 app.get('/', (req, res) => {
     const verticalTemplate = fs.readFileSync(path.join(__dirname, 'templates', 'v4-vertical-header-sections-annotated.html'), 'utf8');
     const wordCloudComponent = fs.readFileSync(path.join(__dirname, 'templates', 'components', 'word-cloud-visualization.html'), 'utf8');
+    const radarChartComponent = fs.readFileSync(path.join(__dirname, 'templates', 'components', 'thematic-radar-chart.html'), 'utf8');
+    const songRadarGallery = fs.readFileSync(path.join(__dirname, 'templates', 'components', 'song-radar-gallery.html'), 'utf8');
     const vocabularySection = fs.readFileSync(path.join(__dirname, 'templates', 'components', 'vocabulary-metrics-section.html'), 'utf8')
-        .replace(/{{WORD_CLOUD_COMPONENT}}/g, wordCloudComponent);
+        .replace(/{{WORD_CLOUD_COMPONENT}}/g, wordCloudComponent)
+        .replace(/{{RADAR_CHART_COMPONENT}}/g, radarChartComponent)
+        .replace(/{{SONG_RADAR_GALLERY_COMPONENT}}/g, songRadarGallery);
 
     // Load first available song from v3 processed data which has lyrics
     const v3ProcessedDir = path.join(__dirname, '..', 'v3', 'data', 'processed');
@@ -579,6 +583,38 @@ app.get('/api/vocabulary-metrics', (req, res) => {
         console.log('[API] Vocabulary metrics regenerated and served');
     } catch (error) {
         console.error('[API] Vocabulary metrics error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Thematic Profiles API endpoint - serves cached or regenerates
+app.get('/api/thematic-profiles', (req, res) => {
+    try {
+        const profilesPath = path.join(__dirname, 'data', 'thematic-profiles.json');
+
+        // Check if profiles file exists and is recent (< 1 hour old)
+        if (fs.existsSync(profilesPath)) {
+            const stats = fs.statSync(profilesPath);
+            const ageMinutes = (Date.now() - stats.mtimeMs) / 1000 / 60;
+
+            if (ageMinutes < 60) {
+                // Serve cached profiles
+                const profiles = JSON.parse(fs.readFileSync(profilesPath, 'utf8'));
+                res.json(profiles);
+                console.log(`[API] Thematic profiles served from cache (${ageMinutes.toFixed(1)} min old)`);
+                return;
+            }
+        }
+
+        // Regenerate if old or missing
+        const ThematicProfileGenerator = require('./generate-thematic-profiles');
+        const generator = new ThematicProfileGenerator();
+        const profiles = generator.generateAllProfiles();
+
+        res.json(profiles);
+        console.log('[API] Thematic profiles regenerated and served');
+    } catch (error) {
+        console.error('[API] Thematic profiles error:', error);
         res.status(500).json({ error: error.message });
     }
 });

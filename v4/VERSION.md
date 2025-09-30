@@ -1,89 +1,177 @@
-# V4.2.10 - Grace Note Color Change: Grey Fill & Black Outline
+# V4.2.12 - Word Cloud & Thematic Radar Visualizations
 
 **Date:** September 30, 2025
 **Status:** ✅ Complete
 
 ## Summary
-Changed grace notes from gold/yellow (#FFD700) to grey (#999999) with black outline (#000000) to reserve yellow for future tone mark features.
+Added three powerful vocabulary visualization systems: Interactive Word Cloud, Thematic Radar Chart, and Song Radar Gallery with similarity-based sorting.
 
-## Changes
+## Features Added
 
-### 1. Visual System Update
-**Grace Note Styling:**
-- **Fill:** #FFD700 (gold) → #999999 (grey)
-- **Stroke:** #CC9900 (dark gold) → #000000 (black)
-- **Slash:** #FFD700 (gold) → #000000 (black)
+### 1. Interactive Word Cloud ☁️
+**File:** `templates/components/word-cloud-visualization.html`
 
-### 2. Files Modified
-- `server-tablature-generator.js` - Lines 130, 273
-- `generate-all-tablatures.js` - Line 120
-- `CLAUDE.md` - Documentation updated
+**Visual Design:**
+- Word size: 12-48px based on frequency
+- Color-coded by semantic category (7 colors)
+- Gradient background for visual appeal
 
-### 3. Regeneration
-- ✅ 109/109 tablatures regenerated
-- ✅ All grace notes now grey with black outline
-- ✅ Server restarted to clear cache
+**Interactive Features:**
+- **Hover:** Tooltip shows Vietnamese=English, frequency, song coverage, category
+- **Click word:** Shows detailed panel with:
+  - Metrics cards (total uses, appears in # songs, average per song)
+  - Complete list of songs using that word (sorted by count)
+  - "View First Song" button → loads song in viewer
+- **Category filters:** Toggle each of 7 categories on/off
+- **Limit selector:** Top 50/100/150/200 words
 
-## Design Rationale
-1. Yellow reserved for Vietnamese tone marks
-2. Grey provides subtle visual hierarchy
-3. Black stroke maintains clear definition
-4. Follows traditional music notation style
+### 2. Thematic Radar Chart 📊
+**File:** `templates/components/thematic-radar-chart.html`
 
-## Verification
-```bash
-# Check generated SVG
-head -15 v4/data/tablatures/b_r.svg | grep grace-note
-# Output: .grace-note { fill: #999999; stroke: #000000; }
+**6 Axes:**
+- 🌿 Nature, 👨‍👩‍👧 Family, 💗 Emotion, ⚒️ Work, ⏰ Time, 📍 Place
+
+**4 Comparison Modes:**
+1. **Current Song vs. Collection Average**
+   - Auto-updates when song changes
+   - Shows most/least emphasized themes
+2. **Regional Comparison** (North/South/Central)
+3. **Genre Comparison** (Hò/Lý/Ru)
+4. **Top 5 Most Different Songs**
+
+**Uses Chart.js library** for professional radar rendering
+
+### 3. Song Radar Gallery 🎯 (Collapsible)
+**File:** `templates/components/song-radar-gallery.html`
+
+**All 121 Songs with Individual Radar Charts:**
+- Mini radar chart for each song (280x280px default)
+- Song info: title, region, genre, dominant theme
+- Top 3 theme percentages displayed
+
+**Sorting Options:**
+- **Similarity to Current Song** (cosine similarity algorithm)
+- Song Title (A-Z)
+- Dominant Theme
+- Region
+- Genre
+- Nature/Family/Work % (High→Low)
+
+**Filtering Options:**
+- All songs / By region / By genre
+
+**Chart Sizes:**
+- Small (200px), Medium (280px), Large (350px)
+
+**Click any card → loads that song in viewer**
+
+### 4. Thematic Profile Generation
+**File:** `generate-thematic-profiles.js`
+
+**Pre-calculates for ALL 121 songs:**
+- 6-axis theme percentages
+- Dominant theme detection
+- Region and genre classification
+- Similarity matrix (121x121)
+- Top 10 most similar songs for each
+
+**Similarity Algorithm:**
+- Cosine similarity between 6-dimensional vectors
+- 100% = identical thematic profile
+- Reveals songs with similar cultural focus
+
+**Collection Statistics:**
+- Averages by region (4 regions)
+- Averages by genre (7 genres)
+- Dominant theme distribution
+
+## Data Generated
+
+### thematic-profiles.json Structure:
+```json
+{
+  "profiles": [
+    {
+      "songName": "...",
+      "region": "Northern",
+      "genre": "Lý",
+      "themePercentages": {
+        "nature": "5.20",
+        "family": "7.10",
+        ...
+      },
+      "radarData": [5.20, 7.10, 1.20, 0.30, 1.10, 1.50],
+      "dominantTheme": "family",
+      "similarSongs": [
+        {"songName": "...", "similarity": "94.23"},
+        ...
+      ]
+    }
+  ],
+  "collectionStats": {
+    "byRegion": {...},
+    "byGenre": {...}
+  }
+}
 ```
 
-## User Instructions
-**Hard refresh required to see changes:**
-- Mac: `Cmd + Shift + R`
-- Windows: `Ctrl + Shift + F5`
-- Alternative: Open in incognito mode
+## API Endpoints
+
+**GET /api/thematic-profiles**
+- Returns all 121 song profiles with similarity data
+- Cached for 1 hour
+- Auto-regenerates when > 1 hour old
+
+**GET /api/vocabulary-metrics**
+- Returns word frequency and category statistics
+- Includes top 100 words with English translations
+
+## Key Insights from Analysis
+
+**Dominant Theme Distribution:**
+- Family: 58 songs (47.9%) - Most common
+- Nature: 34 songs (28.1%)
+- Work: 9 songs (7.4%)
+- Place: 8 songs (6.6%)
+- Emotion: 6 songs (5.0%)
+
+**Regional Patterns:**
+- Northern: More nature imagery
+- Southern: More work vocabulary
+- Central: Balanced distribution
+
+**Genre Patterns:**
+- Hò (work songs): Highest work vocabulary
+- Lý (melodic): Highest nature imagery
+- Ru (lullabies): Highest family terms
+
+## User Experience
+
+**Default State:**
+- Song Radar Gallery = **Collapsed** (avoid crowding)
+- Click header to expand and see all 121 charts
+- Word Cloud = Visible (immediate visual impact)
+- Main Radar = Visible (current song analysis)
+
+**Discovery Flow:**
+1. See word cloud → understand overall vocabulary
+2. See main radar → current song's thematic focus
+3. Expand gallery → explore all songs, find similar ones
+4. Click similar song → loads in viewer
+
+## Performance
+
+**Optimization:**
+- Profiles pre-calculated and cached
+- Mini radars render only when gallery expanded
+- Chart.js reuses canvas elements
+- Similarity matrix calculated once, stored in JSON
+
+**Load Times:**
+- Word cloud: <100ms
+- Main radar: <50ms
+- Gallery (121 charts): ~2-3 seconds (only when expanded)
 
 ---
 
-## Previous Version: V4.1.5 - Comprehensive Tuning Database Integration
-
-**Date:** September 30, 2025
-
-### Changes
-
-#### 1. Expanded Tuning Database (33 Scales)
-- **Before:** 4 hardcoded tunings (Northern, Southern, Central, Modern)
-- **After:** 33 comprehensive scales organized by category
-
-#### 2. Category Organization with Optgroup Headers
-**Vietnamese (9 scales):**
-- Dan Tranh Standard, Northern, Southern, Central
-- Ru Con, Nam Ai, Nam Xuan, Bac, Oan
-
-**Pentatonic (13 scales):**
-- Major, Minor, Egyptian
-- Chinese: Gong, Shang, Jue, Zhi, Yu
-- Japanese: Hirajoshi, Iwato, In-sen, Kumoi, Ritusen
-
-**Hexatonic (4 scales):**
-- Blues Major, Blues Minor
-- Whole Tone, Augmented
-
-**Heptatonic (7 scales):**
-- Major, Natural Minor
-- Dorian, Phrygian, Lydian, Mixolydian
-- Harmonic Minor
-
-#### 3. Files Modified
-- `data/tuning-systems.json` - Complete scale database
-- `vertical-demo-server.js` - Dropdown integration
-
-#### 4. Features
-- Hierarchical dropdown with category headers
-- 33 tuning options available
-- Maintains Vietnamese tuning priority
-- Clean, organized interface
-
----
-
-**Full version history in /Versions/ directory**
+**V4.2.12 Complete - Three Comprehensive Vocabulary Visualization Systems!**

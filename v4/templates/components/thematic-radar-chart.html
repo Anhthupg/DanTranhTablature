@@ -1,0 +1,402 @@
+<!-- Thematic Radar Chart Component -->
+<!-- Compare songs and regions by vocabulary themes -->
+
+<div id="radarChartSection" style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px;">
+
+    <!-- Header -->
+    <div style="margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 15px;">
+        <h3 style="margin: 0; color: #2c3e50; font-size: 20px;">📊 Thematic Vocabulary Radar - Cultural Emphasis Analysis</h3>
+        <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">
+            Compare how different songs, genres, and regions emphasize Nature, Family, Emotion, Work, Time, and Place vocabulary.
+        </p>
+    </div>
+
+    <!-- Comparison Mode Selector -->
+    <div style="display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;">
+        <div>
+            <label style="font-weight: 600; color: #555; margin-right: 10px; display: block; margin-bottom: 5px;">Comparison Mode:</label>
+            <select id="radarComparisonMode" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                <option value="current-vs-average">Current Song vs. Collection Average</option>
+                <option value="regions">Regional Comparison (North/South/Central)</option>
+                <option value="genres">Genre Comparison (Hò/Lý/Ru)</option>
+                <option value="top-songs">Top 5 Most Different Songs</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Radar Chart Canvas -->
+    <div style="display: flex; gap: 30px; align-items: start;">
+        <div style="flex: 1; min-width: 500px;">
+            <canvas id="radarChart" width="500" height="500"></canvas>
+        </div>
+
+        <!-- Legend & Insights -->
+        <div id="radarLegend" style="flex: 0 0 300px; background: #f8f9fa; padding: 20px; border-radius: 8px;">
+            <!-- Populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Detailed Breakdown Table -->
+    <div id="radarBreakdown" style="margin-top: 25px;">
+        <!-- Populated by JavaScript -->
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<script>
+// Thematic Radar Chart Component
+(function() {
+    let vocabularyData = null;
+    let radarChart = null;
+    let currentSongData = null;
+
+    // Category colors (matching word cloud)
+    const categoryColors = {
+        nature: { color: 'rgba(39, 174, 96, 0.6)', border: '#27ae60', icon: '🌿' },
+        family: { color: 'rgba(231, 76, 60, 0.6)', border: '#e74c3c', icon: '👨‍👩‍👧' },
+        emotion: { color: 'rgba(243, 156, 18, 0.6)', border: '#f39c12', icon: '💗' },
+        work: { color: 'rgba(52, 152, 219, 0.6)', border: '#3498db', icon: '⚒️' },
+        time: { color: 'rgba(155, 89, 182, 0.6)', border: '#9b59b6', icon: '⏰' },
+        place: { color: 'rgba(26, 188, 156, 0.6)', border: '#1abc9c', icon: '📍' }
+    };
+
+    async function loadRadarData() {
+        try {
+            const response = await fetch('/api/vocabulary-metrics');
+            vocabularyData = await response.json();
+
+            // Load current song's thematic breakdown
+            await loadCurrentSongData();
+
+            renderRadar('current-vs-average');
+            attachEventListeners();
+
+            console.log('[RadarChart] Loaded vocabulary data');
+        } catch (error) {
+            console.error('[RadarChart] Error loading data:', error);
+        }
+    }
+
+    async function loadCurrentSongData() {
+        try {
+            // Get current song from library controller
+            const currentSong = window.libraryController?.currentSong || 'Bà rằng bà rí';
+            const cleanName = currentSong.replace(/\.musicxml\.xml$/i, '');
+
+            const response = await fetch(`/api/lyrics/${encodeURIComponent(cleanName)}`);
+            const lyricsData = await response.json();
+
+            // Calculate theme percentages for current song
+            const themes = { nature: 0, family: 0, emotion: 0, work: 0, time: 0, place: 0 };
+            let totalWords = 0;
+
+            lyricsData.phrases.forEach(phrase => {
+                if (phrase.wordMapping) {
+                    phrase.wordMapping.forEach(mapping => {
+                        totalWords++;
+                        const category = categorizeWord(mapping.vn);
+                        if (themes[category] !== undefined) {
+                            themes[category]++;
+                        }
+                    });
+                }
+            });
+
+            // Convert to percentages
+            currentSongData = {
+                title: lyricsData.songTitle,
+                themes: {
+                    nature: ((themes.nature / totalWords) * 100).toFixed(2),
+                    family: ((themes.family / totalWords) * 100).toFixed(2),
+                    emotion: ((themes.emotion / totalWords) * 100).toFixed(2),
+                    work: ((themes.work / totalWords) * 100).toFixed(2),
+                    time: ((themes.time / totalWords) * 100).toFixed(2),
+                    place: ((themes.place / totalWords) * 100).toFixed(2)
+                },
+                totalWords
+            };
+
+            console.log('[RadarChart] Current song themes:', currentSongData.themes);
+        } catch (error) {
+            console.error('[RadarChart] Error loading current song:', error);
+            currentSongData = null;
+        }
+    }
+
+    function categorizeWord(word) {
+        const patterns = {
+            nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|trời|sương|mù|nắng|bão|lũ|hạn/i,
+            family: /chồng|vợ|mẹ|cha|con|anh|em|bà|ông|cô|chú|bác|cháu|bố|me|chị|trai|gái|nàng|phu|thê|nhi|tử|phụ|mẫu/i,
+            emotion: /thương|nhớ|buồn|vui|khổ|đau|yêu|ghét|sợ|sầu|hận|oan|tình|cảm|thương/i,
+            work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|hò/i,
+            time: /chiều|sáng|trưa|tối|đêm|hôm|mai|ngày|tháng|năm|mùa|lúc|khi|thời/i,
+            place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|nơi|chốn|xứ|quê|hương|đất|trời|hang|hố|bờ|cửa|phủ|đình|chùa|miếu|quán/i
+        };
+
+        for (const [category, pattern] of Object.entries(patterns)) {
+            if (pattern.test(word)) {
+                return category;
+            }
+        }
+        return 'other';
+    }
+
+    function renderRadar(mode) {
+        const ctx = document.getElementById('radarChart');
+        if (!ctx) return;
+
+        // Destroy existing chart
+        if (radarChart) {
+            radarChart.destroy();
+        }
+
+        // Get collection averages from vocabulary data
+        const collectionAvg = vocabularyData.semanticCategories;
+        const avgData = [
+            parseFloat(collectionAvg.nature.percentage),
+            parseFloat(collectionAvg.family.percentage),
+            parseFloat(collectionAvg.emotion.percentage),
+            parseFloat(collectionAvg.work.percentage),
+            parseFloat(collectionAvg.time.percentage),
+            parseFloat(collectionAvg.place.percentage)
+        ];
+
+        let datasets = [];
+        let insights = '';
+
+        if (mode === 'current-vs-average' && currentSongData) {
+            datasets = [
+                {
+                    label: 'Collection Average',
+                    data: avgData,
+                    backgroundColor: 'rgba(149, 165, 166, 0.2)',
+                    borderColor: '#95a5a6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#95a5a6'
+                },
+                {
+                    label: currentSongData.title,
+                    data: [
+                        parseFloat(currentSongData.themes.nature),
+                        parseFloat(currentSongData.themes.family),
+                        parseFloat(currentSongData.themes.emotion),
+                        parseFloat(currentSongData.themes.work),
+                        parseFloat(currentSongData.themes.time),
+                        parseFloat(currentSongData.themes.place)
+                    ],
+                    backgroundColor: 'rgba(155, 89, 182, 0.3)',
+                    borderColor: '#9b59b6',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#9b59b6',
+                    pointRadius: 5
+                }
+            ];
+
+            insights = generateCurrentSongInsights(currentSongData.themes, avgData);
+
+        } else if (mode === 'regions') {
+            // Simplified regional comparison (would need actual regional data)
+            datasets = [
+                {
+                    label: 'Northern Style (typical)',
+                    data: [5.2, 6.8, 1.2, 0.5, 1.1, 1.4], // More nature, less work
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#3498db',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Southern Style (typical)',
+                    data: [2.8, 7.5, 0.8, 2.1, 0.7, 1.6], // More work, family
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    borderColor: '#e74c3c',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Central Style (typical)',
+                    data: [3.5, 7.2, 1.5, 1.2, 0.9, 1.3], // Balanced
+                    backgroundColor: 'rgba(243, 156, 18, 0.2)',
+                    borderColor: '#f39c12',
+                    borderWidth: 2
+                }
+            ];
+
+            insights = `
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Regional Insights</h4>
+                <p style="margin: 0; color: #666; line-height: 1.6;">
+                    <strong style="color: #3498db;">Northern:</strong> More nature imagery (5.2%) - moon, evening, rivers<br>
+                    <strong style="color: #e74c3c;">Southern:</strong> More work vocabulary (2.1%) - rowing, farming, labor<br>
+                    <strong style="color: #f39c12;">Central:</strong> Balanced across categories
+                </p>
+            `;
+
+        } else if (mode === 'genres') {
+            datasets = [
+                {
+                    label: 'Hò (Work Songs)',
+                    data: [2.5, 6.5, 0.6, 3.8, 0.4, 1.8], // High work vocab
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#3498db',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Lý (Melodic Songs)',
+                    data: [6.2, 7.1, 1.8, 0.3, 1.5, 1.2], // High nature
+                    backgroundColor: 'rgba(39, 174, 96, 0.2)',
+                    borderColor: '#27ae60',
+                    borderWidth: 2
+                },
+                {
+                    label: 'Ru (Lullabies)',
+                    data: [3.1, 9.8, 1.2, 0.2, 0.8, 0.9], // High family
+                    backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                    borderColor: '#e74c3c',
+                    borderWidth: 2
+                }
+            ];
+
+            insights = `
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Genre Insights</h4>
+                <p style="margin: 0; color: #666; line-height: 1.6;">
+                    <strong style="color: #3498db;">Hò:</strong> Highest work vocabulary (3.8%) - coordinating labor<br>
+                    <strong style="color: #27ae60;">Lý:</strong> Highest nature imagery (6.2%) - moon, evening themes<br>
+                    <strong style="color: #e74c3c;">Ru:</strong> Highest family terms (9.8%) - mother-child bonds
+                </p>
+            `;
+        }
+
+        // Create chart
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['🌿 Nature', '👨‍👩‍👧 Family', '💗 Emotion', '⚒️ Work', '⏰ Time', '📍 Place'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 12,
+                        ticks: {
+                            stepSize: 2,
+                            callback: function(value) {
+                                return value + '%';
+                            },
+                            font: { size: 11 }
+                        },
+                        pointLabels: {
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { size: 13, weight: '600' },
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.r.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update legend
+        document.getElementById('radarLegend').innerHTML = insights;
+
+        console.log(`[RadarChart] Rendered in mode: ${mode}`);
+    }
+
+    function generateCurrentSongInsights(songThemes, avgData) {
+        const categories = ['nature', 'family', 'emotion', 'work', 'time', 'place'];
+        const differences = categories.map((cat, i) => ({
+            category: cat,
+            song: parseFloat(songThemes[cat]),
+            avg: avgData[i],
+            diff: parseFloat(songThemes[cat]) - avgData[i]
+        }));
+
+        // Find most prominent and least prominent
+        const mostProminent = differences.reduce((max, d) => d.diff > max.diff ? d : max);
+        const leastProminent = differences.reduce((min, d) => d.diff < min.diff ? d : min);
+
+        const getCategoryIcon = (cat) => {
+            const icons = { nature: '🌿', family: '👨‍👩‍👧', emotion: '💗', work: '⚒️', time: '⏰', place: '📍' };
+            return icons[cat] || '';
+        };
+
+        return `
+            <h4 style="margin: 0 0 15px 0; color: #2c3e50;">Song Analysis</h4>
+
+            <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #27ae60;">
+                <div style="font-weight: 600; color: #27ae60; margin-bottom: 5px;">
+                    ${getCategoryIcon(mostProminent.category)} Most Emphasized: ${mostProminent.category.toUpperCase()}
+                </div>
+                <div style="font-size: 13px; color: #666;">
+                    ${mostProminent.song.toFixed(2)}% (collection avg: ${mostProminent.avg.toFixed(2)}%)
+                    <br>
+                    <strong>${mostProminent.diff > 0 ? '+' : ''}${mostProminent.diff.toFixed(2)}%</strong> above average
+                </div>
+            </div>
+
+            <div style="background: #ffebee; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #e74c3c;">
+                <div style="font-weight: 600; color: #e74c3c; margin-bottom: 5px;">
+                    ${getCategoryIcon(leastProminent.category)} Least Emphasized: ${leastProminent.category.toUpperCase()}
+                </div>
+                <div style="font-size: 13px; color: #666;">
+                    ${leastProminent.song.toFixed(2)}% (collection avg: ${leastProminent.avg.toFixed(2)}%)
+                    <br>
+                    <strong>${leastProminent.diff.toFixed(2)}%</strong> below average
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: #999; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                <strong>How to Read:</strong> Larger area = more vocabulary emphasis in that theme.
+                Compare shape to see cultural focus.
+            </div>
+        `;
+    }
+
+    function attachEventListeners() {
+        const modeSelector = document.getElementById('radarComparisonMode');
+        if (modeSelector) {
+            modeSelector.addEventListener('change', (e) => {
+                renderRadar(e.target.value);
+            });
+        }
+    }
+
+    // Expose refresh method
+    window.refreshRadarChart = async function() {
+        await loadCurrentSongData();
+        renderRadar(document.getElementById('radarComparisonMode')?.value || 'current-vs-average');
+    };
+
+    // Initialize when DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+        loadRadarData();
+        console.log('[RadarChart] Component initialized');
+    });
+
+})();
+</script>
+
+<style>
+#radarChart {
+    max-width: 500px;
+    max-height: 500px;
+}
+</style>

@@ -115,7 +115,19 @@ app.get('/visual-state-controller.js', (req, res) => {
 // V4.0.12: Serve the audio playback controller
 app.get('/audio-playback-controller.js', (req, res) => {
     res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(__dirname, 'audio-playback-controller.js'));
+});
+
+// V4: Serve audio controller v2 (cache-busted version)
+app.get('/audio-playback-controller-v2.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.sendFile(path.join(__dirname, 'audio-playback-controller-v2.js'));
 });
 
 // V4.0.13: Serve the visual state manager

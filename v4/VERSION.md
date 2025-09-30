@@ -1,14 +1,61 @@
-# V4.1.5 - Comprehensive Tuning Database Integration
+# V4.2.10 - Grace Note Color Change: Grey Fill & Black Outline
 
 **Date:** September 30, 2025
+**Status:** ✅ Complete
+
+## Summary
+Changed grace notes from gold/yellow (#FFD700) to grey (#999999) with black outline (#000000) to reserve yellow for future tone mark features.
 
 ## Changes
 
-### 1. Expanded Tuning Database (33 Scales)
+### 1. Visual System Update
+**Grace Note Styling:**
+- **Fill:** #FFD700 (gold) → #999999 (grey)
+- **Stroke:** #CC9900 (dark gold) → #000000 (black)
+- **Slash:** #FFD700 (gold) → #000000 (black)
+
+### 2. Files Modified
+- `server-tablature-generator.js` - Lines 130, 273
+- `generate-all-tablatures.js` - Line 120
+- `CLAUDE.md` - Documentation updated
+
+### 3. Regeneration
+- ✅ 109/109 tablatures regenerated
+- ✅ All grace notes now grey with black outline
+- ✅ Server restarted to clear cache
+
+## Design Rationale
+1. Yellow reserved for Vietnamese tone marks
+2. Grey provides subtle visual hierarchy
+3. Black stroke maintains clear definition
+4. Follows traditional music notation style
+
+## Verification
+```bash
+# Check generated SVG
+head -15 v4/data/tablatures/b_r.svg | grep grace-note
+# Output: .grace-note { fill: #999999; stroke: #000000; }
+```
+
+## User Instructions
+**Hard refresh required to see changes:**
+- Mac: `Cmd + Shift + R`
+- Windows: `Ctrl + Shift + F5`
+- Alternative: Open in incognito mode
+
+---
+
+## Previous Version: V4.1.5 - Comprehensive Tuning Database Integration
+
+**Date:** September 30, 2025
+
+### Changes
+
+#### 1. Expanded Tuning Database (33 Scales)
 - **Before:** 4 hardcoded tunings (Northern, Southern, Central, Modern)
 - **After:** 33 comprehensive scales organized by category
 
-### 2. Category Organization with Optgroup Headers
+#### 2. Category Organization with Optgroup Headers
 **Vietnamese (9 scales):**
 - Dan Tranh Standard, Northern, Southern, Central
 - Ru Con, Nam Ai, Nam Xuan, Bac, Oan
@@ -27,40 +74,16 @@
 - Dorian, Phrygian, Lydian, Mixolydian
 - Harmonic Minor
 
-### 3. Files Modified
+#### 3. Files Modified
+- `data/tuning-systems.json` - Complete scale database
+- `vertical-demo-server.js` - Dropdown integration
 
-**Template:**
-- `templates/v4-vertical-header-sections-annotated.html:565-608`
-- Replaced 4 hardcoded options with 33 organized scales
-- Added optgroup headers for visual grouping
+#### 4. Features
+- Hierarchical dropdown with category headers
+- 33 tuning options available
+- Maintains Vietnamese tuning priority
+- Clean, organized interface
 
-**Client Generator:**
-- `client-tablature-generator.js:27-59`
-- Added all 33 tuning system mappings
-- Supports Vietnamese diacritics (Eb, F#, Db, etc.)
+---
 
-**Data:**
-- Added `data/tuning-systems.json` (copied from v3)
-- Complete scale database with pattern completions
-
-## Impact
-
-- All 33 scales now generate tablatures correctly
-- No more "Invalid tuning key" errors
-- Clear category organization improves UX
-- Supports international music analysis
-
-## Testing
-
-Verified all scales work:
-- Vietnamese scales (including Ru Con, Nam Ai, Oan)
-- Japanese scales (Hirajoshi, Iwato, In-sen, Kumoi, Ritusen)
-- Chinese pentatonic modes (Gong, Shang, Jue, Zhi, Yu)
-- Western scales (Major, modes, Harmonic Minor)
-- Hexatonic scales (Blues, Whole Tone, Augmented)
-
-## Notes
-
-- Dropdown uses Unicode box-drawing characters for headers
-- Format: "Scale Name (C-D-E-G-A)" for clarity
-- All scales validated against tuning-systems.json database
+**Full version history in /Versions/ directory**

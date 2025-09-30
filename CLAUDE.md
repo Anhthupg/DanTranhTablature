@@ -1,5 +1,48 @@
 # Dan Tranh Tablature V3 - Claude Configuration & Visual System
 
+## Analysis Framework - Proactive Suggestion System
+
+### IMPORTANT: No Emoji/Emoticons Rule
+**Claude must NEVER use emoji, emoticons, or Unicode symbols in any communication, code, or documentation. Use plain text only.**
+
+### IMPORTANT: Analysis Framework Rule
+**Claude must ALWAYS check the following framework files when working on any component and proactively suggest relevant analyses:**
+
+1. `/v4/analysis-framework/visual-analyses.md` - 15 UI visualizations
+2. `/v4/analysis-framework/statistical-groups.md` - 450+ metrics in 13 groups
+3. `/v4/analysis-framework/framework-specs.md` - Core specifications and workflow
+
+### Workflow for Analysis Suggestions
+
+#### Step 1: Proactive Checking
+When working on ANY component, Claude will:
+1. Review relevant analyses from the framework files
+2. Identify applicable analyses based on the component being worked on
+3. Proactively suggest analyses with mini-previews
+
+#### Step 2: Mini-Preview Format
+```
+Suggested Analysis: [Name]
+Preview: [Visual representation or sample output]
+Insight: [What this reveals about the music]
+Apply? (y/n)
+```
+
+#### Step 3: User Approval Process
+- **User approves (y)**: Implement the analysis and mark as APPROVED in framework files
+- **User declines (n)**: Mark as REJECTED in framework files with reason
+- **In Progress**: Mark as IN_PROGRESS while implementing
+- **Pending**: Default state PENDING for all unreviewed analyses
+
+#### Step 4: Automatic CLAUDE.md Update
+Once an analysis is approved and implemented:
+1. Add to "Approved Analyses" section below
+2. Include implementation details and usage examples
+3. Update status in framework files to APPROVED
+
+### Approved Analyses
+<!-- Approved analyses will be automatically added here as they are implemented -->
+
 ## Project Overview
 Dan Tranh Tablature V3 is a scalable visualization system for Vietnamese 16-string zither music with advanced pattern analysis capabilities. This version maintains the exact visual experience of V1 while enabling collection-scale analysis of 130+ songs.
 

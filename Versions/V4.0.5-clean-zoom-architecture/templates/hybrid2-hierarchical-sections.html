@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid 2: Hierarchical Collapsible Sections</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Hierarchical Container */
+        .hierarchical-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Tablature Area (20% height - very compact) */
+        .compact-tablature-area {
+            height: 20vh;
+            background: white;
+            border-bottom: 2px solid #3498db;
+            padding: 8px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+
+        .compact-title {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .mini-tablature {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            padding: 6px;
+            height: calc(100% - 25px);
+            overflow-x: auto;
+        }
+
+        /* Hierarchical Analysis Area (80% height) */
+        .hierarchical-analysis {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Category Navigation (Compact Tab Style) */
+        .category-nav {
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+            padding: 4px 8px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            overflow-x: auto;
+        }
+
+        .category-tab {
+            background: transparent;
+            border: none;
+            color: #2c3e50;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .category-tab:hover {
+            background: #d5dbdb;
+        }
+
+        .category-tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Sections Container with Minimal Padding */
+        .sections-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        /* Hierarchical Sections (Minimal Padding) */
+        .hierarchical-section {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            margin: 4px 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .hierarchical-section.highlighted {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Section Header (Compact with Hierarchy Indicators) */
+        .hierarchical-header {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 8px 12px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .hierarchical-header.level-1 {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .hierarchical-header.level-2 {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .hierarchical-header.level-3 {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hierarchy-indicator {
+            font-size: 16px;
+            opacity: 0.8;
+        }
+
+        .section-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-name {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .section-description {
+            font-size: 10px;
+            opacity: 0.8;
+            margin: 1px 0 0 0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Compact Controls */
+        .compact-move-controls {
+            display: flex;
+            gap: 2px;
+        }
+
+        .compact-move-arrow {
+            background: #2c3e50;
+            border: 1px solid #34495e;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            padding: 2px 5px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .compact-move-arrow:hover {
+            background: #1a252f;
+        }
+
+        .compact-toggle {
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsed .compact-toggle {
+            transform: rotate(-90deg);
+        }
+
+        /* Section Content (Minimal Padding) */
+        .hierarchical-content {
+            padding: 10px;
+            display: block;
+            max-height: 800px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .hierarchical-content.collapsed {
+            max-height: 0;
+            padding: 0 10px;
+        }
+
+        /* Ultra-Compact Metrics */
+        .ultra-compact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 6px;
+            margin: 8px 0;
+        }
+
+        .ultra-compact-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 3px;
+            padding: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ultra-compact-card:hover {
+            border-color: #3498db;
+            background: #e8f4f8;
+        }
+
+        .ultra-compact-card.cross-highlighted {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+        }
+
+        .ultra-compact-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 2px;
+            line-height: 1;
+        }
+
+        .ultra-compact-label {
+            font-size: 9px;
+            color: #6c757d;
+            line-height: 1.1;
+        }
+
+        /* Minimal Cross-References */
+        .minimal-cross-refs {
+            background: #f1f2f6;
+            border-left: 3px solid #3498db;
+            padding: 5px 8px;
+            margin: 6px 0;
+            font-size: 10px;
+            color: #2c3e50;
+        }
+
+        .mini-cross-link {
+            background: #3498db;
+            color: white;
+            padding: 1px 4px;
+            margin: 1px;
+            border-radius: 2px;
+            text-decoration: none;
+            font-size: 9px;
+            cursor: pointer;
+        }
+
+        .mini-cross-link:hover {
+            background: #2980b9;
+        }
+
+        /* Side-by-Side Toggle */
+        .comparison-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 15px;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .comparison-toggle:hover {
+            background: #229954;
+        }
+
+        /* Side-by-Side Mode */
+        .sections-side-by-side {
+            display: none;
+            flex-direction: row;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .sections-side-by-side.active {
+            display: flex;
+        }
+
+        .side-section {
+            min-width: 300px;
+            max-width: 400px;
+            flex-shrink: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            overflow-y: auto;
+        }
+
+        /* Category Filters */
+        .category-filter {
+            display: none;
+        }
+
+        .category-filter.active {
+            display: block;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="hierarchical-container">
+
+        <!-- Ultra-Compact Tablature -->
+        <div class="compact-tablature-area">
+            <h2 class="compact-title">Hybrid 2: Hierarchical Sections (Minimal Padding + Side-by-Side)</h2>
+            <div class="mini-tablature">
+                <svg width="400" height="70" style="background: white;">
+                    <line x1="25" y1="20" x2="375" y2="20" stroke="#ddd" stroke-width="2"/>
+                    <line x1="25" y1="35" x2="375" y2="35" stroke="#ddd" stroke-width="2"/>
+                    <line x1="25" y1="50" x2="375" y2="50" stroke="#ddd" stroke-width="2"/>
+
+                    <circle cx="60" cy="35" r="6" fill="#008080"/>
+                    <circle cx="90" cy="50" r="4" fill="#FFD700"/>
+                    <circle cx="120" cy="20" r="6" fill="#008080"/>
+                    <circle cx="150" cy="35" r="6" fill="#008080"/>
+
+                    <text x="8" y="25" font-size="8" fill="#666">G4</text>
+                    <text x="8" y="40" font-size="8" fill="#666">D4</text>
+                    <text x="8" y="55" font-size="8" fill="#666">A3</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Hierarchical Analysis (80% height) -->
+        <div class="hierarchical-analysis">
+
+            <!-- Category Navigation (Compact Tab Style) -->
+            <div class="category-nav">
+                <button class="category-tab active" onclick="filterCategory('musical', this)">🎵 Musical</button>
+                <button class="category-tab" onclick="filterCategory('linguistic', this)">🗣️ Linguistic</button>
+                <button class="category-tab" onclick="filterCategory('correlations', this)">🔗 Correlations</button>
+                <button class="category-tab" onclick="filterCategory('patterns', this)">🔄 Patterns</button>
+                <button class="category-tab" onclick="filterCategory('cultural', this)">🏛️ Cultural</button>
+                <button class="category-tab" onclick="filterCategory('all', this)">📊 All</button>
+            </div>
+
+            <!-- Normal Sections View -->
+            <div class="sections-container" id="sectionsView">
+
+                <!-- Musical Category -->
+                <div class="category-filter active" id="musical-filter">
+
+                    <!-- Level 1: Pitch Analysis -->
+                    <div class="hierarchical-section" data-category="musical" data-level="1">
+                        <div class="hierarchical-header level-1" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">1.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Pitch Analysis</div>
+                                    <div class="section-description">Pure melodic contour (no rhythm)</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('pitch', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('pitch', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card" onclick="crossHighlight('unique-pitches', ['tones', 'cultural'])">
+                                    <div class="ultra-compact-value">5</div>
+                                    <div class="ultra-compact-label">Unique</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('ascending', ['melody', 'tones'])">
+                                    <div class="ultra-compact-value">34.2%</div>
+                                    <div class="ultra-compact-label">Ascending</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('descending', ['melody', 'tones'])">
+                                    <div class="ultra-compact-value">41.7%</div>
+                                    <div class="ultra-compact-label">Descending</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('static', ['rhythm'])">
+                                    <div class="ultra-compact-value">24.1%</div>
+                                    <div class="ultra-compact-label">Static</div>
+                                </div>
+                            </div>
+                            <div class="minimal-cross-refs">
+                                <strong>→</strong> Links to:
+                                <a class="mini-cross-link" onclick="jumpToSection('tones')">Tones</a>
+                                <a class="mini-cross-link" onclick="jumpToSection('melody')">Melody</a>
+                                <a class="mini-cross-link" onclick="jumpToSection('cultural')">Cultural</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Level 2: Rhythm Analysis -->
+                    <div class="hierarchical-section" data-category="musical" data-level="2">
+                        <div class="hierarchical-header level-2" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">2.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Rhythm Analysis</div>
+                                    <div class="section-description">Duration patterns (no pitch)</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('rhythm', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('rhythm', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content collapsed">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">4</div>
+                                    <div class="ultra-compact-label">Diversity</div>
+                                </div>
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">18.9%</div>
+                                    <div class="ultra-compact-label">Syncopation</div>
+                                </div>
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">2.3</div>
+                                    <div class="ultra-compact-label">Density</div>
+                                </div>
+                            </div>
+                            <div class="minimal-cross-refs">
+                                <strong>→</strong> Links to:
+                                <a class="mini-cross-link" onclick="jumpToSection('melody')">Melody</a>
+                                <a class="mini-cross-link" onclick="jumpToSection('phrases')">Phrases</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Level 3: Melody Interplay -->
+                    <div class="hierarchical-section" data-category="musical" data-level="3">
+                        <div class="hierarchical-header level-3" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">3.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Melody Interplay</div>
+                                    <div class="section-description">Pitch + rhythm interaction</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('melody', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('melody', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content collapsed">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">67.3%</div>
+                                    <div class="ultra-compact-label">P-R Sync</div>
+                                </div>
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">8</div>
+                                    <div class="ultra-compact-label">Arcs</div>
+                                </div>
+                            </div>
+                            <div class="minimal-cross-refs">
+                                <strong>→</strong> Combines:
+                                <a class="mini-cross-link" onclick="jumpToSection('pitch')">Pitch</a> +
+                                <a class="mini-cross-link" onclick="jumpToSection('rhythm')">Rhythm</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Linguistic Category -->
+                <div class="category-filter" id="linguistic-filter">
+
+                    <!-- Level 1: Vietnamese Tones -->
+                    <div class="hierarchical-section" data-category="linguistic" data-level="1">
+                        <div class="hierarchical-header level-1" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">1.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Vietnamese Tones</div>
+                                    <div class="section-description">Diacritical tone markers</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('tones', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('tones', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card" onclick="crossHighlight('tone-ngang', ['pitch', 'melody'])">
+                                    <div class="ultra-compact-value">23.5%</div>
+                                    <div class="ultra-compact-label">Ngang</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('tone-nga', ['melisma', 'patterns'])">
+                                    <div class="ultra-compact-value">12.5%</div>
+                                    <div class="ultra-compact-label">Ngã</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('tone-correlation', ['pitch', 'melody'])">
+                                    <div class="ultra-compact-value">78.4%</div>
+                                    <div class="ultra-compact-label">Correlation</div>
+                                </div>
+                            </div>
+                            <div class="minimal-cross-refs">
+                                <strong>🔍 Key:</strong> Ngã tone in 80% of melismas on rank #17 notes
+                                <br><a class="mini-cross-link" onclick="jumpToSection('melisma')">Melisma Details</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Level 2: Phrase Positions -->
+                    <div class="hierarchical-section" data-category="linguistic" data-level="2">
+                        <div class="hierarchical-header level-2" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">2.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Phrase Positions</div>
+                                    <div class="section-description">Beginning/middle/ending analysis</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('phrases', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('phrases', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content collapsed">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">D4</div>
+                                    <div class="ultra-compact-label">Begin Avg</div>
+                                </div>
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">G4</div>
+                                    <div class="ultra-compact-label">End Avg</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Patterns Category -->
+                <div class="category-filter" id="patterns-filter">
+
+                    <!-- Melisma & Grace Analysis -->
+                    <div class="hierarchical-section" data-category="patterns" data-level="1">
+                        <div class="hierarchical-header level-1" onclick="toggleHierarchicalSection(this)">
+                            <div class="header-left">
+                                <span class="hierarchy-indicator">1.</span>
+                                <div class="section-info">
+                                    <div class="section-name">Melisma & Grace</div>
+                                    <div class="section-description">Multiple notes per syllable</div>
+                                </div>
+                            </div>
+                            <div class="header-right">
+                                <div class="compact-move-controls">
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('melisma', 'up', event)">▲</button>
+                                    <button class="compact-move-arrow" onclick="moveHierarchicalSection('melisma', 'down', event)">▼</button>
+                                </div>
+                                <span class="compact-toggle">▼</span>
+                            </div>
+                        </div>
+                        <div class="hierarchical-content">
+                            <div class="ultra-compact-grid">
+                                <div class="ultra-compact-card" onclick="crossHighlight('melisma-count', ['tones'])">
+                                    <div class="ultra-compact-value">8</div>
+                                    <div class="ultra-compact-label">Groups</div>
+                                </div>
+                                <div class="ultra-compact-card" onclick="crossHighlight('nga-melisma', ['tones'])">
+                                    <div class="ultra-compact-value">80%</div>
+                                    <div class="ultra-compact-label">Ngã Link</div>
+                                </div>
+                                <div class="ultra-compact-card">
+                                    <div class="ultra-compact-value">14.0%</div>
+                                    <div class="ultra-compact-label">Grace %</div>
+                                </div>
+                            </div>
+                            <div class="minimal-cross-refs">
+                                <strong>🔍 Cross:</strong>
+                                <a class="mini-cross-link" onclick="jumpToSection('tones')">Tone Analysis</a>
+                                <a class="mini-cross-link" onclick="jumpToSection('patterns')">Grace Patterns</a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- All Category (shows everything) -->
+                <div class="category-filter" id="all-filter">
+                    <!-- All sections would be shown here -->
+                    <div style="padding: 20px; text-align: center; color: #666;">
+                        All sections visible - scroll to explore hierarchical analysis
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Side-by-Side Sections (for comparison) -->
+            <div class="sections-side-by-side" id="sideBySideView">
+                <!-- Comparison sections will be added here dynamically -->
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Comparison Toggle -->
+    <button class="comparison-toggle" onclick="toggleComparisonMode()">
+        <span id="comparisonModeText">Switch to Side-by-Side</span>
+    </button>
+
+    <script>
+        // Hierarchical State
+        const hierarchicalState = {
+            currentCategory: 'musical',
+            comparisonMode: false,
+            selectedSections: new Set(),
+            crossHighlights: new Map()
+        };
+
+        // Filter by Category
+        function filterCategory(category, buttonElement) {
+            // Update button appearance
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            buttonElement.classList.add('active');
+
+            // Show/hide category filters
+            document.querySelectorAll('.category-filter').forEach(filter => {
+                filter.classList.remove('active');
+            });
+
+            const targetFilter = document.getElementById(category + '-filter');
+            if (targetFilter) {
+                targetFilter.classList.add('active');
+            }
+
+            hierarchicalState.currentCategory = category;
+        }
+
+        // Toggle Hierarchical Section
+        function toggleHierarchicalSection(header) {
+            const section = header.closest('.hierarchical-section');
+            const content = section.querySelector('.hierarchical-content');
+            const toggle = section.querySelector('.compact-toggle');
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼';
+                section.classList.remove('collapsed');
+            } else {
+                content.classList.add('collapsed');
+                toggle.textContent = '▶';
+                section.classList.add('collapsed');
+            }
+        }
+
+        // Cross-Highlight Between Sections
+        function crossHighlight(metricId, relatedSections) {
+            console.log(`Cross-highlighting ${metricId} across sections:`, relatedSections);
+
+            // Clear previous highlights
+            document.querySelectorAll('.ultra-compact-card.cross-highlighted').forEach(card => {
+                card.classList.remove('cross-highlighted');
+            });
+
+            document.querySelectorAll('.hierarchical-section.highlighted').forEach(section => {
+                section.classList.remove('highlighted');
+            });
+
+            // Highlight current metric
+            event.target.classList.add('cross-highlighted');
+
+            // Highlight related sections
+            relatedSections.forEach(sectionType => {
+                const relatedSection = document.querySelector(`[data-category*="${sectionType}"], .hierarchical-section`);
+                if (relatedSection) {
+                    relatedSection.classList.add('highlighted');
+                }
+            });
+
+            // Show cross-reference information
+            alert(`${metricId} correlates with: ${relatedSections.join(', ')}`);
+
+            // Store cross-highlight relationship
+            hierarchicalState.crossHighlights.set(metricId, relatedSections);
+        }
+
+        // Jump to Related Section
+        function jumpToSection(sectionType) {
+            // Find and expand target section
+            const targetSection = document.querySelector(`[data-category*="${sectionType}"]`);
+            if (targetSection) {
+                const header = targetSection.querySelector('.hierarchical-header');
+                const content = targetSection.querySelector('.hierarchical-content');
+
+                if (content.classList.contains('collapsed')) {
+                    toggleHierarchicalSection(header);
+                }
+
+                // Scroll to section
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Highlight temporarily
+                targetSection.classList.add('highlighted');
+                setTimeout(() => {
+                    targetSection.classList.remove('highlighted');
+                }, 2000);
+            }
+        }
+
+        // Toggle Comparison Mode
+        function toggleComparisonMode() {
+            const sectionsView = document.getElementById('sectionsView');
+            const sideBySideView = document.getElementById('sideBySideView');
+            const toggleText = document.getElementById('comparisonModeText');
+
+            if (hierarchicalState.comparisonMode) {
+                // Switch to normal view
+                sectionsView.style.display = 'block';
+                sideBySideView.classList.remove('active');
+                toggleText.textContent = 'Switch to Side-by-Side';
+                hierarchicalState.comparisonMode = false;
+            } else {
+                // Switch to side-by-side view
+                sectionsView.style.display = 'none';
+                sideBySideView.classList.add('active');
+                toggleText.textContent = 'Switch to Normal';
+                hierarchicalState.comparisonMode = true;
+
+                // Add some default comparison panels
+                addDefaultComparisonPanels();
+            }
+        }
+
+        // Add Default Comparison Panels
+        function addDefaultComparisonPanels() {
+            const sideBySideView = document.getElementById('sideBySideView');
+            sideBySideView.innerHTML = ''; // Clear existing
+
+            const defaultSections = ['pitch', 'tones', 'melisma'];
+
+            defaultSections.forEach(sectionId => {
+                const panel = document.createElement('div');
+                panel.className = 'side-section';
+                panel.innerHTML = getSectionContentForComparison(sectionId);
+                sideBySideView.appendChild(panel);
+            });
+        }
+
+        // Get Section Content for Side-by-Side
+        function getSectionContentForComparison(sectionId) {
+            const sectionData = {
+                'pitch': {
+                    title: '🎵 Pitch Analysis',
+                    metrics: [['5', 'Unique'], ['34.2%', 'Ascending'], ['41.7%', 'Descending']],
+                    description: 'Pure melodic contour without rhythm consideration'
+                },
+                'tones': {
+                    title: '🗣️ Vietnamese Tones',
+                    metrics: [['23.5%', 'Ngang'], ['12.5%', 'Ngã'], ['78.4%', 'Correlation']],
+                    description: 'Diacritical tone markers and correlations'
+                },
+                'melisma': {
+                    title: '🎶 Melisma & Grace',
+                    metrics: [['8', 'Groups'], ['80%', 'Ngã Link'], ['14.0%', 'Grace %']],
+                    description: 'Multiple notes per syllable analysis'
+                }
+            };
+
+            const data = sectionData[sectionId];
+            if (!data) return '<div>Section not found</div>';
+
+            return `
+                <div class="hierarchical-header level-1" style="margin: 0; border-radius: 6px 6px 0 0;">
+                    <div class="section-info">
+                        <div class="section-name">${data.title}</div>
+                        <div class="section-description">${data.description}</div>
+                    </div>
+                </div>
+                <div style="padding: 10px;">
+                    <div class="ultra-compact-grid">
+                        ${data.metrics.map(([value, label]) => `
+                            <div class="ultra-compact-card">
+                                <div class="ultra-compact-value">${value}</div>
+                                <div class="ultra-compact-label">${label}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Move Hierarchical Section
+        function moveHierarchicalSection(sectionId, direction, event) {
+            event.stopPropagation();
+            console.log(`Moving ${sectionId} ${direction}`);
+            // Implementation similar to V3 move functionality
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Hybrid 2: Hierarchical Collapsible Sections initialized');
+            console.log('Features: Tab hierarchy + Minimal padding + Side-by-side toggle');
+        });
+
+    </script>
+
+</body>
+</html>

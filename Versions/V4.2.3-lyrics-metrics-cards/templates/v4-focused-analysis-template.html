@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{SONG_NAME}} - V4 Focused Analysis System</title>
+    <style>
+        /* V4 Focused Analysis - 10 Collapsible Sections with Cross-Highlighting */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            background: #f8f9fa;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .v4-container {
+            width: 100%;
+            max-width: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Interactive Tablature with Highlighting System */
+        .tablature-overlay-container {
+            width: 100%;
+            position: relative;
+            background: white;
+            border-bottom: 3px solid #3498db;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .tablature-with-overlays {
+            position: relative;
+            overflow-x: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+            padding: 15px;
+        }
+
+        /* Highlighting Overlay System */
+        .highlight-overlay {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        .highlight-overlay.active {
+            opacity: 0.8;
+            animation: pulse 1.5s infinite;
+        }
+
+        .highlight-tone-nga { background: rgba(156, 89, 182, 0.6); } /* Purple for ngã tone */
+        .highlight-pitch-e { background: rgba(52, 152, 219, 0.6); } /* Blue for E notes */
+        .highlight-rank-17 { background: rgba(231, 76, 60, 0.6); } /* Red for rank #17 */
+        .highlight-melisma { background: rgba(241, 196, 15, 0.6); } /* Gold for melisma */
+        .highlight-string-usage { background: rgba(39, 174, 96, 0.6); } /* Green for string usage */
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        /* V4 Focused Section System */
+        .analysis-section {
+            width: 100%;
+            margin: 0 0 15px 0;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+            order: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        .analysis-section.highlighted {
+            border-color: #3498db;
+            box-shadow: 0 5px 20px rgba(52, 152, 219, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .section-header.active-focus {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .section-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+
+        /* Move Controls */
+        .move-controls {
+            display: flex;
+            gap: 5px;
+            margin-right: 15px;
+        }
+
+        .move-arrow {
+            background: #2c3e50;
+            border: 2px solid #34495e;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            padding: 3px 8px;
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 24px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .move-arrow:hover {
+            background: #1a252f;
+            transform: scale(1.1);
+        }
+
+        /* Cross-Highlighting Controls */
+        .highlight-controls {
+            display: flex;
+            gap: 8px;
+            margin-right: 15px;
+        }
+
+        .highlight-toggle {
+            background: #27ae60;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 11px;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .highlight-toggle.active {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .collapse-toggle {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .collapsed .collapse-toggle {
+            transform: rotate(-90deg);
+        }
+
+        /* Section Content */
+        .section-content {
+            padding: 0;
+            display: block;
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+        }
+
+        .content-inner {
+            padding: 20px;
+        }
+
+        /* Focused Content Areas */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .metric-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .metric-card:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .metric-card.highlighted {
+            background: #d4edda;
+            border-color: #27ae60;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        /* Cross-Reference Display */
+        .cross-reference {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #856404;
+        }
+
+        .cross-reference.active {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+
+        /* Tablature Reference Clone */
+        .tablature-reference {
+            margin: 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #fafafa;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="v4-container">
+
+        <!-- Interactive Tablature with Highlighting Overlays -->
+        <div class="tablature-overlay-container">
+            <h1 style="margin: 0 0 10px 0; color: #2c3e50; text-align: center;">{{SONG_NAME}}</h1>
+            <p style="margin: 0 0 15px 0; color: #7f8c8d; text-align: center;">V4 Focused Analysis - Cross-Highlighting System</p>
+
+            <div class="tablature-with-overlays" id="mainTablature">
+                <svg id="primaryTablatureSvg" width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}">
+                    {{OPTIMAL_SVG_CONTENT}}
+                </svg>
+
+                <!-- Dynamic Highlighting Overlays -->
+                <div id="highlightOverlayContainer"></div>
+            </div>
+        </div>
+
+        <!-- 10 Focused Analysis Sections -->
+        <div id="sectionsContainer" style="display: flex; flex-direction: column; padding: 20px;">
+
+            <!-- Section 1: Pitch Analysis (Fixed - Always on top) -->
+            <div class="analysis-section" id="pitchSection" data-order="0" data-focus="pitch">
+                <div class="section-header" onclick="toggleSection('pitchSection')">
+                    <h3>🎵 Pitch Analysis</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="pitch-e" onclick="toggleHighlight('pitch-e', event)">E Notes</button>
+                        <button class="highlight-toggle" data-highlight="pitch-peaks" onclick="toggleHighlight('pitch-peaks', event)">Peaks</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="unique-pitches" onclick="highlightMetric('unique-pitches')">
+                                <div class="metric-value">{{UNIQUE_PITCHES}}</div>
+                                <div class="metric-label">Unique Pitches</div>
+                            </div>
+                            <div class="metric-card" data-metric="pitch-range" onclick="highlightMetric('pitch-range')">
+                                <div class="metric-value">{{PITCH_RANGE}}</div>
+                                <div class="metric-label">Range (Semitones)</div>
+                            </div>
+                            <div class="metric-card" data-metric="ascending-intervals" onclick="highlightMetric('ascending-intervals')">
+                                <div class="metric-value">{{ASCENDING_PERCENTAGE}}%</div>
+                                <div class="metric-label">Ascending Motion</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="pitch-cross-ref">
+                            Cross-references: <span id="pitch-connections">Click metrics to see connections</span>
+                        </div>
+
+                        <div class="tablature-reference">
+                            <h4>Pitch Reference</h4>
+                            <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}">
+                                {{OPTIMAL_SVG_CONTENT}}
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Duration/Rhythm Analysis (Moveable) -->
+            <div class="analysis-section" id="rhythmSection" data-order="1" data-focus="rhythm">
+                <div class="section-header" onclick="toggleSection('rhythmSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('rhythmSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('rhythmSection', 'down')">▼</button>
+                    </div>
+                    <h3>🥁 Rhythm Analysis</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="syncopation" onclick="toggleHighlight('syncopation', event)">Syncopation</button>
+                        <button class="highlight-toggle" data-highlight="long-notes" onclick="toggleHighlight('long-notes', event)">Long Notes</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="rhythmic-diversity" onclick="highlightMetric('rhythmic-diversity')">
+                                <div class="metric-value">{{RHYTHMIC_DIVERSITY}}</div>
+                                <div class="metric-label">Rhythmic Diversity</div>
+                            </div>
+                            <div class="metric-card" data-metric="syncopation-index" onclick="highlightMetric('syncopation-index')">
+                                <div class="metric-value">{{SYNCOPATION_INDEX}}%</div>
+                                <div class="metric-label">Syncopation Index</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="rhythm-cross-ref">
+                            Cross-references: <span id="rhythm-connections">Focus on rhythm patterns</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 3: Melody Interplay (Moveable) -->
+            <div class="analysis-section" id="melodySection" data-order="2" data-focus="melody">
+                <div class="section-header" onclick="toggleSection('melodySection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('melodySection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('melodySection', 'down')">▼</button>
+                    </div>
+                    <h3>🎼 Melody Interplay</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="melodic-peaks" onclick="toggleHighlight('melodic-peaks', event)">Peaks</button>
+                        <button class="highlight-toggle" data-highlight="phrase-arcs" onclick="toggleHighlight('phrase-arcs', event)">Arcs</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="pitch-rhythm-correlation" onclick="highlightMetric('pitch-rhythm-correlation')">
+                                <div class="metric-value">{{PITCH_RHYTHM_CORRELATION}}%</div>
+                                <div class="metric-label">Pitch-Rhythm Sync</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="melody-cross-ref">
+                            Cross-references: <span id="melody-connections">Melody combines pitch + rhythm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 4: Vietnamese Tones (Moveable) -->
+            <div class="analysis-section" id="tonesSection" data-order="3" data-focus="tones">
+                <div class="section-header" onclick="toggleSection('tonesSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('tonesSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('tonesSection', 'down')">▼</button>
+                    </div>
+                    <h3>🗣️ Vietnamese Tones</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="tone-nga" onclick="toggleHighlight('tone-nga', event)">Ngã Tone</button>
+                        <button class="highlight-toggle" data-highlight="tone-correlation" onclick="toggleHighlight('tone-correlation', event)">Correlations</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="tone-ngang" onclick="highlightMetric('tone-ngang')">
+                                <div class="metric-value">{{TONE_NGANG_PERCENTAGE}}%</div>
+                                <div class="metric-label">Ngang (Level)</div>
+                            </div>
+                            <div class="metric-card" data-metric="tone-nga" onclick="highlightMetric('tone-nga')">
+                                <div class="metric-value">{{TONE_NGA_PERCENTAGE}}%</div>
+                                <div class="metric-label">Ngã (Sharp)</div>
+                            </div>
+                            <div class="metric-card" data-metric="tone-melody-correlation" onclick="highlightMetric('tone-melody-correlation')">
+                                <div class="metric-value">{{TONE_MELODY_CORRELATION}}%</div>
+                                <div class="metric-label">Tone-Melody Match</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="tones-cross-ref">
+                            Cross-references: <span id="tones-connections">Ngã tone appears in 80% of melismas on rank #17 notes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 5: Lyrics & Words (Moveable) -->
+            <div class="analysis-section" id="lyricsSection" data-order="4" data-focus="lyrics">
+                <div class="section-header" onclick="toggleSection('lyricsSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('lyricsSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('lyricsSection', 'down')">▼</button>
+                    </div>
+                    <h3>📝 Lyrics & Words</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="important-words" onclick="toggleHighlight('important-words', event)">Key Words</button>
+                        <button class="highlight-toggle" data-highlight="semantic-fields" onclick="toggleHighlight('semantic-fields', event)">Semantic</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="syllable-count" onclick="highlightMetric('syllable-count')">
+                                <div class="metric-value">{{SYLLABLE_COUNT}}</div>
+                                <div class="metric-label">Total Syllables</div>
+                            </div>
+                            <div class="metric-card" data-metric="lyric-coverage" onclick="highlightMetric('lyric-coverage')">
+                                <div class="metric-value">{{LYRIC_COVERAGE}}%</div>
+                                <div class="metric-label">Lyric Coverage</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="lyrics-cross-ref">
+                            Cross-references: <span id="lyrics-connections">Words correlate with pitch and melisma patterns</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 6: Phrase Positions (Moveable) -->
+            <div class="analysis-section" id="phrasesSection" data-order="5" data-focus="phrases">
+                <div class="section-header" onclick="toggleSection('phrasesSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('phrasesSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('phrasesSection', 'down')">▼</button>
+                    </div>
+                    <h3>📍 Phrase Positions</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="phrase-beginnings" onclick="toggleHighlight('phrase-beginnings', event)">Beginnings</button>
+                        <button class="highlight-toggle" data-highlight="phrase-endings" onclick="toggleHighlight('phrase-endings', event)">Endings</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="beginning-tendency" onclick="highlightMetric('beginning-tendency')">
+                                <div class="metric-value">{{BEGINNING_PITCH_AVG}}</div>
+                                <div class="metric-label">Beginning Avg Pitch</div>
+                            </div>
+                            <div class="metric-card" data-metric="ending-tendency" onclick="highlightMetric('ending-tendency')">
+                                <div class="metric-value">{{ENDING_PITCH_AVG}}</div>
+                                <div class="metric-label">Ending Avg Pitch</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="phrases-cross-ref">
+                            Cross-references: <span id="phrases-connections">Phrase positions correlate with tones and melody</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 7: Melisma & Grace Notes (Moveable) -->
+            <div class="analysis-section" id="melismaSection" data-order="6" data-focus="melisma">
+                <div class="section-header" onclick="toggleSection('melismaSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('melismaSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('melismaSection', 'down')">▼</button>
+                    </div>
+                    <h3>🎶 Melisma & Grace Notes</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="melisma-groups" onclick="toggleHighlight('melisma-groups', event)">Melismas</button>
+                        <button class="highlight-toggle" data-highlight="grace-notes" onclick="toggleHighlight('grace-notes', event)">Grace Notes</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="melisma-count" onclick="highlightMetric('melisma-count')">
+                                <div class="metric-value">{{MELISMA_COUNT}}</div>
+                                <div class="metric-label">Melisma Groups</div>
+                            </div>
+                            <div class="metric-card" data-metric="grace-percentage" onclick="highlightMetric('grace-percentage')">
+                                <div class="metric-value">{{GRACE_PERCENTAGE}}%</div>
+                                <div class="metric-label">Grace Note %</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="melisma-cross-ref">
+                            Cross-references: <span id="melisma-connections">80% of melismas use ngã tone on rank #17 notes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 8: Patterns & Motifs (Moveable) -->
+            <div class="analysis-section" id="patternsSection" data-order="7" data-focus="patterns">
+                <div class="section-header" onclick="toggleSection('patternsSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('patternsSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('patternsSection', 'down')">▼</button>
+                    </div>
+                    <h3>🔄 Patterns & Motifs</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="exact-patterns" onclick="toggleHighlight('exact-patterns', event)">Exact</button>
+                        <button class="highlight-toggle" data-highlight="variations" onclick="toggleHighlight('variations', event)">Variations</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="exact-patterns" onclick="highlightMetric('exact-patterns')">
+                                <div class="metric-value">{{EXACT_PATTERNS_COUNT}}</div>
+                                <div class="metric-label">Exact Repetitions</div>
+                            </div>
+                            <div class="metric-card" data-metric="transpositions" onclick="highlightMetric('transpositions')">
+                                <div class="metric-value">{{TRANSPOSITION_COUNT}}</div>
+                                <div class="metric-label">Transpositions</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="patterns-cross-ref">
+                            Cross-references: <span id="patterns-connections">Pattern analysis reveals motivic development</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 9: Correlations (Moveable) -->
+            <div class="analysis-section" id="correlationsSection" data-order="8" data-focus="correlations">
+                <div class="section-header" onclick="toggleSection('correlationsSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('correlationsSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('correlationsSection', 'down')">▼</button>
+                    </div>
+                    <h3>🔗 Cross-Correlations</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="strong-correlations" onclick="toggleHighlight('strong-correlations', event)">Strong</button>
+                        <button class="highlight-toggle" data-highlight="all-correlations" onclick="toggleHighlight('all-correlations', event)">All</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="tone-pitch-correlation" onclick="highlightMetric('tone-pitch-correlation')">
+                                <div class="metric-value">{{TONE_PITCH_CORRELATION}}%</div>
+                                <div class="metric-label">Tone-Pitch Match</div>
+                            </div>
+                            <div class="metric-card" data-metric="word-melody-correlation" onclick="highlightMetric('word-melody-correlation')">
+                                <div class="metric-value">{{WORD_MELODY_CORRELATION}}%</div>
+                                <div class="metric-label">Word-Melody Sync</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="correlations-cross-ref">
+                            Cross-references: <span id="correlations-connections">Correlations show deep linguistic-musical connections</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 10: Cultural Context (Moveable) -->
+            <div class="analysis-section" id="culturalSection" data-order="9" data-focus="cultural">
+                <div class="section-header" onclick="toggleSection('culturalSection')">
+                    <div class="move-controls">
+                        <button class="move-arrow" onclick="moveSection('culturalSection', 'up')">▲</button>
+                        <button class="move-arrow" onclick="moveSection('culturalSection', 'down')">▼</button>
+                    </div>
+                    <h3>🏛️ Cultural Context</h3>
+                    <div class="highlight-controls">
+                        <button class="highlight-toggle" data-highlight="regional-markers" onclick="toggleHighlight('regional-markers', event)">Regional</button>
+                        <button class="highlight-toggle" data-highlight="traditional-elements" onclick="toggleHighlight('traditional-elements', event)">Traditional</button>
+                    </div>
+                    <span class="collapse-toggle">▼</span>
+                </div>
+                <div class="section-content collapsed">
+                    <div class="content-inner">
+                        <div class="metric-grid">
+                            <div class="metric-card" data-metric="regional-similarity" onclick="highlightMetric('regional-similarity')">
+                                <div class="metric-value">{{REGIONAL_SIMILARITY}}%</div>
+                                <div class="metric-label">Regional Similarity</div>
+                            </div>
+                            <div class="metric-card" data-metric="traditional-elements" onclick="highlightMetric('traditional-elements')">
+                                <div class="metric-value">{{TRADITIONAL_SCORE}}</div>
+                                <div class="metric-label">Tradition Score</div>
+                            </div>
+                        </div>
+
+                        <div class="cross-reference" id="cultural-cross-ref">
+                            Cross-references: <span id="cultural-connections">Cultural context shapes musical choices</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // V4 Cross-Highlighting System
+        const crossHighlighting = {
+            // Define cross-reference relationships
+            relationships: {
+                'tone-nga': ['melisma-groups', 'rank-17-notes', 'phrase-peaks'],
+                'pitch-e': ['string-usage', 'melodic-emphasis', 'traditional-elements'],
+                'melisma-count': ['tone-nga', 'grace-notes', 'phrase-endings'],
+                'syncopation-index': ['melodic-peaks', 'word-emphasis', 'cultural-innovation']
+            },
+
+            // Active highlights
+            activeHighlights: new Set(),
+
+            // Highlight correlation examples
+            correlationExamples: {
+                'tone-nga': {
+                    description: "Ngã tone appears in 80% of melismas on rank #17 notes",
+                    relatedSections: ['melismaSection', 'patternsSection'],
+                    tablatureHighlights: ['tone-nga', 'melisma-groups', 'rank-17']
+                },
+                'pitch-e': {
+                    description: "E notes correlate with 50% of string usage patterns",
+                    relatedSections: ['pitchSection', 'culturalSection'],
+                    tablatureHighlights: ['pitch-e', 'string-usage']
+                }
+            }
+        };
+
+        // Section Toggle with Cross-Highlighting
+        function toggleSection(sectionId) {
+            const content = document.querySelector(`#${sectionId} .section-content`);
+            const toggle = document.querySelector(`#${sectionId} .collapse-toggle`);
+            const section = document.getElementById(sectionId);
+            const header = document.querySelector(`#${sectionId} .section-header`);
+
+            if (content.classList.contains('collapsed')) {
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼';
+                section.classList.remove('collapsed');
+                header.classList.add('active-focus');
+
+                // Activate cross-highlighting for this section
+                activateCrossHighlighting(sectionId);
+            } else {
+                content.classList.add('collapsed');
+                toggle.textContent = '▶';
+                section.classList.add('collapsed');
+                header.classList.remove('active-focus');
+
+                // Deactivate cross-highlighting
+                deactivateCrossHighlighting(sectionId);
+            }
+        }
+
+        // Metric Highlighting System
+        function highlightMetric(metricId) {
+            console.log(`Highlighting metric: ${metricId}`);
+
+            // Clear previous highlights
+            clearAllHighlights();
+
+            // Highlight related elements on tablature
+            const relatedElements = crossHighlighting.relationships[metricId] || [];
+            relatedElements.forEach(elementType => {
+                highlightTableatureElements(elementType);
+            });
+
+            // Highlight related sections
+            highlightRelatedSections(metricId);
+
+            // Show cross-reference information
+            showCrossReferences(metricId);
+
+            // Update metric card appearance
+            document.querySelectorAll('.metric-card').forEach(card => {
+                card.classList.remove('highlighted');
+            });
+            document.querySelector(`[data-metric="${metricId}"]`).classList.add('highlighted');
+        }
+
+        // Tablature Element Highlighting
+        function highlightTableatureElements(elementType) {
+            // This would identify and highlight specific notes/patterns on the tablature
+            console.log(`Highlighting tablature elements: ${elementType}`);
+
+            // Example: Highlight all E notes if elementType is 'pitch-e'
+            if (elementType === 'pitch-e') {
+                // Find all notes with pitch E and add highlight overlay
+                addHighlightOverlay('highlight-pitch-e', findEPitchNotes());
+            }
+
+            if (elementType === 'melisma-groups') {
+                // Highlight all melismatic passages
+                addHighlightOverlay('highlight-melisma', findMelismaGroups());
+            }
+
+            if (elementType === 'tone-nga') {
+                // Highlight all syllables with ngã tone
+                addHighlightOverlay('highlight-tone-nga', findNgaToneNotes());
+            }
+        }
+
+        // Cross-Section Highlighting
+        function highlightRelatedSections(metricId) {
+            const correlation = crossHighlighting.correlationExamples[metricId];
+            if (correlation) {
+                correlation.relatedSections.forEach(sectionId => {
+                    document.getElementById(sectionId).classList.add('highlighted');
+                });
+            }
+        }
+
+        // Show Cross-References
+        function showCrossReferences(metricId) {
+            const correlation = crossHighlighting.correlationExamples[metricId];
+            if (correlation) {
+                // Update cross-reference displays in related sections
+                correlation.relatedSections.forEach(sectionId => {
+                    const crossRefElement = document.querySelector(`#${sectionId.replace('Section', '')}-cross-ref span`);
+                    if (crossRefElement) {
+                        crossRefElement.textContent = correlation.description;
+                        crossRefElement.parentElement.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // Clear All Highlights
+        function clearAllHighlights() {
+            document.querySelectorAll('.analysis-section.highlighted').forEach(section => {
+                section.classList.remove('highlighted');
+            });
+
+            document.querySelectorAll('.metric-card.highlighted').forEach(card => {
+                card.classList.remove('highlighted');
+            });
+
+            document.querySelectorAll('.cross-reference.active').forEach(ref => {
+                ref.classList.remove('active');
+            });
+
+            document.querySelectorAll('.highlight-overlay.active').forEach(overlay => {
+                overlay.classList.remove('active');
+            });
+        }
+
+        // Add Highlight Overlay to Tablature
+        function addHighlightOverlay(className, notePositions) {
+            const container = document.getElementById('highlightOverlayContainer');
+
+            notePositions.forEach(pos => {
+                const overlay = document.createElement('div');
+                overlay.className = `highlight-overlay ${className} active`;
+                overlay.style.left = pos.x + 'px';
+                overlay.style.top = pos.y + 'px';
+                overlay.style.width = '20px';
+                overlay.style.height = '20px';
+                container.appendChild(overlay);
+            });
+        }
+
+        // Move Section Functionality (from V3)
+        window.moveSection = function(sectionId, direction) {
+            const section = document.getElementById(sectionId);
+            if (!section) return false;
+
+            const container = document.getElementById('sectionsContainer');
+            const movableSections = Array.from(container.querySelectorAll('.analysis-section:not(#pitchSection)'));
+
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            movableSections.forEach((s, i) => {
+                if (!s.style.order) {
+                    s.style.order = s.dataset.order || (i + 1);
+                }
+            });
+
+            const sortedSections = movableSections.map(s => ({
+                section: s,
+                order: parseInt(s.style.order),
+                id: s.id
+            })).sort((a, b) => a.order - b.order);
+
+            const currentIndex = sortedSections.findIndex(s => s.section === section);
+
+            if (direction === 'up' && currentIndex > 0) {
+                const prevSection = sortedSections[currentIndex - 1];
+                const tempOrder = section.style.order;
+                section.style.order = prevSection.section.style.order;
+                prevSection.section.style.order = tempOrder;
+
+                container.style.display = 'none';
+                container.offsetHeight;
+                container.style.display = 'flex';
+
+                return true;
+            } else if (direction === 'down' && currentIndex < sortedSections.length - 1) {
+                const nextSection = sortedSections[currentIndex + 1];
+                const tempOrder = section.style.order;
+                section.style.order = nextSection.section.style.order;
+                nextSection.section.style.order = tempOrder;
+
+                container.style.display = 'none';
+                container.offsetHeight;
+                container.style.display = 'flex';
+
+                return true;
+            }
+
+            return false;
+        };
+
+        // Toggle Individual Highlights
+        function toggleHighlight(highlightType, event) {
+            event.stopPropagation();
+
+            const button = event.target;
+            const isActive = button.classList.contains('active');
+
+            if (isActive) {
+                button.classList.remove('active');
+                removeHighlightOverlays(highlightType);
+                crossHighlighting.activeHighlights.delete(highlightType);
+            } else {
+                button.classList.add('active');
+                addSpecificHighlight(highlightType);
+                crossHighlighting.activeHighlights.add(highlightType);
+            }
+        }
+
+        // Placeholder functions for note finding (to be implemented with real data)
+        function findEPitchNotes() {
+            // Return positions of all E notes in tablature
+            return [{ x: 150, y: 200 }, { x: 300, y: 200 }]; // Example positions
+        }
+
+        function findMelismaGroups() {
+            // Return positions of all melismatic note groups
+            return [{ x: 200, y: 150 }, { x: 400, y: 250 }]; // Example positions
+        }
+
+        function findNgaToneNotes() {
+            // Return positions of all notes with ngã tone syllables
+            return [{ x: 100, y: 300 }, { x: 250, y: 180 }]; // Example positions
+        }
+
+        function addSpecificHighlight(highlightType) {
+            // Add specific highlight overlays based on type
+            console.log(`Adding highlight: ${highlightType}`);
+        }
+
+        function removeHighlightOverlays(highlightType) {
+            document.querySelectorAll(`.highlight-${highlightType}`).forEach(overlay => {
+                overlay.remove();
+            });
+        }
+
+        function activateCrossHighlighting(sectionId) {
+            // Activate cross-highlighting when section is opened
+            console.log(`Activating cross-highlighting for: ${sectionId}`);
+        }
+
+        function deactivateCrossHighlighting(sectionId) {
+            // Deactivate cross-highlighting when section is closed
+            console.log(`Deactivating cross-highlighting for: ${sectionId}`);
+        }
+
+        // Initialize V4 System
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('V4 Focused Analysis System Initialized');
+            console.log('Features: 10 focused sections, cross-highlighting, correlation display');
+        });
+
+    </script>
+</body>
+</html>

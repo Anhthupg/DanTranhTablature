@@ -1,0 +1,543 @@
+/**
+ * Lyrics Controller - V4.2.0
+ * Ultra-Compact Single-Row Design with Interactive Word-to-Word Highlighting
+ *
+ * Features:
+ * - Loads lyrics segmentation JSON
+ * - Renders 28 phrases in ultra-compact format (30px height)
+ * - 6 control buttons per phrase (horizontal layout)
+ * - Interactive word-to-word highlighting
+ * - Color-coded linguistic types (7 colors)
+ */
+
+class LyricsController {
+    constructor() {
+        this.lyricsData = null;
+        this.currentlyPlaying = null;
+        this.isLooping = {};
+        this.highlightedWords = new Set();
+
+        // Linguistic type colors (7 colors)
+        this.typeColors = {
+            'exclamatory': '#FF6B6B',      // Red - emotional
+            'question': '#4ECDC4',         // Cyan - inquiry
+            'answer': '#95E1D3',           // Light cyan - response
+            'narrative': '#A8E6CF',        // Light green - storytelling
+            'complaint': '#FFD93D',        // Yellow - dissatisfaction
+            'onomatopoeia': '#C3AED6',     // Purple - sound effects
+            'descriptive': '#8AC4D0'       // Blue-grey - description
+        };
+    }
+
+    async initialize() {
+        console.log('[LyricsController] Initializing...');
+
+        // Load lyrics data
+        await this.loadLyricsData();
+
+        // DON'T render phrases - server already generated the table!
+        // this.renderPhrases();
+
+        // Only update statistics (metrics cards)
+        this.updateStatistics();
+
+        // Attach event listeners to server-generated buttons
+        this.attachEventListenersToExistingTable();
+
+        console.log('[LyricsController] Initialized successfully');
+    }
+
+    async loadLyricsData() {
+        try {
+            const response = await fetch('/api/lyrics/Bà rằng bà rí');
+            this.lyricsData = await response.json();
+            console.log(`[LyricsController] Loaded ${this.lyricsData.phrases.length} phrases`);
+        } catch (error) {
+            console.error('[LyricsController] Error loading lyrics:', error);
+            this.lyricsData = { phrases: [], statistics: {} };
+        }
+    }
+
+    attachEventListenersToExistingTable() {
+        // Server already generated the table - just attach event listeners to buttons
+        if (!this.lyricsData || !this.lyricsData.phrases) return;
+
+        this.lyricsData.phrases.forEach((phrase, index) => {
+            const row = document.querySelector(`tr[data-phrase="${index}"]`);
+            if (!row) return;
+
+            // Find buttons in this row
+            const pronunciationBtn = row.querySelector('.btn-pronunciation');
+            const infoBtn = row.querySelector('.btn-info');
+
+            // Attach event listeners
+            if (pronunciationBtn) {
+                pronunciationBtn.addEventListener('click', () => this.showPronunciation(phrase));
+            }
+
+            if (infoBtn) {
+                infoBtn.addEventListener('click', () => this.showNoteMapping(phrase));
+            }
+
+            // Word highlighting on clickable words
+            const vnWords = row.querySelectorAll('.syllable');
+            const enWords = row.querySelectorAll('.translation-word');
+
+            vnWords.forEach(word => {
+                word.addEventListener('click', (e) => this.handleWordClick(e, row));
+            });
+
+            enWords.forEach(word => {
+                word.addEventListener('click', (e) => this.handleWordClick(e, row));
+            });
+        });
+
+        console.log('[LyricsController] Event listeners attached to server-generated table');
+    }
+
+    // ========== CONTROL BUTTON HANDLERS (Server-generated table) ==========
+    // NOTE: Table rendering removed - server generates table with LLM segmentation data
+    // Controller only handles: statistics calculation + event listener attachment
+
+    playPhrase(phraseId) {
+        console.log(`[LyricsController] Play phrase ${phraseId}`);
+        // TODO: Integrate with audio playback controller
+        // For now, just highlight the phrase
+        this.highlightPlayingPhrase(phraseId);
+
+        // Simulate playback duration
+        setTimeout(() => {
+            if (!this.isLooping[phraseId]) {
+                this.clearPlayingPhrase(phraseId);
+            } else {
+                this.playPhrase(phraseId); // Loop
+            }
+        }, 3000);
+    }
+
+    toggleLoop(phraseId, loopBtn) {
+        this.isLooping[phraseId] = !this.isLooping[phraseId];
+
+        if (this.isLooping[phraseId]) {
+            loopBtn.style.backgroundColor = '#3498DB';
+            loopBtn.style.color = 'white';
+        } else {
+            loopBtn.style.backgroundColor = 'white';
+            loopBtn.style.color = '#3498DB';
+        }
+
+        console.log(`[LyricsController] Loop ${phraseId}: ${this.isLooping[phraseId]}`);
+    }
+
+    stopPhrase(phraseId) {
+        console.log(`[LyricsController] Stop phrase ${phraseId}`);
+        this.isLooping[phraseId] = false;
+        this.clearPlayingPhrase(phraseId);
+
+        // Reset loop button
+        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
+        const loopBtn = row?.querySelector('.btn-loop');
+        if (loopBtn) {
+            loopBtn.style.backgroundColor = 'white';
+            loopBtn.style.color = '#3498DB';
+        }
+    }
+
+    showPronunciation(phrase) {
+        console.log(`[LyricsController] Speaking Vietnamese: "${phrase.text}"`);
+
+        // Use Web Speech API with Vietnamese voice
+        if (!('speechSynthesis' in window)) {
+            console.error('Speech synthesis not supported');
+            return;
+        }
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        // Function to speak once voices are loaded
+        const speak = () => {
+            const voices = window.speechSynthesis.getVoices();
+            console.log(`[LyricsController] Available voices: ${voices.length}`);
+
+            const utterance = new SpeechSynthesisUtterance(phrase.text);
+            utterance.lang = 'vi-VN';
+            utterance.rate = 0.8;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // Try to find Vietnamese voice
+            const vietnameseVoice = voices.find(voice =>
+                voice.lang === 'vi-VN' || voice.lang === 'vi_VN' || voice.lang.startsWith('vi')
+            );
+
+            if (vietnameseVoice) {
+                utterance.voice = vietnameseVoice;
+                console.log(`[LyricsController] Using voice: ${vietnameseVoice.name} (${vietnameseVoice.lang})`);
+            } else {
+                console.warn('[LyricsController] No Vietnamese voice found, using default voice');
+            }
+
+            // Event listeners for debugging
+            utterance.onstart = () => console.log('[LyricsController] Speech started');
+            utterance.onend = () => console.log('[LyricsController] Speech ended');
+            utterance.onerror = (e) => console.error('[LyricsController] Speech error:', e);
+
+            window.speechSynthesis.speak(utterance);
+        };
+
+        // Load voices first (Chrome requires this)
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            speak();
+        } else {
+            // Wait for voices to load
+            window.speechSynthesis.onvoiceschanged = () => {
+                speak();
+                window.speechSynthesis.onvoiceschanged = null;  // Remove listener
+            };
+        }
+    }
+
+    generatePronunciationGuide(phrase) {
+        // Simple pronunciation guide (could be enhanced with actual IPA data)
+        if (!phrase.wordMapping) return 'No pronunciation data available';
+
+        return phrase.wordMapping.map(m => `${m.vn} → [${m.en}]`).join('\n');
+    }
+
+    showNoteMapping(phrase) {
+        console.log(`[LyricsController] Show info for phrase ${phrase.id}`);
+
+        // Create a styled modal with comprehensive info
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 10000;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        `;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+        `;
+
+        // Build content
+        let content = `
+            <div style="border-bottom: 2px solid #3498db; padding-bottom: 12px; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #2c3e50;">Phrase Information</h3>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #7f8c8d; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Vietnamese</div>
+                <div style="font-size: 18px; color: #2c3e50; margin-bottom: 10px;">${phrase.text}</div>
+
+                <div style="font-weight: 600; color: #7f8c8d; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">English Translation</div>
+                <div style="font-size: 16px; color: #555; margin-bottom: 10px;">${phrase.english}</div>
+
+                <div style="font-weight: 600; color: #7f8c8d; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Linguistic Type</div>
+                <div style="font-size: 14px; color: #666; text-transform: capitalize;">${phrase.linguisticType}</div>
+            </div>
+        `;
+
+        // Add word-by-word breakdown if available
+        if (phrase.wordMapping && phrase.wordMapping.length > 0) {
+            content += `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">Word-by-Word Breakdown:</div>
+                    <table style="width: 100%; border-collapse: collapse;">
+            `;
+
+            phrase.wordMapping.forEach((mapping, idx) => {
+                content += `
+                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                        <td style="padding: 8px; color: #666; width: 30px;">${idx + 1}.</td>
+                        <td style="padding: 8px; font-weight: 600; color: #2c3e50;">${mapping.vn}</td>
+                        <td style="padding: 8px; color: #555;">→</td>
+                        <td style="padding: 8px; color: #555;">${mapping.en}</td>
+                    </tr>
+                `;
+            });
+
+            content += `</table></div>`;
+        }
+
+        // Add pronunciation guide
+        content += `
+            <div style="margin-top: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #3498db;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 5px;">Pronunciation Guide</div>
+                <div style="font-size: 13px; color: #666; line-height: 1.6;">
+                    Click the pronunciation button (🗣) to hear this phrase spoken in Vietnamese.
+                </div>
+            </div>
+        `;
+
+        // Close button
+        content += `
+            <div style="margin-top: 20px; text-align: right;">
+                <button onclick="this.closest('[data-modal]').remove(); document.querySelector('[data-overlay]').remove()"
+                        style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 20px; cursor: pointer; font-size: 14px; font-weight: 600;">
+                    Close
+                </button>
+            </div>
+        `;
+
+        modal.innerHTML = content;
+        modal.dataset.modal = 'true';
+        overlay.dataset.overlay = 'true';
+
+        // Close on overlay click
+        overlay.addEventListener('click', () => {
+            modal.remove();
+            overlay.remove();
+        });
+
+        document.body.appendChild(overlay);
+        document.body.appendChild(modal);
+    }
+
+    openGoogleTranslate(phrase) {
+        console.log(`[LyricsController] Open Google Translate for phrase ${phrase.id}`);
+
+        const text = encodeURIComponent(phrase.text);
+        const url = `https://translate.google.com/?sl=vi&tl=en&text=${text}&op=translate`;
+        window.open(url, '_blank');
+    }
+
+    // ========== HIGHLIGHTING ==========
+
+    highlightPlayingPhrase(phraseId) {
+        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
+        if (row) {
+            row.style.outline = '3px solid #27AE60';
+            row.style.backgroundColor = 'rgba(39, 174, 96, 0.1)';
+        }
+    }
+
+    clearPlayingPhrase(phraseId) {
+        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
+        if (row) {
+            row.style.outline = '';
+            // Restore original background color based on linguistic type
+            const phrase = this.lyricsData.phrases.find(p => p.id === phraseId);
+            if (phrase) {
+                row.style.backgroundColor = this.typeColors[phrase.linguisticType] + '15';
+            }
+        }
+    }
+
+    handleWordClick(event, row) {
+        const word = event.target;
+        const phraseId = word.dataset.phraseId;
+        const wordIndex = word.dataset.wordIndex;
+        const vnWord = word.dataset.vn;
+        const enWord = word.dataset.en;
+
+        console.log(`[LyricsController] Word clicked: ${vnWord} → ${enWord}`);
+
+        // Toggle highlight
+        const wordKey = `${phraseId}-${wordIndex}`;
+
+        if (this.highlightedWords.has(wordKey)) {
+            this.clearWordHighlight(phraseId, wordIndex);
+            this.highlightedWords.delete(wordKey);
+        } else {
+            this.highlightWord(phraseId, wordIndex);
+            this.highlightedWords.add(wordKey);
+        }
+
+        // TODO: Highlight corresponding note in tablature
+        this.highlightCorrespondingNote(phraseId, wordIndex);
+    }
+
+    highlightWord(phraseId, wordIndex) {
+        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
+        if (!row) return;
+
+        // Highlight both Vietnamese and English words
+        const vnWord = row.querySelector(`.syllable[data-phrase-id="${phraseId}"][data-word-index="${wordIndex}"]`);
+        const enWord = row.querySelector(`.translation-word[data-phrase-id="${phraseId}"][data-word-index="${wordIndex}"]`);
+
+        if (vnWord) vnWord.classList.add('highlighted');
+        if (enWord) enWord.classList.add('highlighted');
+    }
+
+    clearWordHighlight(phraseId, wordIndex) {
+        const row = document.querySelector(`tr[data-phrase-id="${phraseId}"]`);
+        if (!row) return;
+
+        const vnWord = row.querySelector(`.syllable[data-phrase-id="${phraseId}"][data-word-index="${wordIndex}"]`);
+        const enWord = row.querySelector(`.translation-word[data-phrase-id="${phraseId}"][data-word-index="${wordIndex}"]`);
+
+        if (vnWord) vnWord.classList.remove('highlighted');
+        if (enWord) enWord.classList.remove('highlighted');
+    }
+
+    highlightCorrespondingNote(phraseId, wordIndex) {
+        // TODO: Find and highlight the corresponding note in the tablature SVG
+        console.log(`[LyricsController] Highlighting note for phrase ${phraseId}, word ${wordIndex}`);
+
+        // This will be integrated with the tablature system
+        // For now, just log it
+    }
+
+    // ========== STATISTICS ==========
+
+    updateStatistics() {
+        if (!this.lyricsData || !this.lyricsData.phrases) return;
+
+        const phrases = this.lyricsData.phrases;
+
+        // Calculate total phrases
+        const totalPhrases = phrases.length;
+
+        // Calculate total syllables from LLM segmentation data
+        const totalSyllables = phrases.reduce((sum, phrase) => sum + phrase.syllableCount, 0);
+
+        // Calculate average syllables per phrase
+        const avgSyllables = totalSyllables / totalPhrases;
+
+        // Count unique linguistic types
+        const uniqueTypes = new Set(phrases.map(p => p.linguisticType)).size;
+
+        // Count types for breakdown
+        const typeCounts = {};
+        phrases.forEach(phrase => {
+            typeCounts[phrase.linguisticType] = (typeCounts[phrase.linguisticType] || 0) + 1;
+        });
+
+        // Update metrics card
+        const totalPhrasesEl = document.getElementById('totalPhrases');
+        const totalWordsEl = document.getElementById('totalWords');
+        const avgWordsEl = document.getElementById('avgWordsPerPhrase');
+        const uniqueTypesEl = document.getElementById('uniqueTypes');
+        const typeBreakdownEl = document.getElementById('typeBreakdown');
+
+        if (totalPhrasesEl) totalPhrasesEl.textContent = totalPhrases;
+        if (totalWordsEl) totalWordsEl.textContent = totalSyllables;
+        if (avgWordsEl) avgWordsEl.textContent = avgSyllables.toFixed(1);
+        if (uniqueTypesEl) uniqueTypesEl.textContent = uniqueTypes;
+
+        // Build type breakdown HTML
+        if (typeBreakdownEl) {
+            const breakdownHTML = Object.entries(typeCounts)
+                .sort((a, b) => b[1] - a[1]) // Sort by count descending
+                .map(([type, count]) => {
+                    const color = this.typeColors[type] || '#999';
+                    const percentage = ((count / totalPhrases) * 100).toFixed(0);
+                    return `
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${color};"></span>
+                                <span style="text-transform: capitalize;">${type}</span>
+                            </span>
+                            <span style="font-weight: 600; color: #2c3e50;">${count} (${percentage}%)</span>
+                        </div>
+                    `;
+                })
+                .join('');
+            typeBreakdownEl.innerHTML = breakdownHTML;
+        }
+
+        // Calculate phrase structure metrics from LLM segmentation
+        const phraseLengths = phrases.map(phrase => phrase.syllableCount);
+
+        const shortestLength = Math.min(...phraseLengths);
+        const longestLength = Math.max(...phraseLengths);
+
+        // Find most common length
+        const lengthCounts = {};
+        phraseLengths.forEach(length => {
+            lengthCounts[length] = (lengthCounts[length] || 0) + 1;
+        });
+        const mostCommonLength = Object.entries(lengthCounts)
+            .sort((a, b) => b[1] - a[1])[0][0];
+
+        // Get pattern structure from LLM data
+        const patternStructure = this.lyricsData.patterns?.structure || 'Unknown';
+        const dominantPattern = this.lyricsData.statistics?.dominantPattern || 'Unknown pattern';
+
+        // Update phrase structure card
+        const shortestEl = document.getElementById('shortestPhrase');
+        const longestEl = document.getElementById('longestPhrase');
+        const mostCommonEl = document.getElementById('mostCommonLength');
+        const lengthBreakdownEl = document.getElementById('lengthBreakdown');
+
+        if (shortestEl) shortestEl.textContent = `${shortestLength} syllables`;
+        if (longestEl) longestEl.textContent = `${longestLength} syllables`;
+        if (mostCommonEl) mostCommonEl.textContent = `${mostCommonLength} syllables`;
+
+        // Build length distribution breakdown
+        if (lengthBreakdownEl) {
+            // First show the Q-A-E pattern
+            let lengthBreakdownHTML = `
+                <div style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 5px; font-size: 12px;">Pattern Structure</div>
+                    <div style="font-size: 14px; color: #3498db; font-weight: 600;">${patternStructure}</div>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">${dominantPattern}</div>
+                </div>
+            `;
+
+            // Then show syllable distribution
+            lengthBreakdownHTML += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">`;
+            lengthBreakdownHTML += Object.entries(lengthCounts)
+                .sort((a, b) => parseInt(a[0]) - parseInt(b[0])) // Sort by length ascending
+                .map(([length, count]) => {
+                    const percentage = ((count / totalPhrases) * 100).toFixed(0);
+                    const barWidth = (count / totalPhrases) * 100;
+                    return `
+                        <div style="margin-bottom: 6px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
+                                <span style="color: #666;">${length} syllables</span>
+                                <span style="font-weight: 600; color: #2c3e50;">${count} (${percentage}%)</span>
+                            </div>
+                            <div style="width: 100%; background: #e9ecef; border-radius: 3px; height: 6px; overflow: hidden;">
+                                <div style="width: ${barWidth}%; background: #9b59b6; height: 100%;"></div>
+                            </div>
+                        </div>
+                    `;
+                })
+                .join('');
+            lengthBreakdownHTML += `</div>`;
+
+            lengthBreakdownEl.innerHTML = lengthBreakdownHTML;
+        }
+
+        console.log('[LyricsController] Statistics updated:', {
+            totalPhrases,
+            totalSyllables,
+            avgSyllables: avgSyllables.toFixed(1),
+            uniqueTypes,
+            typeCounts,
+            phraseLengths: { shortestLength, longestLength, mostCommonLength },
+            lengthCounts,
+            patternStructure,
+            dominantPattern
+        });
+    }
+}
+
+// Global instance
+window.lyricsController = new LyricsController();
+
+// Auto-initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('[LyricsController] DOM ready, initializing...');
+    window.lyricsController.initialize();
+});

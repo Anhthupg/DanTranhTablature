@@ -106,6 +106,12 @@ app.get('/library-controller.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'library-controller.js'));
 });
 
+// V4.0.11: Serve the visual state controller
+app.get('/visual-state-controller.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.join(__dirname, 'visual-state-controller.js'));
+});
+
 // All Tablatures Viewer
 app.get('/tablatures', (req, res) => {
     const tablatureViewerPath = path.join(__dirname, 'templates', 'all-tablatures-viewer.html');

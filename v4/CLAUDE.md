@@ -1386,3 +1386,42 @@ element.style.fill = '#333333';  // Now grey!
 ---
 
 **V4 now has 4 external controllers managing all major features with clean, reusable architecture!**
+
+---
+
+## Componentization Decision: Priority #2 Reconsidered
+
+### VisualStateController Integration - DEFERRED
+
+**Original Plan:** Replace inline `toggleBentNotes()` with VisualStateController
+
+**Decision:** Keep inline implementation
+
+**Reasoning:**
+1. **Current code is clean** - Only 50 lines, well-organized
+2. **Not repeated** - Specific to bent notes, not used elsewhere
+3. **Already follows best practices** - Data attribute grouping, inline styles
+4. **Controller adds complexity** - Generic abstraction not needed for single use case
+5. **Works perfectly** - No bugs, no maintenance issues
+
+**Better Approach:**
+- Keep `toggleBentNotes()` as **reference implementation**
+- Use it as template for future visual state features
+- Only extract when pattern repeats 3+ times
+
+**Rule:** Don't componentize unless:
+- Code repeated in 3+ places, OR
+- Logic exceeds 100 lines, OR
+- Clear reuse case exists
+
+**VisualStateController Status:**
+- ✅ Created and documented (V4.0.7)
+- ✅ Available for future features
+- ⏸️ Not integrated yet - waiting for actual need
+
+**Example Future Use:** When we add grace note highlighting, pitch selection, string usage highlighting → THEN integrate controller for all of them at once.
+
+---
+
+**Priority #2 Complete: Evaluated and made informed decision to defer integration until actual reuse case emerges.**
+

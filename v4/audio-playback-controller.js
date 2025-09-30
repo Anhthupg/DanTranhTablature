@@ -181,6 +181,62 @@ class AudioPlaybackController {
     }
 
     /**
+     * Play specific note IDs (for phrase playback)
+     * @param {Array<string>} noteIds - Array of note IDs to play (e.g., ['note_5', 'note_7', 'note_8'])
+     * @param {boolean} mainNotesOnly - If true, filter out grace notes
+     * @param {boolean} loop - If true, loop the sequence
+     */
+    playNoteIds(noteIds, mainNotesOnly = true, loop = false) {
+        console.log(`[AudioController] Playing note IDs:`, noteIds, `mainNotesOnly: ${mainNotesOnly}`);
+
+        // Stop any existing playback
+        this.stop();
+
+        // Find note objects for these IDs
+        const notesToPlay = noteIds
+            .map(id => this.notes.find(n => n.id === id))
+            .filter(n => n !== undefined)
+            .filter(n => !mainNotesOnly || !n.isGrace);  // Filter grace notes if mainNotesOnly
+
+        if (notesToPlay.length === 0) {
+            console.warn('[AudioController] No valid notes found to play');
+            return;
+        }
+
+        console.log(`[AudioController] Playing ${notesToPlay.length} notes (filtered from ${noteIds.length})`);
+
+        this.isPlaying = true;
+
+        const playSequence = () => {
+            let cumulativeTime = 0;
+
+            notesToPlay.forEach((note, i) => {
+                const noteDuration = this.calculateNoteDuration(note.duration);
+
+                const timeout = setTimeout(() => {
+                    if (!this.isPlaying) return;
+
+                    this.playNoteWithVisuals(note, noteDuration);
+
+                    // If last note and looping
+                    if (i === notesToPlay.length - 1) {
+                        if (loop && this.isPlaying) {
+                            setTimeout(() => playSequence(), noteDuration);
+                        } else {
+                            setTimeout(() => this.stop(), noteDuration);
+                        }
+                    }
+                }, cumulativeTime);
+
+                this.playbackTimeouts.push(timeout);
+                cumulativeTime += noteDuration;
+            });
+        };
+
+        playSequence();
+    }
+
+    /**
      * Stop playback
      */
     stop() {

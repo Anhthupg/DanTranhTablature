@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 1: Interactive Dashboard Layout</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-container {
+            display: grid;
+            grid-template-areas:
+                "tablature tablature tablature"
+                "sidebar analysis correlations";
+            grid-template-rows: 40vh 60vh;
+            grid-template-columns: 250px 1fr 300px;
+            height: 100vh;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* Top: Full-width Interactive Tablature */
+        .tablature-area {
+            grid-area: tablature;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow: auto;
+            position: relative;
+        }
+
+        .tablature-title {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .interactive-tablature {
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: #f9f9f9;
+            padding: 15px;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        /* Highlight overlays on tablature */
+        .highlight-overlay {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.4);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            animation: pulse 2s infinite;
+        }
+
+        /* Left: Metric Selection Tree */
+        .sidebar-area {
+            grid-area: sidebar;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .metric-tree {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .metric-category {
+            margin-bottom: 10px;
+        }
+
+        .category-header {
+            background: #34495e;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .category-metrics {
+            padding-left: 10px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .category-metrics.expanded {
+            display: block;
+        }
+
+        .metric-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            font-size: 13px;
+            margin: 2px 0;
+            transition: background 0.2s;
+        }
+
+        .metric-item:hover {
+            background: #ecf0f1;
+        }
+
+        .metric-item.selected {
+            background: #3498db;
+            color: white;
+        }
+
+        /* Center: Analysis Results */
+        .analysis-area {
+            grid-area: analysis;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .analysis-header {
+            margin: 0 0 20px 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .metric-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+
+        /* Right: Correlation Explorer */
+        .correlations-area {
+            grid-area: correlations;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .correlation-network {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .connection-item {
+            background: #e8f5e8;
+            border: 1px solid #27ae60;
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin: 5px 0;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .connection-item:hover {
+            background: #d5e7d5;
+        }
+
+        /* Floating Action Panel */
+        .floating-actions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        .action-button {
+            display: block;
+            width: 100%;
+            padding: 8px 15px;
+            margin: 5px 0;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .action-button:hover {
+            background: #2980b9;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+
+        <!-- Top: Interactive Tablature (40% height) -->
+        <div class="tablature-area">
+            <h2 class="tablature-title">Lý Chiều Chiều - Interactive Tablature</h2>
+            <div class="interactive-tablature">
+                <!-- Simulated tablature with interactive elements -->
+                <svg width="800" height="200" style="background: white;">
+                    <!-- String lines -->
+                    <line x1="50" y1="50" x2="750" y2="50" stroke="#ddd" stroke-width="2"/>
+                    <line x1="50" y1="80" x2="750" y2="80" stroke="#ddd" stroke-width="2"/>
+                    <line x1="50" y1="110" x2="750" y2="110" stroke="#ddd" stroke-width="2"/>
+                    <line x1="50" y1="140" x2="750" y2="140" stroke="#ddd" stroke-width="2"/>
+                    <line x1="50" y1="170" x2="750" y2="170" stroke="#ddd" stroke-width="2"/>
+
+                    <!-- Interactive notes -->
+                    <circle cx="120" cy="80" r="12" fill="#008080" stroke="#005959" stroke-width="2" class="interactive-note" data-pitch="D4" data-syllable="Lý" data-tone="huyền"/>
+                    <circle cx="180" cy="110" r="8" fill="#FFD700" stroke="#CC9900" stroke-width="2" class="interactive-note grace-note" data-pitch="C5"/>
+                    <circle cx="220" cy="140" r="12" fill="#008080" stroke="#005959" stroke-width="2" class="interactive-note" data-pitch="G4" data-syllable="chiều" data-tone="ngang"/>
+                    <circle cx="280" cy="110" r="12" fill="#008080" stroke="#005959" stroke-width="2" class="interactive-note" data-pitch="A4" data-syllable="chiều" data-tone="ngang"/>
+                    <circle cx="340" cy="170" r="12" fill="#008080" stroke="#005959" stroke-width="2" class="interactive-note" data-pitch="C5" data-syllable="về" data-tone="sắc"/>
+
+                    <!-- String labels -->
+                    <text x="20" y="85" font-size="12" fill="#666">G4</text>
+                    <text x="20" y="115" font-size="12" fill="#666">D4</text>
+                    <text x="20" y="145" font-size="12" fill="#666">A3</text>
+                    <text x="20" y="175" font-size="12" fill="#666">E3</text>
+
+                    <!-- Interactive overlays -->
+                    <circle cx="120" cy="80" r="15" fill="rgba(156, 89, 182, 0.5)" class="highlight-overlay" style="display: none;" id="highlight-tone-huyen"/>
+                    <circle cx="220" cy="140" r="15" fill="rgba(52, 152, 219, 0.5)" class="highlight-overlay" style="display: none;" id="highlight-pitch-g"/>
+                </svg>
+
+                <!-- Interaction instructions -->
+                <div style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;">
+                    Click notes for details • Hover for correlations • Select metrics to highlight patterns
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Left: Metric Selection Tree -->
+        <div class="sidebar-area">
+            <h3 style="margin: 0 0 15px 0; color: #2c3e50;">Analysis Explorer</h3>
+
+            <ul class="metric-tree">
+                <li class="metric-category">
+                    <div class="category-header" onclick="toggleCategory('pitch')">🎵 Pitch Analysis</div>
+                    <div class="category-metrics" id="pitch-metrics">
+                        <div class="metric-item" onclick="selectMetric('unique-pitches')">Unique Pitches</div>
+                        <div class="metric-item" onclick="selectMetric('pitch-range')">Pitch Range</div>
+                        <div class="metric-item" onclick="selectMetric('ascending-motion')">Ascending Motion</div>
+                        <div class="metric-item" onclick="selectMetric('descending-motion')">Descending Motion</div>
+                    </div>
+                </li>
+
+                <li class="metric-category">
+                    <div class="category-header" onclick="toggleCategory('rhythm')">🥁 Rhythm Analysis</div>
+                    <div class="category-metrics" id="rhythm-metrics">
+                        <div class="metric-item" onclick="selectMetric('rhythmic-diversity')">Rhythmic Diversity</div>
+                        <div class="metric-item" onclick="selectMetric('syncopation')">Syncopation Index</div>
+                        <div class="metric-item" onclick="selectMetric('tempo-stability')">Tempo Stability</div>
+                    </div>
+                </li>
+
+                <li class="metric-category">
+                    <div class="category-header" onclick="toggleCategory('tones')">🗣️ Vietnamese Tones</div>
+                    <div class="category-metrics" id="tones-metrics">
+                        <div class="metric-item" onclick="selectMetric('tone-ngang')">Ngang (Level)</div>
+                        <div class="metric-item" onclick="selectMetric('tone-sac')">Sắc (Rising)</div>
+                        <div class="metric-item" onclick="selectMetric('tone-huyen')">Huyền (Falling)</div>
+                        <div class="metric-item" onclick="selectMetric('tone-nga')">Ngã (Sharp)</div>
+                    </div>
+                </li>
+
+                <li class="metric-category">
+                    <div class="category-header" onclick="toggleCategory('melisma')">🎶 Melisma & Grace</div>
+                    <div class="category-metrics" id="melisma-metrics">
+                        <div class="metric-item" onclick="selectMetric('melisma-count')">Melisma Groups</div>
+                        <div class="metric-item" onclick="selectMetric('grace-percentage')">Grace Note %</div>
+                        <div class="metric-item" onclick="selectMetric('ornament-complexity')">Ornament Complexity</div>
+                    </div>
+                </li>
+
+                <li class="metric-category">
+                    <div class="category-header" onclick="toggleCategory('correlations')">🔗 Correlations</div>
+                    <div class="category-metrics" id="correlations-metrics">
+                        <div class="metric-item" onclick="selectMetric('tone-melody-correlation')">Tone-Melody</div>
+                        <div class="metric-item" onclick="selectMetric('word-pitch-correlation')">Word-Pitch</div>
+                        <div class="metric-item" onclick="selectMetric('phrase-rhythm-correlation')">Phrase-Rhythm</div>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Bottom Center: Analysis Results -->
+        <div class="analysis-area">
+            <h3 class="analysis-header" id="analysis-title">Select a metric to view analysis</h3>
+
+            <div id="analysis-content">
+                <div class="metric-display" id="current-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value">--</div>
+                        <div class="metric-label">Select Analysis</div>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; border-radius: 6px; padding: 15px; margin-top: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Analysis Details</h4>
+                    <p style="margin: 0; color: #666; font-size: 14px;" id="analysis-details">
+                        Click on metrics in the left panel to see detailed analysis here.
+                    </p>
+                </div>
+
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 10px; margin-top: 15px;">
+                    <strong>Cross-References:</strong>
+                    <span id="cross-references">Connections will appear here when you select metrics</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Right: Correlation Explorer -->
+        <div class="correlations-area">
+            <h3 style="margin: 0 0 15px 0; color: #2c3e50;">Correlation Network</h3>
+
+            <div class="correlation-network">
+                <div style="color: #666;">
+                    Interactive correlation visualization
+                    <br><br>
+                    <small>Click metrics to see relationships</small>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">Active Connections</h4>
+                <div class="connection-item">Tone-Melody: 78.4% correlation</div>
+                <div class="connection-item">Ngã-Melisma: 80% occurrence</div>
+                <div class="connection-item">E notes-String usage: 50% pattern</div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">Filters</h4>
+                <label style="display: block; font-size: 12px; margin: 5px 0;">
+                    <input type="checkbox" checked> Strong correlations (>70%)
+                </label>
+                <label style="display: block; font-size: 12px; margin: 5px 0;">
+                    <input type="checkbox"> Medium correlations (40-70%)
+                </label>
+                <label style="display: block; font-size: 12px; margin: 5px 0;">
+                    <input type="checkbox"> Weak correlations (<40%)
+                </label>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Floating Actions -->
+    <div class="floating-actions">
+        <button class="action-button" onclick="exportAnalysis()">Export Analysis</button>
+        <button class="action-button" onclick="compareWithOtherSongs()">Compare Songs</button>
+        <button class="action-button" onclick="showPatternOverlay()">Pattern Overlay</button>
+        <button class="action-button" onclick="resetView()">Reset View</button>
+    </div>
+
+    <script>
+        // Dashboard Interaction Logic
+        function toggleCategory(categoryId) {
+            const metrics = document.getElementById(categoryId + '-metrics');
+            metrics.classList.toggle('expanded');
+        }
+
+        function selectMetric(metricId) {
+            // Clear previous selections
+            document.querySelectorAll('.metric-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+
+            // Select current metric
+            event.target.classList.add('selected');
+
+            // Update analysis area
+            updateAnalysisDisplay(metricId);
+
+            // Update tablature highlighting
+            updateTablatureHighlighting(metricId);
+
+            // Update correlation display
+            updateCorrelationDisplay(metricId);
+        }
+
+        function updateAnalysisDisplay(metricId) {
+            const title = document.getElementById('analysis-title');
+            const content = document.getElementById('current-metrics');
+            const details = document.getElementById('analysis-details');
+            const crossRefs = document.getElementById('cross-references');
+
+            // Example data for different metrics
+            const metricData = {
+                'unique-pitches': {
+                    title: 'Unique Pitches Analysis',
+                    value: '5',
+                    label: 'Different Pitches',
+                    details: 'This song uses 5 unique pitches: D4, G4, A4, C5, E5. This represents a pentatonic scale typical of Vietnamese traditional music.',
+                    crossRefs: 'Related to: Tuning System (Pentatonic), Cultural Context (Traditional), String Usage (5 of 17 strings)'
+                },
+                'tone-nga': {
+                    title: 'Ngã Tone Analysis',
+                    value: '12.5%',
+                    label: 'Ngã Tone Usage',
+                    details: 'Ngã tone (tilde diacritic) appears in 12.5% of syllables. This tone often correlates with ornamental passages and melismatic elaboration.',
+                    crossRefs: 'Related to: Melisma Groups (80% contain ngã), Grace Notes (60% on ngã syllables), Phrase Endings (ngã preference)'
+                },
+                'melisma-count': {
+                    title: 'Melisma Groups Analysis',
+                    value: '8',
+                    label: 'Melismatic Passages',
+                    details: 'Song contains 8 melismatic passages where single syllables span multiple notes. Average 2.3 notes per melisma.',
+                    crossRefs: 'Related to: Ngã Tone (80% correlation), Grace Notes (subset), Ornamental Complexity (high correlation)'
+                }
+            };
+
+            const data = metricData[metricId] || {
+                title: 'Analysis Loading...',
+                value: '--',
+                label: 'Select Metric',
+                details: 'Detailed analysis will appear here.',
+                crossRefs: 'Cross-references will show connections to other metrics.'
+            };
+
+            title.textContent = data.title;
+            content.innerHTML = `
+                <div class="metric-card">
+                    <div class="metric-value">${data.value}</div>
+                    <div class="metric-label">${data.label}</div>
+                </div>
+            `;
+            details.textContent = data.details;
+            crossRefs.textContent = data.crossRefs;
+        }
+
+        function updateTablatureHighlighting(metricId) {
+            // Clear previous highlights
+            document.querySelectorAll('.highlight-overlay').forEach(overlay => {
+                overlay.style.display = 'none';
+            });
+
+            // Add new highlights based on metric
+            if (metricId === 'tone-nga') {
+                // Highlight notes with ngã tone (example)
+                const ngaHighlight = document.getElementById('highlight-tone-huyen');
+                if (ngaHighlight) ngaHighlight.style.display = 'block';
+            }
+
+            if (metricId === 'unique-pitches') {
+                // Highlight all unique pitches
+                document.querySelectorAll('.interactive-note').forEach(note => {
+                    note.style.filter = 'drop-shadow(0 0 8px rgba(52, 152, 219, 0.8))';
+                });
+            }
+        }
+
+        function updateCorrelationDisplay(metricId) {
+            // Update correlation network based on selected metric
+            console.log(`Updating correlations for: ${metricId}`);
+        }
+
+        // Interactive note clicks
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.interactive-note').forEach(note => {
+                note.addEventListener('click', function() {
+                    const pitch = this.getAttribute('data-pitch');
+                    const syllable = this.getAttribute('data-syllable');
+                    const tone = this.getAttribute('data-tone');
+
+                    alert(`Note: ${pitch}${syllable ? '\nSyllable: ' + syllable : ''}${tone ? '\nTone: ' + tone : ''}`);
+                });
+
+                note.addEventListener('mouseover', function() {
+                    this.style.transform = 'scale(1.2)';
+                    this.style.filter = 'drop-shadow(0 0 10px rgba(231, 76, 60, 0.8))';
+                });
+
+                note.addEventListener('mouseout', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.filter = 'none';
+                });
+            });
+
+            console.log('Option 1: Interactive Dashboard Layout Initialized');
+        });
+
+        // Floating action functions
+        function exportAnalysis() { alert('Export analysis functionality'); }
+        function compareWithOtherSongs() { alert('Compare with other songs'); }
+        function showPatternOverlay() { alert('Show pattern overlay'); }
+        function resetView() { alert('Reset view'); }
+
+    </script>
+
+</body>
+</html>

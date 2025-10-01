@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V4 Vertical Header Sections - Annotated Template</title>
+
+    <!-- V4.0.5: External Zoom Controller -->
+    <script src="/zoom-controller.js"></script>
+
+    <!-- V4.0.9: External Library Controller -->
+    <script src="/library-controller.js"></script>
+
+    <!-- V4.0.11: External Visual State Controller -->
+    <script src="/visual-state-controller.js"></script>
+
+    <!-- V4.0.13: External Visual State Manager (Systematic State Layering) -->
+    <script src="/visual-state-manager.js"></script>
+
+    <!-- V4.0.12: External Audio Playback Controller -->
+    <script src="/audio-playback-controller-v2.js"></script>
+
+    <!-- V4.2.0: External Lyrics Controller (Ultra-Compact Single-Row Design) -->
+    <script src="/lyrics-controller.js"></script>
+
+    <!-- V4.2.5: External Phrase Bars Controller (Phrase-to-Note Visualization) -->
+    <script src="/phrase-bars-controller.js"></script>
+
+    <style>
+        /* V4 Focused Sections with Vertical Headers - Annotated with UI Terminology */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            background: #f8f9fa;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* CSS Variables for V3 Compatibility */
+        :root {
+            --note-fill: #008080;
+            --note-text: #FFFFFF;
+            --triangle-fill: #008080;
+            --bent-note-color: #E67E22;
+        }
+
+        /* V4.0.12: Audio Playback - Note Playing Animation (Vertical) - Green */
+        @keyframes note-vertical-pulse {
+            0% {
+                transform: translateY(0);
+                filter: drop-shadow(0 0 10px rgba(39, 174, 96, 0.4));
+            }
+            50% {
+                transform: translateY(8px);
+                filter: drop-shadow(0 0 20px rgba(39, 174, 96, 0.8));
+            }
+            100% {
+                transform: translateY(0);
+                filter: drop-shadow(0 0 10px rgba(39, 174, 96, 0.4));
+            }
+        }
+
+        .note-playing {
+            animation: note-vertical-pulse 0.6s ease-in-out;
+            fill: #27ae60 !important;  /* Green - avoids conflict with red bent notes */
+        }
+
+        /* V4.0.12: Make notes clickable - ignore text overlay clicks */
+        .note-text {
+            pointer-events: none;  /* Let clicks pass through to circle below */
+        }
+
+        .note, .grace-note, .bent-note, .note-circle {
+            cursor: pointer;  /* Show clickable cursor */
+        }
+
+        .v4-container {
+            width: 100%;
+            max-width: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* INTERACTIVE TABLATURE AREA - Full-width top section */
+        .tablature-overlay-container {
+            width: 100%;
+            position: relative;
+            background: white;
+            border-bottom: 3px solid #3498db;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* SECTION CONTAINER - Main content area holding all analysis sections */
+        .sections-container {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px; /* SECTION GAP - Space between analysis sections */
+        }
+
+        /* ANALYSIS SECTION - Individual collapsible analysis container */
+        .analysis-section {
+            width: 100%;
+            background: white;
+            border: 2px solid #e0e0e0; /* SECTION BORDER */
+            border-radius: 12px; /* SECTION BORDER RADIUS */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* SECTION SHADOW */
+            overflow: hidden;
+            order: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            display: flex; /* LAYOUT: Horizontal flex for vertical header */
+        }
+
+        .analysis-section.highlighted {
+            border-color: #3498db; /* HIGHLIGHT BORDER COLOR */
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3); /* HIGHLIGHT SHADOW */
+            transform: translateY(-2px); /* HIGHLIGHT LIFT EFFECT */
+        }
+
+        /* VERTICAL HEADER - Left side vertical panel (replaces horizontal header) */
+        .vertical-header {
+            /* POSITION: x=0, y=0 (left edge of section) */
+            /* DIMENSIONS: width=80px, height=100% of section */
+            width: 80px;
+            background: linear-gradient(180deg, #3498db, #2980b9); /* VERTICAL GRADIENT */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 5px; /* VERTICAL HEADER PADDING */
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s ease;
+            position: relative; /* POSITIONING CONTEXT */
+            flex-shrink: 0; /* PREVENT SHRINKING */
+        }
+
+        .vertical-header:hover {
+            background: linear-gradient(180deg, #2980b9, #1f639a); /* HOVER GRADIENT */
+        }
+
+        .vertical-header.active-focus {
+            background: linear-gradient(180deg, #27ae60, #229954); /* ACTIVE GRADIENT */
+        }
+
+        /* SECTION ICON - Top element in vertical header */
+        .section-icon {
+            /* POSITION: x=40px (center), y=20px (top area) */
+            font-size: 24px; /* ICON SIZE */
+            margin-bottom: 8px; /* ICON BOTTOM MARGIN */
+            display: block;
+        }
+
+        /* SECTION TITLE - Center element in vertical header */
+        .section-title {
+            /* POSITION: x=40px (center), y=middle (varies by content) */
+            font-size: 11px; /* TITLE FONT SIZE */
+            font-weight: 600; /* TITLE FONT WEIGHT */
+            text-align: center;
+            line-height: 1.2; /* TITLE LINE HEIGHT */
+            margin: 0;
+            writing-mode: horizontal-tb; /* TITLE WRITING MODE */
+            max-width: 70px;
+            word-wrap: break-word;
+        }
+
+        /* VERTICAL CONTROLS - Control elements in vertical header */
+        .vertical-controls {
+            /* POSITION: x=40px (center), y=bottom area */
+            display: flex;
+            flex-direction: column;
+            gap: 3px; /* CONTROL GAP */
+            margin-top: 8px; /* CONTROLS TOP MARGIN */
+            align-items: center;
+        }
+
+        /* MOVE ARROWS - Up/down movement controls */
+        .vertical-move-arrow {
+            /* POSITION: x=40px (center), y=varies in controls area */
+            /* DIMENSIONS: width=20px, height=16px */
+            background: #2c3e50; /* ARROW BACKGROUND */
+            border: 1px solid #34495e; /* ARROW BORDER */
+            border-radius: 3px; /* ARROW BORDER RADIUS */
+            color: white;
+            cursor: pointer;
+            padding: 2px 4px; /* ARROW PADDING */
+            font-size: 10px; /* ARROW FONT SIZE */
+            font-weight: bold;
+            min-width: 20px; /* ARROW MIN WIDTH */
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .vertical-move-arrow:hover {
+            background: #1a252f; /* ARROW HOVER BACKGROUND */
+            transform: scale(1.1); /* ARROW HOVER SCALE */
+        }
+
+        /* COLLAPSE TOGGLE - Expand/collapse indicator */
+        .vertical-collapse-toggle {
+            /* POSITION: x=40px (center), y=bottom of controls */
+            font-size: 14px; /* TOGGLE ICON SIZE */
+            margin-top: 5px; /* TOGGLE TOP MARGIN */
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .collapsed .vertical-collapse-toggle {
+            transform: rotate(-90deg); /* COLLAPSED ROTATION */
+        }
+
+        /* SECTION CONTENT - Main content area (right side) */
+        .section-content {
+            /* POSITION: x=80px (after vertical header), y=0 */
+            /* DIMENSIONS: width=calc(100% - 80px), height=auto */
+            flex: 1; /* CONTENT FLEX GROW */
+            padding: 20px; /* CONTENT PADDING */
+            display: block;
+            max-height: 1000px; /* CONTENT MAX HEIGHT */
+            overflow-y: auto; /* CONTENT OVERFLOW */
+            transition: max-height 0.4s ease;
+        }
+
+        .section-content.collapsed {
+            max-height: 0; /* COLLAPSED HEIGHT */
+            padding: 0 20px; /* COLLAPSED PADDING */
+        }
+
+        /* METRIC GRID - Container for metric cards */
+        .metric-grid {
+            /* POSITION: x=0 (relative to content), y=0 (top of content) */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* GRID COLUMNS */
+            gap: 15px; /* METRIC CARD GAP */
+            margin: 15px 0; /* GRID MARGIN */
+        }
+
+        /* METRIC CARD - Individual metric display container */
+        .metric-card {
+            /* POSITION: x=varies (grid), y=varies (grid) */
+            /* DIMENSIONS: min-width=150px, height=auto */
+            background: #f8f9fa; /* CARD BACKGROUND */
+            border: 1px solid #e9ecef; /* CARD BORDER */
+            border-radius: 8px; /* CARD BORDER RADIUS */
+            padding: 15px; /* CARD PADDING */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* CARD SHADOW */
+        }
+
+        .metric-card:hover {
+            background: #e9ecef; /* CARD HOVER BACKGROUND */
+            transform: translateY(-2px); /* CARD HOVER LIFT */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* CARD HOVER SHADOW */
+        }
+
+        .metric-card.highlighted {
+            background: #d4edda; /* CARD HIGHLIGHT BACKGROUND */
+            border-color: #27ae60; /* CARD HIGHLIGHT BORDER */
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); /* CARD HIGHLIGHT SHADOW */
+        }
+
+        /* METRIC VALUE - Main numeric/text value display */
+        .metric-value {
+            /* POSITION: x=center of card, y=top area of card */
+            font-size: 24px; /* VALUE FONT SIZE */
+            font-weight: bold; /* VALUE FONT WEIGHT */
+            color: #2c3e50; /* VALUE COLOR */
+            margin-bottom: 5px; /* VALUE BOTTOM MARGIN */
+            line-height: 1; /* VALUE LINE HEIGHT */
+        }
+
+        /* METRIC LABEL - Descriptive text below value */
+        .metric-label {
+            /* POSITION: x=center of card, y=bottom area of card */
+            font-size: 12px; /* LABEL FONT SIZE */
+            color: #7f8c8d; /* LABEL COLOR */
+            font-weight: 500; /* LABEL FONT WEIGHT */
+            line-height: 1.2; /* LABEL LINE HEIGHT */
+            margin: 0; /* LABEL MARGIN */
+        }
+
+        /* CROSS REFERENCE BOX - Shows relationships to other sections */
+        .cross-reference {
+            /* POSITION: x=0 (relative to content), y=below metric grid */
+            /* DIMENSIONS: width=100% of content area, height=auto */
+            background: #fff3cd; /* CROSS REF BACKGROUND */
+            border: 1px solid #ffeaa7; /* CROSS REF BORDER */
+            border-radius: 6px; /* CROSS REF BORDER RADIUS */
+            padding: 10px; /* CROSS REF PADDING */
+            margin: 10px 0; /* CROSS REF MARGIN */
+            font-size: 13px; /* CROSS REF FONT SIZE */
+            color: #856404; /* CROSS REF TEXT COLOR */
+        }
+
+        .cross-reference.active {
+            background: #d1ecf1; /* ACTIVE CROSS REF BACKGROUND */
+            border-color: #bee5eb; /* ACTIVE CROSS REF BORDER */
+            color: #0c5460; /* ACTIVE CROSS REF TEXT */
+        }
+
+        /* TABLATURE REFERENCE - Mini tablature clone in section */
+        .tablature-reference {
+            /* POSITION: x=0 (relative to content), y=bottom of content */
+            /* DIMENSIONS: width=100% of content area, height=auto */
+            margin: 15px 0; /* TABLATURE REF MARGIN */
+            border: 1px solid #ddd; /* TABLATURE REF BORDER */
+            border-radius: 6px; /* TABLATURE REF BORDER RADIUS */
+            background: #fafafa; /* TABLATURE REF BACKGROUND */
+            padding: 10px; /* TABLATURE REF PADDING */
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 600px; /* Maximum height before scrolling */
+            position: relative;
+            box-sizing: border-box; /* Include padding in width calculation */
+            width: 100%; /* Full width of container */
+        }
+
+        /* HIGHLIGHT OVERLAYS - Dynamic highlighting system */
+        .highlight-overlay {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%; /* OVERLAY BORDER RADIUS */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10; /* OVERLAY Z-INDEX */
+            /* DIMENSIONS: width=20px, height=20px (set via JavaScript) */
+            /* POSITION: x,y set dynamically based on tablature note positions */
+        }
+
+        .highlight-overlay.active {
+            opacity: 0.8; /* ACTIVE OVERLAY OPACITY */
+            animation: pulse 1.5s infinite; /* ACTIVE OVERLAY ANIMATION */
+        }
+
+        /* HIGHLIGHT COLOR CLASSES - Different highlight types */
+        .highlight-tone-nga { background: rgba(156, 89, 182, 0.6); } /* PURPLE for ngã tone */
+        .highlight-pitch-e { background: rgba(52, 152, 219, 0.6); } /* BLUE for E notes */
+        .highlight-rank-17 { background: rgba(231, 76, 60, 0.6); } /* RED for rank #17 */
+        .highlight-melisma { background: rgba(241, 196, 15, 0.6); } /* GOLD for melisma */
+        .highlight-string-usage { background: rgba(39, 174, 96, 0.6); } /* GREEN for string usage */
+
+        @keyframes pulse {
+            0% { transform: scale(1); } /* PULSE START SCALE */
+            50% { transform: scale(1.2); } /* PULSE MAX SCALE */
+            100% { transform: scale(1); } /* PULSE END SCALE */
+        }
+
+        /* SVG Zoom Styles */
+        .tablature-reference svg {
+            transition: transform 0.2s ease;
+            will-change: transform;
+            display: block;
+            position: relative;
+            /* min-width removed - allows horizontal scroll when zoomed */
+        }
+
+        /* Preserve crisp rendering during zoom */
+        .tablature-reference svg text,
+        .tablature-reference svg circle {
+            shape-rendering: geometricPrecision;
+            text-rendering: geometricPrecision;
+        }
+
+        /* Annotated Phrases Section Styles */
+        .phrase-box {
+            fill: rgba(0, 128, 128, 0.2);  /* Increased from 0.08 to 0.2 for better visibility */
+            stroke: #008080;
+            stroke-width: 3;  /* Increased from 2 to 3 */
+            stroke-dasharray: 5,5;
+            transition: fill 0.2s, stroke 0.2s;
+            cursor: pointer;
+        }
+        .phrase-box:hover {
+            fill: rgba(0, 128, 128, 0.35);  /* Increased from 0.15 to 0.35 */
+            stroke: #005959;
+            stroke-width: 4;  /* Increased from 3 to 4 */
+        }
+        /* Domain colors (lower specificity - apply first) */
+        .phrase-box.domain-emotion { stroke: #E74C3C; }
+        .phrase-box.domain-abstract { stroke: #9B59B6; }
+        .phrase-box.domain-nature { stroke: #27AE60; }
+        .phrase-box.domain-action { stroke: #3498DB; }
+        .phrase-box.domain-characters { stroke: #F39C12; }
+        .phrase-box.domain-vocatives { stroke: #E67E22; }
+
+        /* Parallelism levels (higher specificity - override domains) */
+        .phrase-box.exact-refrain {
+            fill: rgba(255, 215, 0, 0.3) !important;
+            stroke: #FFD700 !important;  /* Gold always wins */
+            stroke-dasharray: none !important;
+            stroke-width: 4 !important;
+        }
+        .phrase-box.structural-parallel {
+            fill: rgba(52, 152, 219, 0.2) !important;
+            stroke: #3498DB !important;  /* Blue always wins */
+            stroke-dasharray: 8,4 !important;
+            stroke-width: 3 !important;
+        }
+
+        .phrase-label {
+            font-size: 12px;
+            font-weight: bold;
+            fill: #2C3E50;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .phrase-text {
+            font-size: 10px;
+            font-style: italic;
+            fill: #555;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .parallelism-badge {
+            font-size: 11px;
+            font-weight: bold;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .parallelism-badge.exact { fill: #B8860B; }
+        .parallelism-badge.structural { fill: #2874A6; }
+        .semantic-icon {
+            font-size: 11px;
+            text-anchor: middle;
+            fill: #555;
+            pointer-events: none;
+        }
+        .semantic-icon.emotion { fill: #E74C3C; }
+        .semantic-icon.abstract { fill: #9B59B6; }
+        .semantic-icon.nature { fill: #27AE60; }
+        .semantic-icon.action { fill: #3498DB; }
+        .semantic-icon.characters { fill: #F39C12; }
+        .semantic-icon.vocatives { fill: #E67E22; }
+        .function-label {
+            font-size: 10px;
+            font-style: italic;
+            fill: #7F8C8D;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Section Boxes (V4.2.7 - Macro Structure) */
+        .section-box {
+            fill: rgba(100, 100, 255, 0.05);
+            stroke: #95A5A6;
+            stroke-width: 2;
+            stroke-dasharray: 10,5;
+            pointer-events: none;
+        }
+        .section-box.section-intro {
+            fill: rgba(52, 152, 219, 0.08);
+            stroke: #3498DB;
+        }
+        .section-box.section-verse {
+            fill: rgba(155, 89, 182, 0.06);
+            stroke: #9B59B6;
+        }
+        .section-box.section-refrain {
+            fill: rgba(241, 196, 15, 0.08);
+            stroke: #F39C12;
+        }
+        .section-box.section-dialogue {
+            fill: rgba(26, 188, 156, 0.06);
+            stroke: #1ABC9C;
+        }
+        .section-box.section-coda {
+            fill: rgba(231, 76, 60, 0.06);
+            stroke: #E74C3C;
+        }
+
+        .section-label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: #FFFFFF;
+            stroke: #000000;
+            stroke-width: 1.5;
+            paint-order: stroke fill;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .section-label.section-intro { fill: #3498DB; stroke: #2874A6; }
+        .section-label.section-verse { fill: #9B59B6; stroke: #7D3C98; }
+        .section-label.section-refrain { fill: #F39C12; stroke: #D68910; }
+        .section-label.section-dialogue { fill: #1ABC9C; stroke: #148F77; }
+        .section-label.section-coda { fill: #E74C3C; stroke: #C0392B; }
+
+        .section-info {
+            font-size: 11px;
+            font-weight: 600;
+            fill: #7F8C8D;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Song Library Styles */
+        .song-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .song-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .song-card.selected {
+            background: #e8f5e9;
+            border: 2px solid #008080;
+            box-shadow: 0 4px 12px rgba(0, 128, 128, 0.2);
+        }
+
+        .song-card.selected:hover {
+            transform: scale(1.02);
+        }
+
+        /* RESPONSIVE ADJUSTMENTS */
+        @media (max-width: 768px) {
+            .vertical-header {
+                width: 60px; /* MOBILE HEADER WIDTH */
+            }
+            .section-title {
+                font-size: 10px; /* MOBILE TITLE SIZE */
+            }
+            .section-icon {
+                font-size: 20px; /* MOBILE ICON SIZE */
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="v4-container">
+
+        <!-- SONG HEADER -->
+        <!-- POSITION: x=0, y=0 (top of page) -->
+        <!-- DIMENSIONS: width=100vw, height=auto -->
+        <div class="song-header" style="width: 100%; background: white; border-bottom: 3px solid #3498db; padding: 20px; box-sizing: border-box; text-align: center;">
+            <h1 id="songTitle" style="margin: 0 0 10px 0; color: #2c3e50;">{{SONG_NAME}}</h1>
+            <p style="margin: 0; color: #7f8c8d;">V4 Tuning Analysis with Bent Note Detection</p>
+        </div>
+
+        <!-- SECTIONS CONTAINER -->
+        <!-- POSITION: x=0, y=after tablature -->
+        <!-- DIMENSIONS: width=100%, height=auto (content-based) -->
+        <div class="sections-container" id="sectionsContainer">
+
+            <!-- OPTIMAL TUNING SECTION (Fixed - Always on top) -->
+            <!-- POSITION: x=0, y=0 (first section) -->
+            <!-- DIMENSIONS: width=100%, height=auto -->
+            <div class="analysis-section" id="optimalTuningSection" data-order="0" data-focus="optimal-tuning">
+
+                <!-- VERTICAL HEADER -->
+                <!-- POSITION: x=0, y=0 (left edge of section) -->
+                <!-- DIMENSIONS: width=80px, height=100% of section content -->
+                <div class="vertical-header" onclick="toggleSection('optimalTuningSection')">
+
+                    <!-- SECTION ICON -->
+                    <!-- POSITION: x=40px (center of header), y=20px (top area) -->
+
+                    <!-- SECTION TITLE -->
+                    <!-- POSITION: x=40px (center of header), y=middle area -->
+                    <h3 class="section-title">Optimal Tuning</h3>
+
+                    <!-- VERTICAL CONTROLS -->
+                    <!-- POSITION: x=40px (center of header), y=bottom area -->
+                    <div class="vertical-controls">
+                        <!-- Note: No move arrows for first section (fixed position) -->
+
+                        <!-- COLLAPSE TOGGLE -->
+                        <!-- POSITION: x=40px (center), y=bottom of controls -->
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <!-- POSITION: x=80px (after vertical header), y=0 -->
+                <!-- DIMENSIONS: width=calc(100% - 80px), height=auto -->
+                <div class="section-content">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Optimal Tuning Analysis</h4>
+
+                    <!-- TUNING CONTROLS WITH ZOOM -->
+                    <div class="tuning-controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <div class="tuning-info" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <label style="font-weight: 600; color: #2c3e50;">Tuning System:</label>
+                            <span class="tuning-display" id="optimalTuning" style="font-family: monospace; font-size: 14px; color: #008080; font-weight: bold;">C-D-E-G-A (Standard Pentatonic)</span>
+                            <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
+                                <span class="bent-notes-count" id="optimalBentCount" style="color: #E67E22; font-weight: 600;">0 bent notes</span>
+                                <button class="bent-toggle-btn" onclick="toggleBentNotes('optimal')" title="Toggle bent notes visibility"
+                                        style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
+                                    Show/Hide
+                                </button>
+                            </span>
+                        </div>
+
+                        <!-- V4.0.13: Playback Controls (Linked - between both tablatures) -->
+                        <div class="playback-controls" style="display: flex; align-items: center; gap: 8px; padding-right: 15px; border-right: 1px solid #ddd;">
+                            <button onclick="window.audioController && window.audioController.play()" title="Play tablature"
+                                    style="background: #27ae60; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ▶
+                            </button>
+                            <button onclick="window.audioController && window.audioController.stop()" title="Stop playback"
+                                    style="background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ■
+                            </button>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Tempo:</label>
+                                <input type="range" min="40" max="240" value="120" step="10" id="tempoSlider"
+                                       style="width: 80px; cursor: pointer;"
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value; }">
+                                <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
+                            </div>
+                        </div>
+
+                        <!-- V4 Zoom Controls (V3-style inline) -->
+                        <div class="zoom-controls" style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">X:</label>
+                                <input type="range" id="optimalXZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('optimal', 'x', this.value)">
+                                <span id="optimalXValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Y:</label>
+                                <input type="range" id="optimalYZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('optimal', 'y', this.value)">
+                                <span id="optimalYValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <button onclick="window.zoomController.fitToWidth('optimal')" style="padding: 2px 6px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">Fit</button>
+                        </div>
+                    </div>
+
+                    <!-- OPTIMAL TUNING TABLATURE -->
+                    <!-- POSITION: x=0 (relative to content), y=after controls -->
+                    <!-- DIMENSIONS: width=100% of content area, height=auto -->
+                    <!-- V4.2.7: Made scrollable and added ID for scroll sync with annotated phrases -->
+                    <div class="tablature-reference" id="optimalScrollContainer" style="overflow-x: auto; overflow-y: hidden; box-sizing: border-box;">
+                        <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg" id="optimalSvg">
+                            {{OPTIMAL_SVG_CONTENT}}
+                        </svg>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ALTERNATIVE TUNING SECTION 1 (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="altTuning1Section" data-order="1" data-focus="alt-tuning-1">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('altTuning1Section')">
+
+                    <!-- SECTION ICON -->
+
+                    <!-- SECTION TITLE -->
+                    <h3 class="section-title">Alt Tuning</h3>
+
+                    <!-- VERTICAL CONTROLS -->
+                    <div class="vertical-controls">
+                        <!-- MOVE ARROWS (for moveable sections) -->
+                        <!-- UP ARROW -->
+                        <!-- POSITION: x=40px (center), y=controls top -->
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning1Section', 'up'); event.stopPropagation();">▲</button>
+
+                        <!-- DOWN ARROW -->
+                        <!-- POSITION: x=40px (center), y=after up arrow + gap -->
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning1Section', 'down'); event.stopPropagation();">▼</button>
+
+                        <!-- COLLAPSE TOGGLE -->
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Alternative Tuning Comparison 1</h4>
+
+                    <!-- TUNING CONTROLS WITH ZOOM -->
+                    <div class="tuning-controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <div class="tuning-info" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <label style="font-weight: 600; color: #2c3e50;">Tuning System:</label>
+                            <select class="tuning-selector" id="altTuning1Select" onchange="updateAlternativeTuning(1, this.value)"
+                                    style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                <optgroup label="═══ Vietnamese ═══">
+                                    <option value="C-D-E-G-A">Dan Tranh Standard (C-D-E-G-A)</option>
+                                    <option value="C-D-E-G-A">Dan Tranh Northern (C-D-E-G-A)</option>
+                                    <option value="C-D-F-G-A">Dan Tranh Southern (C-D-F-G-A)</option>
+                                    <option value="C-D-E-G-B">Dan Tranh Central (C-D-E-G-B)</option>
+                                    <option value="C-Eb-F-G-Bb">Ru Con (C-Eb-F-G-Bb)</option>
+                                    <option value="D-F-G-A-C">Nam Ai (D-F-G-A-C)</option>
+                                    <option value="D-E-F#-A-B">Nam Xuan (D-E-F#-A-B)</option>
+                                    <option value="C-D-F-G-A">Bac (C-D-F-G-A)</option>
+                                    <option value="C-Eb-F-G-Ab">Oan (C-Eb-F-G-Ab)</option>
+                                </optgroup>
+                                <optgroup label="═══ Pentatonic ═══">
+                                    <option value="C-D-E-G-A">Major (C-D-E-G-A)</option>
+                                    <option value="A-C-D-E-G">Minor (A-C-D-E-G)</option>
+                                    <option value="C-D-F-G-Bb">Egyptian (C-D-F-G-Bb)</option>
+                                    <option value="C-D-E-G-A">Chinese Gong (C-D-E-G-A)</option>
+                                    <option value="D-E-G-A-C">Chinese Shang (D-E-G-A-C)</option>
+                                    <option value="E-G-A-C-D">Chinese Jue (E-G-A-C-D)</option>
+                                    <option value="G-A-C-D-E">Chinese Zhi (G-A-C-D-E)</option>
+                                    <option value="A-C-D-E-G">Chinese Yu (A-C-D-E-G)</option>
+                                    <option value="C-D-Eb-G-Ab">Japanese Hirajoshi (C-D-Eb-G-Ab)</option>
+                                    <option value="C-Db-F-Gb-Bb">Japanese Iwato (C-Db-F-Gb-Bb)</option>
+                                    <option value="C-Db-F-G-Bb">Japanese In-sen (C-Db-F-G-Bb)</option>
+                                    <option value="C-D-Eb-G-A">Japanese Kumoi (C-D-Eb-G-A)</option>
+                                    <option value="C-D-F-G-A">Japanese Ritusen (C-D-F-G-A)</option>
+                                </optgroup>
+                                <optgroup label="═══ Hexatonic ═══">
+                                    <option value="C-D-Eb-E-G-A">Blues Major (C-D-Eb-E-G-A)</option>
+                                    <option value="C-Eb-F-Gb-G-Bb">Blues Minor (C-Eb-F-Gb-G-Bb)</option>
+                                    <option value="C-D-E-F#-G#-A#">Whole Tone (C-D-E-F#-G#-A#)</option>
+                                    <option value="C-D#-E-G-Ab-B">Augmented (C-D#-E-G-Ab-B)</option>
+                                </optgroup>
+                                <optgroup label="═══ Heptatonic ═══">
+                                    <option value="C-D-E-F-G-A-B">Major (C-D-E-F-G-A-B)</option>
+                                    <option value="A-B-C-D-E-F-G">Natural Minor (A-B-C-D-E-F-G)</option>
+                                    <option value="D-E-F-G-A-B-C">Dorian (D-E-F-G-A-B-C)</option>
+                                    <option value="E-F-G-A-B-C-D">Phrygian (E-F-G-A-B-C-D)</option>
+                                    <option value="F-G-A-B-C-D-E">Lydian (F-G-A-B-C-D-E)</option>
+                                    <option value="G-A-B-C-D-E-F">Mixolydian (G-A-B-C-D-E-F)</option>
+                                    <option value="A-B-C-D-E-F-G#">Harmonic Minor (A-B-C-D-E-F-G#)</option>
+                                </optgroup>
+                            </select>
+                            <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
+                                <span class="bent-notes-count" id="alt1BentCount" style="color: #E67E22; font-weight: 600;">2 bent notes</span>
+                                <button class="bent-toggle-btn" onclick="toggleBentNotes('alt1')" title="Toggle bent notes visibility"
+                                        style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
+                                    Show/Hide
+                                </button>
+                            </span>
+                        </div>
+
+                        <!-- V4.0.13: Playback Controls (Linked - same as optimal) -->
+                        <div class="playback-controls" style="display: flex; align-items: center; gap: 8px; padding-right: 15px; border-right: 1px solid #ddd;">
+                            <button onclick="window.audioController && window.audioController.play()" title="Play tablature"
+                                    style="background: #27ae60; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ▶
+                            </button>
+                            <button onclick="window.audioController && window.audioController.stop()" title="Stop playback"
+                                    style="background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ■
+                            </button>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Tempo:</label>
+                                <input type="range" min="40" max="240" value="120" step="10" id="tempoSlider"
+                                       style="width: 80px; cursor: pointer;"
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value; }">
+                                <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
+                            </div>
+                        </div>
+
+                        <!-- V4 Zoom Controls (V3-style inline) -->
+                        <div class="zoom-controls" style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">X:</label>
+                                <input type="range" id="alt1XZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('alt1', 'x', this.value)">
+                                <span id="alt1XValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Y:</label>
+                                <input type="range" id="alt1YZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('alt1', 'y', this.value)">
+                                <span id="alt1YValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <button onclick="window.zoomController.fitToWidth('alt1')" style="padding: 2px 6px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">Fit</button>
+                            <label style="font-size: 11px;">
+                                <input type="checkbox" id="linkZoom" checked onchange="toggleZoomLink(this.checked)" style="margin-right: 3px;">
+                                Link
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ALTERNATIVE TUNING TABLATURE -->
+                    <div class="tablature-reference">
+                        <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg" id="alt1Svg">
+                            {{COMPARISON_SVG_CONTENT}}
+                        </svg>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ALTERNATIVE TUNING SECTION 2 (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="altTuning2Section" data-order="2" data-focus="alt-tuning-2">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('altTuning2Section')">
+                    <h3 class="section-title">Sections</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning2Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning2Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Sections Analysis</h4>
+
+                    <!-- Placeholder content -->
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>Sections content will be added here.</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- KP/RIC-1 SECTION (Moveable) -->
+            <div class="analysis-section" id="kpric1Section" data-order="3" data-focus="kpric-1">
+                <div class="vertical-header" onclick="toggleSection('kpric1Section')">
+                    <h3 class="section-title">KP/RIC-1</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('kpric1Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('kpric1Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">KP/RIC-1 Analysis</h4>
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>KP/RIC-1 analysis content will be added here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPIC-2 & KRIC-2 SECTION (Moveable) -->
+            <div class="analysis-section" id="kpic2kric2Section" data-order="4" data-focus="kpic2-kric2">
+                <div class="vertical-header" onclick="toggleSection('kpic2kric2Section')">
+                    <h3 class="section-title">KPIC-2 & KRIC-2</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('kpic2kric2Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('kpic2kric2Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">KPIC-2 & KRIC-2 Analysis</h4>
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>KPIC-2 & KRIC-2 analysis content will be added here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPIC-3 & KRIC-3 SECTION (Moveable) -->
+            <div class="analysis-section" id="kpic3kric3Section" data-order="5" data-focus="kpic3-kric3">
+                <div class="vertical-header" onclick="toggleSection('kpic3kric3Section')">
+                    <h3 class="section-title">KPIC-3 & KRIC-3</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('kpic3kric3Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('kpic3kric3Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">KPIC-3 & KRIC-3 Analysis</h4>
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>KPIC-3 & KRIC-3 analysis content will be added here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KxxIC-nn SECTION (Moveable) -->
+            <div class="analysis-section" id="kxxicnnSection" data-order="6" data-focus="kxxic-nn">
+                <div class="vertical-header" onclick="toggleSection('kxxicnnSection')">
+                    <h3 class="section-title">KxxIC-nn</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('kxxicnnSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('kxxicnnSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">KxxIC-nn Analysis</h4>
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>KxxIC-nn analysis content will be added here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PHRASES IN TABLATURE SECTION (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="altTuning3Section" data-order="7" data-focus="phrases-tablature">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('altTuning3Section')">
+                    <h3 class="section-title">Phrases in Tablature</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning3Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning3Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Phrase-to-Note Alignment Visualization</h4>
+
+                    <!-- Phrase Bars Container (horizontal colored bars) -->
+                    <div id="phraseBarsContainer" style="width: 100%; overflow-x: auto; overflow-y: auto; min-height: 400px; max-height: 3000px; background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 10px;">
+                        <!-- Phrase bars SVG will be generated here by phrase-bars-controller.js -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- LING TONES SECTION (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="lingTonesSection" data-order="8" data-focus="ling-tones">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('lingTonesSection')">
+                    <h3 class="section-title">Ling Tones</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('lingTonesSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('lingTonesSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Linguistic Tones Analysis</h4>
+
+                    <!-- Placeholder content -->
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        <p>Linguistic tones content will be added here.</p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- LYRICS SECTION (Collapsible) -->
+            <div class="analysis-section" id="lyricsSection" data-order="9" data-focus="lyrics">
+                <div class="vertical-header" onclick="toggleSection('lyricsSection')">
+                    <h3 class="section-title">Lyrics</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('lyricsSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('lyricsSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Vietnamese Lyrics (Extracted from MusicXML)</h4>
+
+                    <!-- Flex container: Lyrics table on left, data cards on right -->
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+
+                        <!-- Left: Lyrics table (flex-grow to take most space) -->
+                        <div style="flex: 1; min-width: 0;" id="lyricsTableContainer">
+                            <p style="padding: 20px; text-align: center; color: #999;">Loading lyrics...</p>
+                        </div>
+
+                        <!-- Right: Data cards stack (top-aligned, right next to table) -->
+                        <div style="display: flex; flex-direction: column; gap: 15px; width: 220px; flex-shrink: 0;">
+
+                            <!-- Lyrics Metrics Card -->
+                            <div class="lyrics-metrics-card" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h5 style="margin: 0 0 12px 0; color: #2c3e50; font-size: 16px; font-weight: 600; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 8px;">Lyrics Metrics</h5>
+
+                                <!-- Metric item template -->
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Total Phrases</div>
+                                    <div class="metric-value" id="totalPhrases" style="font-size: 24px; font-weight: bold; color: #2c3e50;">28</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Total Syllables</div>
+                                    <div class="metric-value" id="totalWords" style="font-size: 24px; font-weight: bold; color: #2c3e50;">119</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Avg Syllables</div>
+                                    <div class="metric-value" id="avgWordsPerPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">4.3</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Unique Types</div>
+                                    <div class="metric-value" id="uniqueTypes" style="font-size: 24px; font-weight: bold; color: #2c3e50;">7</div>
+                                </div>
+
+                                <!-- Linguistic type breakdown -->
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                                    <div style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Linguistic Types</div>
+                                    <div id="typeBreakdown" style="font-size: 12px; line-height: 1.6;">
+                                        <!-- Will be populated by controller -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phrase Structures Card -->
+                            <div class="phrase-structures-card" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h5 style="margin: 0 0 12px 0; color: #2c3e50; font-size: 16px; font-weight: 600; text-align: center; border-bottom: 2px solid #9b59b6; padding-bottom: 8px;">Phrase Structures</h5>
+
+                                <!-- Phrase length distribution -->
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Shortest Phrase</div>
+                                    <div class="metric-value" id="shortestPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">3 syllables</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Longest Phrase</div>
+                                    <div class="metric-value" id="longestPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">5 syllables</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Most Common</div>
+                                    <div class="metric-value" id="mostCommonLength" style="font-size: 24px; font-weight: bold; color: #2c3e50;">4 syllables</div>
+                                </div>
+
+                                <!-- Length distribution breakdown -->
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                                    <div style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Length Distribution</div>
+                                    <div id="lengthBreakdown" style="font-size: 12px; line-height: 1.6;">
+                                        <!-- Will be populated by controller -->
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- STRUCTURAL OVERVIEW SECTION (Simple text-based) -->
+            <!-- POSITION: x=0, y=after lyrics section + gap -->
+            <div class="analysis-section" id="structuralOverviewSection" data-order="10" data-focus="structural-overview">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('structuralOverviewSection')">
+                    <h3 class="section-title">Structure Overview</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">📊 Song Structure Analysis</h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; align-items: start;">
+                        {{STRUCTURAL_OVERVIEW_CARDS}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANNOTATED PHRASES SECTION (Synchronized with Optimal Tuning) -->
+            <!-- POSITION: x=0, y=after structural overview + gap -->
+            <div class="analysis-section" id="annotatedPhrasesSection" data-order="11" data-focus="annotated-phrases">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('annotatedPhrasesSection')">
+                    <h3 class="section-title">Annotated Phrases</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('annotatedPhrasesSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('annotatedPhrasesSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">🎼 Structural Phrase Visualization</h4>
+
+                    <p style="margin: 0 0 15px 0; color: #555; font-size: 14px;">
+                        Visual analysis showing parallelism hierarchy (exact refrains, structural patterns) and semantic clustering (emotions, actions, nature vocabulary) aligned with tablature positions.
+                    </p>
+
+                    <!-- Zoom Controls -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <label style="font-weight: 600; color: #2c3e50;">X-Zoom:</label>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 67)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">67%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 100)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">100%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 150)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">150%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 200)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">200%</button>
+                        <button onclick="window.zoomController.fitToWidth('annotated')" style="padding: 4px 10px; border: 1px solid #008080; border-radius: 4px; background: white; color: #008080; cursor: pointer; font-weight: 600;">Fit Width</button>
+                        <span style="margin-left: auto; font-size: 12px; color: #7f8c8d;">💡 Synced with Optimal Tuning (scroll & zoom)</span>
+                    </div>
+
+                    <!-- Scrollable SVG Container -->
+                    <div class="tablature-scroll-container" id="annotatedScrollContainer" style="overflow-x: auto; overflow-y: visible; border: 1px solid #ccc; background: white; box-sizing: border-box; min-height: 550px; padding: 10px 0;">
+                        <svg id="annotatedSvg" width="{{ANNOTATED_SVG_WIDTH}}" height="550">
+                            {{ANNOTATED_PHRASES_SVG}}
+                        </svg>
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <h5 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px; font-weight: 600;">📊 Legend</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 12px;">
+                            <div><span style="display: inline-block; width: 20px; height: 3px; background: #FFD700; margin-right: 5px; vertical-align: middle;"></span> <strong>Gold:</strong> Exact Refrain</div>
+                            <div><span style="display: inline-block; width: 20px; height: 3px; background: #3498DB; margin-right: 5px; vertical-align: middle;"></span> <strong>Blue:</strong> Structural Parallel</div>
+                            <div style="color: #E74C3C;"><strong>😢 Emotion</strong> (khổ, thương, nhớ)</div>
+                            <div style="color: #9B59B6;"><strong>💭 Abstract</strong> (duyên, đời, lòng)</div>
+                            <div style="color: #27AE60;"><strong>🌳 Nature</strong> (chiều, gió, cây)</div>
+                            <div style="color: #3498DB;"><strong>🗣️ Action</strong> (đi, làm, ru)</div>
+                            <div style="color: #F39C12;"><strong>👤 Characters</strong> (bà, chồng, con)</div>
+                            <div style="color: #E67E22;"><strong>📣 Vocatives</strong> (ơi, hỡi, này)</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- LIBRARY SECTION (Final Collapsible Section) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="librarySection" data-order="12" data-focus="song-library">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('librarySection')">
+                    <h3 class="section-title">Song Library</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('librarySection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('librarySection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Vietnamese Traditional Music Library</h4>
+
+                    <!-- LIBRARY CONTROLS -->
+                    <div class="library-controls" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+
+                        <!-- Sort By -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 60px;">Sort by:</label>
+                            <select id="librarySortBy" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="title">Title (A-Z)</option>
+                                <option value="region">Region</option>
+                                <option value="genre">Genre</option>
+                                <option value="totalNotes">Total Notes</option>
+                                <option value="bentNotes">Bent Notes (High-Low)</option>
+                                <option value="bentStrings">Bent Strings</option>
+                                <option value="optimalTuning">Optimal Tuning</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter by Region -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 50px;">Region:</label>
+                            <select id="libraryFilterRegion" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="all">All Regions</option>
+                                <option value="Northern">Northern</option>
+                                <option value="Southern">Southern</option>
+                                <option value="Central">Central</option>
+                                <option value="Highland">Highland</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter by Genre -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 50px;">Genre:</label>
+                            <select id="libraryFilterGenre" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="all">All Genres</option>
+                                <option value="Lý">Lý</option>
+                                <option value="Hò">Hò</option>
+                                <option value="Ru Con">Ru Con</option>
+                                <option value="Quan Họ">Quan Họ</option>
+                                <option value="Hát Chèo">Hát Chèo</option>
+                                <option value="Traditional">Traditional</option>
+                            </select>
+                        </div>
+
+                        <!-- Library Stats -->
+                        <div class="library-stats" style="margin-left: auto; display: flex; align-items: center; gap: 15px; font-size: 14px; color: #666;">
+                            <span id="libraryCount">0 songs</span>
+                            <button onclick="window.libraryController.refresh()" style="background: #008080; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer;">
+                                Refresh
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- LIBRARY GRID -->
+                    <div class="library-grid" id="libraryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                        <!-- Song cards will be populated here by JavaScript -->
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VOCABULARY METRICS SECTION (Below Library) -->
+            <!-- Auto-updates when library changes -->
+            {{VOCABULARY_METRICS_SECTION}}
+
+        </div>
+    </div>
+
+    <script>
+        // V4 Vertical Header System with Cross-Highlighting
+
+        const verticalHeaderSystem = {
+            // Cross-reference relationships between sections
+            relationships: {
+                'tone-nga': ['melisma-groups', 'rank-17-notes', 'phrase-peaks'],
+                'pitch-e': ['string-usage', 'melodic-emphasis', 'traditional-elements'],
+                'melisma-count': ['tone-nga', 'grace-notes', 'phrase-endings'],
+                'unique-pitches': ['string-usage', 'tuning-system', 'cultural-context']
+            },
+
+            // Active highlights tracking
+            activeHighlights: new Set(),
+
+            // Correlation examples with positioning data
+            correlationExamples: {
+                'tone-nga': {
+                    description: "Ngã tone appears in 80% of melismas on rank #17 notes",
+                    relatedSections: ['melismaSection', 'patternsSection'],
+                    tablatureHighlights: ['tone-nga', 'melisma-groups', 'rank-17'],
+                    highlightPositions: [
+                        { x: 120, y: 80, type: 'tone-nga' },
+                        { x: 280, y: 110, type: 'melisma-groups' }
+                    ]
+                }
+            }
+        };
+
+        // ===================================================================
+        // V4.0.5 ZOOM SYSTEM - External Controller (Cleaned Up)
+        // ===================================================================
+        // Old inline zoom functions removed (~240 lines)
+        // Now using centralized ZoomController from zoom-controller.js
+        //
+        // Benefits:
+        // - No code duplication
+        // - Easy to test
+        // - Single source of truth
+        // - Built-in error handling
+        // ===================================================================
+
+        // V4.0.7: Simplified bent toggle using unified data-bent attribute
+        // Initialize bent notes to hidden state (default colors)
+        window.initializeBentNotesState = function(section) {
+            const svgId = section === 'optimal' ? 'optimalSvg' :
+                         section === 'alt1' ? 'alt1Svg' :
+                         section === 'alt2' ? 'alt2Svg' : 'alt3Svg';
+
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            svg.setAttribute('data-bent-visible', 'false');
+
+            // Use single selector for ALL bent elements (circles, triangles, lines, text)
+            const allBentElements = svg.querySelectorAll('[data-bent="true"]');
+
+            allBentElements.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                const elementId = element.id;
+
+                if (tagName === 'circle') {
+                    // V4.0.13: Register with VisualStateManager if available
+                    if (window.visualStateManager && elementId) {
+                        window.visualStateManager.applyState(elementId, 'bent-toggle', {
+                            fill: '#333333',  // Grey (hidden)
+                            stroke: '#000000'
+                        });
+                    } else {
+                        // Fallback: Direct style manipulation
+                        element.style.fill = '#333333';
+                        element.style.stroke = '#000000';
+                    }
+                } else if (tagName === 'polygon') {
+                    // Bent triangles: grey
+                    element.style.fill = '#666666';
+                } else if (tagName === 'line' || tagName === 'text') {
+                    // Bent indicators: hidden
+                    element.style.display = 'none';
+                }
+            });
+
+            console.log(`${section} initialized: ${allBentElements.length} bent elements set to default (hidden)`);
+        }
+
+        // Toggle bent notes visibility and colors
+        function toggleBentNotes(section) {
+            const svgId = section === 'optimal' ? 'optimalSvg' :
+                         section === 'alt1' ? 'alt1Svg' :
+                         section === 'alt2' ? 'alt2Svg' : 'alt3Svg';
+
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            // Toggle state
+            const isCurrentlyVisible = svg.getAttribute('data-bent-visible') === 'true';
+            const newVisibility = !isCurrentlyVisible;
+            svg.setAttribute('data-bent-visible', newVisibility);
+
+            // Use single selector for ALL bent elements
+            const allBentElements = svg.querySelectorAll('[data-bent="true"]');
+
+            allBentElements.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                const elementId = element.id;
+
+                if (tagName === 'circle') {
+                    // V4.0.13: Register with VisualStateManager if available
+                    if (window.visualStateManager && elementId) {
+                        window.visualStateManager.applyState(elementId, 'bent-toggle', {
+                            fill: newVisibility ? '#FF0000' : '#333333',
+                            stroke: newVisibility ? '#CC0000' : '#000000'
+                        });
+                    } else {
+                        // Fallback: Direct style manipulation
+                        element.style.fill = newVisibility ? '#FF0000' : '#333333';
+                        element.style.stroke = newVisibility ? '#CC0000' : '#000000';
+                    }
+                } else if (tagName === 'polygon') {
+                    // Toggle triangle colors
+                    element.style.fill = newVisibility ? '#FF0000' : '#666666';
+                } else if (tagName === 'line' || tagName === 'text') {
+                    // Toggle indicator visibility
+                    element.style.display = newVisibility ? 'block' : 'none';
+                }
+            });
+
+            // Update button appearance
+            const button = svg.closest('.section-content').querySelector('.bent-toggle-btn');
+            if (button) {
+                button.style.background = newVisibility ? '#FF0000' : '#E67E22';
+            }
+
+            console.log(`${section} bent: ${newVisibility ? 'SHOWN (red)' : 'HIDDEN (grey)'} - ${allBentElements.length} elements toggled`);
+        }
+
+        // SECTION TOGGLE FUNCTION
+        function toggleSection(sectionId) {
+            // UI ELEMENTS ACCESSED:
+            const content = document.querySelector(`#${sectionId} .section-content`); // CONTENT AREA
+            const toggle = document.querySelector(`#${sectionId} .vertical-collapse-toggle`); // TOGGLE ICON
+            const section = document.getElementById(sectionId); // ENTIRE SECTION
+            const header = document.querySelector(`#${sectionId} .vertical-header`); // VERTICAL HEADER
+
+            if (content.classList.contains('collapsed')) {
+                // EXPAND SECTION
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼'; // EXPANDED ICON
+                section.classList.remove('collapsed');
+                header.classList.add('active-focus'); // ACTIVE HEADER STYLING
+
+                // ACTIVATE CROSS-HIGHLIGHTING
+                activateCrossHighlighting(sectionId);
+            } else {
+                // COLLAPSE SECTION
+                content.classList.add('collapsed');
+                toggle.textContent = '▶'; // COLLAPSED ICON
+                section.classList.add('collapsed');
+                header.classList.remove('active-focus');
+
+                // DEACTIVATE CROSS-HIGHLIGHTING
+                deactivateCrossHighlighting(sectionId);
+            }
+        }
+
+        // METRIC HIGHLIGHTING FUNCTION
+        function highlightMetric(metricId) {
+            console.log(`Highlighting metric: ${metricId}`);
+
+            // CLEAR PREVIOUS HIGHLIGHTS
+            clearAllHighlights();
+
+            // HIGHLIGHT RELATED ELEMENTS ON TABLATURE
+            const relatedElements = verticalHeaderSystem.relationships[metricId] || [];
+            relatedElements.forEach(elementType => {
+                highlightTablatureElements(elementType);
+            });
+
+            // HIGHLIGHT RELATED SECTIONS
+            highlightRelatedSections(metricId);
+
+            // SHOW CROSS-REFERENCE INFORMATION
+            showCrossReferences(metricId);
+
+            // UPDATE METRIC CARD APPEARANCE
+            document.querySelectorAll('.metric-card').forEach(card => {
+                card.classList.remove('highlighted');
+            });
+            document.querySelector(`[data-metric="${metricId}"]`).classList.add('highlighted');
+        }
+
+        // TABLATURE ELEMENT HIGHLIGHTING FUNCTION
+        function highlightTablatureElements(elementType) {
+            console.log(`Highlighting tablature elements: ${elementType}`);
+
+            // EXAMPLE HIGHLIGHT POSITIONS (would be calculated from real data)
+            const highlightPositions = {
+                'pitch-e': [{ x: 220, y: 140 }, { x: 340, y: 170 }],
+                'melisma-groups': [{ x: 180, y: 110 }, { x: 280, y: 110 }],
+                'tone-nga': [{ x: 120, y: 80 }],
+                'rank-17': [{ x: 220, y: 140 }]
+            };
+
+            const positions = highlightPositions[elementType] || [];
+            const className = `highlight-${elementType.replace('_', '-')}`;
+
+            addHighlightOverlays(className, positions);
+        }
+
+        // ADD HIGHLIGHT OVERLAYS FUNCTION
+        function addHighlightOverlays(className, positions) {
+            const container = document.getElementById('highlightOverlayContainer');
+
+            positions.forEach(pos => {
+                const overlay = document.createElement('div');
+                overlay.className = `highlight-overlay ${className} active`;
+                // OVERLAY POSITIONING
+                overlay.style.left = pos.x + 'px'; // X COORDINATE
+                overlay.style.top = pos.y + 'px';  // Y COORDINATE
+                overlay.style.width = '20px';     // OVERLAY WIDTH
+                overlay.style.height = '20px';    // OVERLAY HEIGHT
+                container.appendChild(overlay);
+            });
+        }
+
+        // MOVE SECTION FUNCTION (Fixed for Vertical Headers)
+        window.moveSection = function(sectionId, direction) {
+            console.log(`V4 Move: ${sectionId} ${direction}`);
+
+            const section = document.getElementById(sectionId);
+            if (!section) {
+                console.log('Section not found:', sectionId);
+                return false;
+            }
+
+            const container = document.getElementById('sectionsContainer');
+            const movableSections = Array.from(container.querySelectorAll('.analysis-section:not(#optimalTuningSection)'));
+
+            console.log('Found movable sections:', movableSections.map(s => s.id));
+
+            // ENSURE FLEXBOX LAYOUT
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // INITIALIZE ORDER VALUES
+            movableSections.forEach((s, i) => {
+                if (!s.style.order) {
+                    s.style.order = s.dataset.order || (i + 1);
+                }
+                console.log(`Section ${s.id} order: ${s.style.order}`);
+            });
+
+            // GET SORTED SECTIONS
+            const sortedSections = movableSections.map(s => ({
+                section: s,
+                order: parseInt(s.style.order),
+                id: s.id
+            })).sort((a, b) => a.order - b.order);
+
+            const currentIndex = sortedSections.findIndex(s => s.section === section);
+            console.log(`Current index: ${currentIndex}, direction: ${direction}`);
+
+            if (direction === 'up' && currentIndex > 0) {
+                // MOVE UP
+                const prevSection = sortedSections[currentIndex - 1];
+                const tempOrder = section.style.order;
+                section.style.order = prevSection.section.style.order;
+                prevSection.section.style.order = tempOrder;
+
+                console.log(`Moved ${sectionId} UP - swapped orders`);
+
+                // FORCE BROWSER REFLOW
+                container.style.display = 'none';
+                container.offsetHeight; // TRIGGER REFLOW
+                container.style.display = 'flex';
+
+                return true;
+
+            } else if (direction === 'down' && currentIndex < sortedSections.length - 1) {
+                // MOVE DOWN
+                const nextSection = sortedSections[currentIndex + 1];
+                const tempOrder = section.style.order;
+                section.style.order = nextSection.section.style.order;
+                nextSection.section.style.order = tempOrder;
+
+                console.log(`Moved ${sectionId} DOWN - swapped orders`);
+
+                // FORCE BROWSER REFLOW
+                container.style.display = 'none';
+                container.offsetHeight;
+                container.style.display = 'flex';
+
+                return true;
+            }
+
+            console.log('Move not possible - at boundary or invalid direction');
+            return false;
+        };
+
+        // OLD BENT NOTES TOGGLE FUNCTION - REMOVED (conflicts with new modular system)
+
+        // UPDATE ALTERNATIVE TUNING FUNCTION
+        function updateAlternativeTuning(tuningNumber, selectedTuning) {
+            console.log(`Updating alternative tuning ${tuningNumber} to: ${selectedTuning}`);
+
+            // Update bent notes count based on tuning
+            const bentCountElement = document.getElementById(`alt${tuningNumber}BentCount`);
+            if (bentCountElement) {
+                // Simulate different bent note counts for different tunings
+                const bentCounts = {
+                    'C-D-F-G-A': 2,
+                    'C-D-E-G-Bb': 3,
+                    'C-Eb-F-G-Bb': 4,
+                    'D-E-G-A-B': 1
+                };
+                const count = bentCounts[selectedTuning.split(' ')[0]] || 0;
+                bentCountElement.textContent = `${count} bent note${count !== 1 ? 's' : ''}`;
+            }
+
+            // Here you would normally regenerate the SVG based on the new tuning
+            // For now, we'll just log the change
+        }
+
+        // PLACEHOLDER FUNCTIONS
+        function clearAllHighlights() { /* Clear all visual highlights */ }
+        function highlightRelatedSections(metricId) { /* Highlight related sections */ }
+        function showCrossReferences(metricId) { /* Show cross-reference information */ }
+        function activateCrossHighlighting(sectionId) { /* Activate cross-highlighting for section */ }
+        function deactivateCrossHighlighting(sectionId) { /* Deactivate cross-highlighting */ }
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('V4 Vertical Header Sections System Initialized');
+            console.log('UI Elements: Vertical headers, metric cards, cross-reference boxes, tablature references');
+        });
+
+    </script>
+
+    <!-- Include Client Tablature Generator -->
+    <script src="/static/client-tablature-generator.js"></script>
+
+    <!-- Dynamic Update Functions -->
+    <script>
+        // Store bent note visibility state for each section (default: visible/on)
+        window.bentNotesVisible = {
+            optimal: true,
+            alt1: true,
+            alt2: true,
+            alt3: true
+        };
+
+        // Override the updateAlternativeTuning function to actually update the tablature
+        window.updateAlternativeTuning = function(tuningNumber, selectedValue) {
+            console.log(`Updating Alternative Tuning ${tuningNumber} to: ${selectedValue}`);
+
+            // Parse the tuning key from the dropdown value
+            const tuningKey = tablatureGenerator.parseTuningKey(selectedValue);
+            if (!tuningKey) {
+                console.error('Invalid tuning value:', selectedValue);
+                return;
+            }
+
+            // Update the SVG with current bent note visibility state
+            const svgId = `alt${tuningNumber}Svg`;
+            const sectionKey = `alt${tuningNumber}`;
+            const showBent = bentNotesVisible[sectionKey];
+            const bentCount = tablatureGenerator.updateSVG(svgId, tuningKey, null, showBent);
+
+            // Update the bent notes count display
+            const bentCountElement = document.getElementById(`alt${tuningNumber}BentCount`);
+            if (bentCountElement) {
+                bentCountElement.textContent = `${bentCount} bent note${bentCount !== 1 ? 's' : ''}`;
+            }
+
+            console.log(`Tablature updated with ${bentCount} bent notes`);
+        };
+
+        // V4.0.7: Old window.toggleBentNotes wrapper removed
+        // Now using direct toggleBentNotes() function with unified data-bent attribute
+
+        // Toggle zoom linking (wrapper for checkbox)
+        function toggleZoomLink(linked) {
+            if (window.zoomController) {
+                window.zoomController.setZoomLinked(linked);
+            }
+        }
+
+        // Library Management Functions
+        let libraryData = [];
+
+        // Update library display based on current filters and sorting
+        window.updateLibrary = function() {
+            const sortBy = document.getElementById('librarySortBy').value;
+            const filterRegion = document.getElementById('libraryFilterRegion').value;
+            const filterGenre = document.getElementById('libraryFilterGenre').value;
+
+            console.log(`Updating library: sort=${sortBy}, region=${filterRegion}, genre=${filterGenre}`);
+
+            // Apply filters
+            let filteredData = libraryData.filter(song => {
+                const regionMatch = filterRegion === 'all' || song.region === filterRegion;
+                const genreMatch = filterGenre === 'all' || song.genre === filterGenre;
+                return regionMatch && genreMatch;
+            });
+
+            // Apply sorting
+            filteredData.sort((a, b) => {
+                const aVal = a[sortBy];
+                const bVal = b[sortBy];
+
+                if (typeof aVal === 'number') {
+                    return sortBy.includes('bent') ? bVal - aVal : aVal - bVal;
+                }
+                return aVal.localeCompare(bVal);
+            });
+
+            renderLibraryGrid(filteredData);
+            document.getElementById('libraryCount').textContent = `${filteredData.length} songs`;
+        };
+
+        // Track currently selected song
+        let currentSelectedSong = null;
+
+        // Render library grid with song cards
+        function renderLibraryGrid(songs) {
+            const grid = document.getElementById('libraryGrid');
+
+            if (songs.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">No songs found. Add MusicXML files to: v4/data/musicxml/</div>';
+                return;
+            }
+
+            grid.innerHTML = songs.map((song, index) => {
+                const isSelected = index === 0 && !currentSelectedSong || song.filename === currentSelectedSong;
+                const selectedClass = isSelected ? ' selected' : '';
+
+                return `
+                <div class="song-card${selectedClass}"
+                     data-filename="${song.filename}"
+                     onclick="openSongAnalysis('${song.filename}')">
+
+                    <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 16px; font-weight: 600;">${song.title}</h5>
+
+                    <div class="song-meta" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 10px;">
+                        <span style="color: #007bff;"><strong>Region:</strong> ${song.region}</span>
+                        <span style="color: #28a745;"><strong>Genre:</strong> ${song.genre}</span>
+                        <span style="color: #6f42c1;"><strong>Tuning:</strong> ${song.optimalTuning}</span>
+                        <span style="color: #dc3545;"><strong>Notes:</strong> ${song.totalNotes}</span>
+                    </div>
+
+                    <div class="song-stats" style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+                        <span><strong>${song.bentNotes}</strong> bent notes</span>
+                        <span><strong>${song.bentStrings}</strong> bent strings</span>
+                        <span><strong>${song.uniquePitches}</strong> unique pitches</span>
+                    </div>
+
+                </div>
+                `;
+            }).join('');
+
+            // Auto-select first song if none selected
+            if (!currentSelectedSong && songs.length > 0) {
+                currentSelectedSong = songs[0].filename;
+            }
+        }
+
+        // Refresh library from server
+        window.refreshLibrary = function() {
+            console.log('Refreshing library...');
+            fetch('/api/library')
+                .then(response => response.json())
+                .then(data => {
+                    libraryData = data;
+                    updateLibrary();
+                    console.log(`Loaded ${data.length} songs from library`);
+
+                    // Auto-load first song's tablature
+                    if (data.length > 0) {
+                        openSongAnalysis(data[0].filename);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading library:', error);
+                    // Use demo data if API fails
+                    loadDemoLibrary();
+                });
+        };
+
+        // Load demo library data
+        function loadDemoLibrary() {
+            libraryData = [
+                {
+                    title: "Lý Chiều Chiều",
+                    filename: "ly_chieu_chieu.xml",
+                    region: "Northern",
+                    genre: "Lý",
+                    optimalTuning: "C-D-E-G-A",
+                    totalNotes: 57,
+                    uniquePitches: 5,
+                    bentStrings: 2,
+                    bentNotes: 8
+                },
+                {
+                    title: "Hò Giã Gạo",
+                    filename: "ho_gia_gao.xml",
+                    region: "Southern",
+                    genre: "Hò",
+                    optimalTuning: "C-D-F-G-A",
+                    totalNotes: 43,
+                    uniquePitches: 6,
+                    bentStrings: 3,
+                    bentNotes: 12
+                },
+                {
+                    title: "Ru Con Quảng Nam",
+                    filename: "ru_con_quang_nam.xml",
+                    region: "Central",
+                    genre: "Ru Con",
+                    optimalTuning: "C-D-E-G-Bb",
+                    totalNotes: 32,
+                    uniquePitches: 4,
+                    bentStrings: 1,
+                    bentNotes: 3
+                }
+            ];
+            updateLibrary();
+
+            // Auto-load first song's tablature
+            if (libraryData.length > 0) {
+                openSongAnalysis(libraryData[0].filename);
+            }
+        }
+
+        // Load song tablature dynamically
+        async function openSongAnalysis(filename) {
+            console.log(`Loading tablature for: ${filename}`);
+
+            // Update selection state
+            currentSelectedSong = filename;
+
+            // Update UI: Remove 'selected' from all cards
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add 'selected' to clicked card
+            const selectedCard = document.querySelector(`.song-card[data-filename="${filename}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+
+            try {
+                // Fetch tablature data from server
+                const response = await fetch(`/api/tablature/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load song: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update song title in header
+                document.getElementById('songTitle').textContent = data.songName;
+
+                // Extract SVG content (remove outer <svg> tags)
+                const extractSvgContent = (svgString) => {
+                    if (!svgString) return '';
+                    const match = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/);
+                    return match ? match[1] : svgString;
+                };
+
+                // Update optimal tuning section
+                const optimalSvg = document.getElementById('optimalSvg');
+                optimalSvg.innerHTML = extractSvgContent(data.optimalSVG);
+
+                // Update optimal tuning display
+                const optimalTuningDisplay = document.getElementById('optimalTuning');
+                if (optimalTuningDisplay) {
+                    optimalTuningDisplay.textContent = `${data.optimalTuning} (Optimal)`;
+                }
+
+                // Update comparison section
+                const comparisonSvg = document.getElementById('alt1Svg');
+                if (comparisonSvg) {
+                    comparisonSvg.innerHTML = extractSvgContent(data.comparisonSVG);
+                }
+
+                // Update alternative tuning display (if exists)
+                const altTuningDisplay = document.querySelector('#alternativeTuning1 .tuning-display');
+                if (altTuningDisplay) {
+                    altTuningDisplay.textContent = `${data.alternativeTuning} (Alternative)`;
+                }
+
+                // Scroll to top to show updated tablature
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // V4.0.7: Initialize bent notes to hidden state for newly loaded song
+                setTimeout(() => {
+                    initializeBentNotesState('optimal');
+                    initializeBentNotesState('alt1');
+
+                    // V4.1.4: Refresh zoom controller after loading new SVG content
+                    // This updates element references without re-initializing
+                    if (window.zoomController && window.zoomController.refresh) {
+                        window.zoomController.refresh();
+                        console.log('Zoom controller refreshed after loading new song');
+                    }
+
+                    // V4.0.13: Re-initialize audio controller references
+                    if (window.audioController) {
+                        const optimalSvg = document.getElementById('optimalSvg');
+                        const alt1Svg = document.getElementById('alt1Svg');
+                        window.audioController.setSVGReferences(optimalSvg, alt1Svg);
+                    }
+                }, 100); // Small delay to ensure SVG content is rendered
+
+                console.log(`Loaded: ${data.songName}`);
+            } catch (error) {
+                console.error('Error loading tablature:', error);
+                alert(`Error loading song: ${error.message}`);
+            }
+        }
+
+        // Initialize tablatures on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // OLD DEMO TABLATURE REMOVED - Library controller loads real songs now
+            // tablatureGenerator.updateSVG('optimalSvg', 'C-D-E-G-A');
+            // tablatureGenerator.updateSVG('alt1Svg', 'C-D-F-G-A');
+            // tablatureGenerator.updateSVG('alt2Svg', 'C-D-E-G-Bb');
+            // tablatureGenerator.updateSVG('alt3Svg', 'C-Eb-F-G-Bb');
+
+            // V4.0.9: Initialize library controller (replaces 216 lines of inline code)
+            // V4.2.14: RE-ENABLED - phrase annotations now generated server-side
+            window.libraryController = new LibraryController();
+            window.libraryController.initialize();
+
+            // V4.0.5: Initialize zoom controller (replaces old applyZoom calls)
+            window.zoomController = new ZoomController();
+            window.zoomController.initialize();
+
+            // Ensure zoom linking is enabled (checkbox starts checked)
+            const linkCheckbox = document.getElementById('linkZoom');
+            if (linkCheckbox && linkCheckbox.checked) {
+                window.zoomController.setZoomLinked(true);
+            }
+
+            // V4.2.14: Initialize bent note button colors to match default state (visible/red)
+            document.querySelectorAll('.bent-toggle-btn').forEach(btn => {
+                btn.style.background = '#FF0000';  // Red = visible
+            });
+
+            // V4.0.13: Initialize visual state manager (before audio controller)
+            try {
+                window.visualStateManager = new VisualStateManager();
+                console.log('VisualStateManager loaded successfully');
+            } catch (error) {
+                console.warn('VisualStateManager not available, using fallback mode:', error.message);
+            }
+
+            // V4.0.12: Initialize audio playback controller (uses visualStateManager if available)
+            try {
+                window.audioController = new AudioPlaybackController();
+                window.audioController.initialize();
+                console.log('AudioPlaybackController loaded successfully');
+            } catch (error) {
+                console.error('Failed to initialize AudioPlaybackController:', error);
+            }
+
+            // V4.1.4: Removed setTimeout for SVG references and bent notes initialization
+            // These are now handled by library-controller.js after loading each song
+            // This prevents duplicate initialization that was clearing the loaded tablature
+
+            console.log('V4.0.13 Tablatures, Library, Zoom Controller, Visual State Manager, Audio Playback initialized');
+        });
+    </script>
+
+    <!-- UI TERMINOLOGY REFERENCE -->
+    <!--
+    LAYOUT STRUCTURE:
+    - TABLATURE OVERLAY CONTAINER: Top full-width area containing interactive tablature
+    - SECTIONS CONTAINER: Main content area containing all analysis sections
+    - ANALYSIS SECTION: Individual collapsible container for each analysis type
+
+    VERTICAL HEADER COMPONENTS:
+    - VERTICAL HEADER: Left-side vertical panel (replaces horizontal header/banner)
+    - SECTION ICON: Visual identifier (🎵, 🗣️, 🎶, etc.)
+    - SECTION TITLE: Text description of analysis type
+    - VERTICAL CONTROLS: Container for move arrows and collapse toggle
+    - VERTICAL MOVE ARROW: Up/down movement buttons
+    - VERTICAL COLLAPSE TOGGLE: Expand/collapse indicator
+
+    SECTION CONTENT COMPONENTS:
+    - SECTION CONTENT: Main content area (right side of section)
+    - METRIC GRID: Grid container for metric cards
+    - METRIC CARD: Individual metric display (rounded rectangle you mentioned)
+    - METRIC VALUE: Main numeric/text value
+    - METRIC LABEL: Descriptive text below value
+    - CROSS REFERENCE BOX: Shows relationships to other sections
+    - TABLATURE REFERENCE: Mini tablature clone for context
+
+    POSITIONING SYSTEM:
+    - X COORDINATES: 0 = left edge, increases rightward
+    - Y COORDINATES: 0 = top edge, increases downward
+    - VERTICAL HEADER: x=0, width=80px
+    - SECTION CONTENT: x=80px, width=calc(100% - 80px)
+    - METRIC CARDS: Grid positioning within content area
+    -->
+
+</body>
+</html>

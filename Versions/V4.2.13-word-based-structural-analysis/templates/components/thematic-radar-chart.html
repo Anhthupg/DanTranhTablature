@@ -1,0 +1,631 @@
+<!-- Thematic Radar Chart Component -->
+<!-- Multi-song overlay with similarity-based comparison -->
+
+<div class="analysis-section" id="thematicRadar" style="margin-top: 20px;">
+
+    <!-- Horizontal Header -->
+    <div class="section-header" onclick="toggleThematicRadar()" style="background: #3498db; color: white; padding: 15px 20px; cursor: pointer; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 18px;">📊 Thematic Radar Chart</h3>
+        <span class="collapse-indicator" id="thematicRadarCollapse" style="font-size: 18px;">▼</span>
+    </div>
+
+    <!-- Section Content -->
+    <div class="section-content" id="thematicRadarContent" style="background: white; padding: 25px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+        <!-- Info Panel -->
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px;">6 Thematic Axes Analysis</h4>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px; color: #666;">
+                <div><strong>🌿 Nature:</strong> trăng, sông, chiều, hoa, cò, mây, núi, cây</div>
+                <div><strong>👨‍👩‍👧 Family:</strong> chồng, vợ, mẹ, cha, con, anh, em, bà, ông</div>
+                <div><strong>💗 Emotion:</strong> thương, nhớ, buồn, vui, khổ, đau, yêu, sầu</div>
+                <div><strong>⚒️ Work:</strong> làm, giã, đập, chèo, kéo, cày, trồng, dệt</div>
+                <div><strong>⏰ Time:</strong> chiều, sáng, đêm, ngày, mùa, lúc, thời</div>
+                <div><strong>📍 Place:</strong> làng, sông, nhà, đò, chùa, cầu, núi, đồng</div>
+            </div>
+        </div>
+
+        <!-- Controls Row 1: Comparison Mode -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <label style="font-weight: 600; color: #555; display: block; margin-bottom: 8px;">Comparison Mode:</label>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button onclick="setRadarMode('current-vs-avg')" class="radar-mode-btn active" data-mode="current-vs-avg" style="padding: 8px 16px; border: 2px solid #3498db; background: #e3f2fd; color: #3498db; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;">Current vs. Average</button>
+                <button onclick="setRadarMode('multi-song')" class="radar-mode-btn" data-mode="multi-song" style="padding: 8px 16px; border: 1px solid #ddd; background: white; color: #666; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;">Multi-Song Overlay</button>
+                <button onclick="setRadarMode('regional')" class="radar-mode-btn" data-mode="regional" style="padding: 8px 16px; border: 1px solid #ddd; background: white; color: #666; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;">Regional Comparison</button>
+                <button onclick="setRadarMode('genre')" class="radar-mode-btn" data-mode="genre" style="padding: 8px 16px; border: 1px solid #ddd; background: white; color: #666; border-radius: 5px; cursor: pointer; font-weight: 600; font-size: 13px;">Genre Comparison</button>
+            </div>
+        </div>
+
+        <!-- Controls Row 2: Multi-Song Selection (only visible in multi-song mode) -->
+        <div id="multiSongControls" style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none;">
+            <div style="display: flex; gap: 15px; align-items: start; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <label style="font-weight: 600; color: #555; display: block; margin-bottom: 8px;">Select Songs to Compare:</label>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <select id="songSelector" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                            <option value="">-- Choose a song --</option>
+                        </select>
+                        <button onclick="addSongToRadar()" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Add</button>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="addSimilarSongs()" style="padding: 6px 12px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">+ Top 5 Similar</button>
+                        <button onclick="addDifferentSongs()" style="padding: 6px 12px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">+ Top 5 Different</button>
+                        <button onclick="clearAllSongs()" style="padding: 6px 12px; background: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear All</button>
+                    </div>
+                </div>
+                <div id="selectedSongsList" style="flex: 1; min-width: 300px;">
+                    <div style="font-weight: 600; color: #555; margin-bottom: 8px;">Selected Songs (max 10):</div>
+                    <div id="selectedSongsChips" style="display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px;">
+                        <div style="color: #999; font-size: 12px;">No songs selected</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chart Area -->
+        <div style="display: flex; gap: 20px; align-items: start;">
+            <!-- Radar Chart -->
+            <div style="flex: 1; min-width: 500px; max-width: 700px;">
+                <canvas id="thematicRadarChart" width="600" height="600"></canvas>
+            </div>
+
+            <!-- Legend & Insights -->
+            <div id="radarInsights" style="flex: 0 0 300px; background: #f8f9fa; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto;">
+                <h4 style="margin: 0 0 15px 0; color: #2c3e50;">Insights</h4>
+                <div id="insightsContent" style="color: #666; font-size: 13px; line-height: 1.6;">
+                    Loading...
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<script>
+// Thematic Radar Chart with Multi-Song Overlay
+(function() {
+    let thematicProfiles = null;
+    let vocabularyMetrics = null;
+    let radarChart = null;
+    let currentMode = 'current-vs-avg';
+    let selectedSongs = []; // For multi-song mode
+    let currentSong = null;
+
+    const categoryColors = {
+        nature: '#27ae60',
+        family: '#e74c3c',
+        emotion: '#f39c12',
+        work: '#3498db',
+        time: '#9b59b6',
+        place: '#1abc9c'
+    };
+
+    const chartColors = [
+        { bg: 'rgba(52, 152, 219, 0.2)', border: '#3498db' },   // Blue
+        { bg: 'rgba(231, 76, 60, 0.2)', border: '#e74c3c' },    // Red
+        { bg: 'rgba(39, 174, 96, 0.2)', border: '#27ae60' },    // Green
+        { bg: 'rgba(243, 156, 18, 0.2)', border: '#f39c12' },   // Orange
+        { bg: 'rgba(155, 89, 182, 0.2)', border: '#9b59b6' },   // Purple
+        { bg: 'rgba(26, 188, 156, 0.2)', border: '#1abc9c' },   // Teal
+        { bg: 'rgba(241, 196, 15, 0.2)', border: '#f1c40f' },   // Yellow
+        { bg: 'rgba(230, 126, 34, 0.2)', border: '#e67e22' },   // Carrot
+        { bg: 'rgba(52, 73, 94, 0.2)', border: '#34495e' },     // Dark
+        { bg: 'rgba(149, 165, 166, 0.2)', border: '#95a5a6' }   // Gray
+    ];
+
+    async function loadData() {
+        try {
+            const [profilesRes, metricsRes] = await Promise.all([
+                fetch('/api/thematic-profiles'),
+                fetch('/api/vocabulary-metrics')
+            ]);
+
+            thematicProfiles = await profilesRes.json();
+            vocabularyMetrics = await metricsRes.json();
+
+            // Get current song
+            const currentSongName = window.libraryController?.currentSong?.replace(/\.musicxml\.xml$/i, '') || 'Bà rằng bà rí';
+            currentSong = thematicProfiles.profiles.find(p =>
+                p.songName.toLowerCase().includes(currentSongName.toLowerCase())
+            ) || thematicProfiles.profiles[0];
+
+            // Populate song selector
+            populateSongSelector();
+
+            // Render initial chart
+            renderRadar();
+
+            console.log('[ThematicRadar] Loaded data, current song:', currentSong.songTitle);
+        } catch (error) {
+            console.error('[ThematicRadar] Error loading data:', error);
+        }
+    }
+
+    function populateSongSelector() {
+        const selector = document.getElementById('songSelector');
+        if (!selector) return;
+
+        // Sort songs by title
+        const sorted = [...thematicProfiles.profiles].sort((a, b) => a.songTitle.localeCompare(b.songTitle));
+
+        selector.innerHTML = '<option value="">-- Choose a song --</option>' +
+            sorted.map(p => `<option value="${p.songName}">${p.songTitle}</option>`).join('');
+    }
+
+    window.setRadarMode = function(mode) {
+        currentMode = mode;
+
+        // Update button styles
+        document.querySelectorAll('.radar-mode-btn').forEach(btn => {
+            if (btn.dataset.mode === mode) {
+                btn.style.border = '2px solid #3498db';
+                btn.style.background = '#e3f2fd';
+                btn.style.color = '#3498db';
+                btn.classList.add('active');
+            } else {
+                btn.style.border = '1px solid #ddd';
+                btn.style.background = 'white';
+                btn.style.color = '#666';
+                btn.classList.remove('active');
+            }
+        });
+
+        // Show/hide multi-song controls
+        const multiControls = document.getElementById('multiSongControls');
+        if (multiControls) {
+            multiControls.style.display = mode === 'multi-song' ? 'block' : 'none';
+        }
+
+        renderRadar();
+    };
+
+    window.addSongToRadar = function() {
+        if (selectedSongs.length >= 10) {
+            alert('Maximum 10 songs can be compared at once');
+            return;
+        }
+
+        const selector = document.getElementById('songSelector');
+        const songName = selector.value;
+        if (!songName) return;
+
+        const profile = thematicProfiles.profiles.find(p => p.songName === songName);
+        if (!profile) return;
+
+        // Check if already added
+        if (selectedSongs.find(s => s.songName === songName)) {
+            alert('Song already added');
+            return;
+        }
+
+        selectedSongs.push(profile);
+        updateSelectedSongsUI();
+        renderRadar();
+
+        // Reset selector
+        selector.value = '';
+    };
+
+    window.addSimilarSongs = function() {
+        if (!currentSong || !currentSong.similarSongs) return;
+
+        // Add top 5 most similar songs
+        const toAdd = currentSong.similarSongs.slice(0, 5);
+        toAdd.forEach(similar => {
+            const profile = thematicProfiles.profiles.find(p => p.songName === similar.songName);
+            if (profile && !selectedSongs.find(s => s.songName === profile.songName) && selectedSongs.length < 10) {
+                selectedSongs.push(profile);
+            }
+        });
+
+        updateSelectedSongsUI();
+        renderRadar();
+    };
+
+    window.addDifferentSongs = function() {
+        if (!currentSong || !currentSong.similarSongs) return;
+
+        // Add 5 least similar songs (lowest similarity scores)
+        const sorted = [...currentSong.similarSongs].sort((a, b) => parseFloat(a.similarity) - parseFloat(b.similarity));
+        const toAdd = sorted.slice(0, 5);
+
+        toAdd.forEach(different => {
+            const profile = thematicProfiles.profiles.find(p => p.songName === different.songName);
+            if (profile && !selectedSongs.find(s => s.songName === profile.songName) && selectedSongs.length < 10) {
+                selectedSongs.push(profile);
+            }
+        });
+
+        updateSelectedSongsUI();
+        renderRadar();
+    };
+
+    window.clearAllSongs = function() {
+        selectedSongs = [];
+        updateSelectedSongsUI();
+        renderRadar();
+    };
+
+    window.removeSongFromRadar = function(songName) {
+        selectedSongs = selectedSongs.filter(s => s.songName !== songName);
+        updateSelectedSongsUI();
+        renderRadar();
+    };
+
+    function updateSelectedSongsUI() {
+        const container = document.getElementById('selectedSongsChips');
+        if (!container) return;
+
+        if (selectedSongs.length === 0) {
+            container.innerHTML = '<div style="color: #999; font-size: 12px;">No songs selected</div>';
+            return;
+        }
+
+        container.innerHTML = selectedSongs.map((song, idx) => `
+            <div style="background: ${chartColors[idx].border}; color: white; padding: 5px 10px; border-radius: 15px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                <span>${song.songTitle}</span>
+                <span onclick="removeSongFromRadar('${song.songName}')" style="cursor: pointer; font-weight: bold; font-size: 14px;">×</span>
+            </div>
+        `).join('');
+    }
+
+    function renderRadar() {
+        const ctx = document.getElementById('thematicRadarChart');
+        if (!ctx) return;
+
+        if (radarChart) radarChart.destroy();
+
+        let datasets = [];
+        let insights = '';
+
+        if (currentMode === 'current-vs-avg') {
+            // Current song vs collection average
+            const collectionAvg = [
+                parseFloat(vocabularyMetrics.semanticCategories.nature.percentage),
+                parseFloat(vocabularyMetrics.semanticCategories.family.percentage),
+                parseFloat(vocabularyMetrics.semanticCategories.emotion.percentage),
+                parseFloat(vocabularyMetrics.semanticCategories.work.percentage),
+                parseFloat(vocabularyMetrics.semanticCategories.time.percentage),
+                parseFloat(vocabularyMetrics.semanticCategories.place.percentage)
+            ];
+
+            datasets = [
+                {
+                    label: 'Collection Average',
+                    data: collectionAvg,
+                    backgroundColor: 'rgba(149, 165, 166, 0.2)',
+                    borderColor: '#95a5a6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#95a5a6',
+                    pointRadius: 4
+                },
+                {
+                    label: currentSong.songTitle,
+                    data: currentSong.radarData,
+                    backgroundColor: 'rgba(52, 152, 219, 0.3)',
+                    borderColor: '#3498db',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#3498db',
+                    pointRadius: 5
+                }
+            ];
+
+            insights = generateCurrentSongInsights(currentSong, collectionAvg);
+
+        } else if (currentMode === 'multi-song') {
+            // Multi-song overlay
+            if (selectedSongs.length === 0) {
+                datasets = [{
+                    label: currentSong.songTitle,
+                    data: currentSong.radarData,
+                    backgroundColor: chartColors[0].bg,
+                    borderColor: chartColors[0].border,
+                    borderWidth: 2,
+                    pointBackgroundColor: chartColors[0].border,
+                    pointRadius: 4
+                }];
+                insights = `<p>Select songs above to overlay their thematic profiles.</p>`;
+            } else {
+                datasets = selectedSongs.map((song, idx) => ({
+                    label: song.songTitle,
+                    data: song.radarData,
+                    backgroundColor: chartColors[idx].bg,
+                    borderColor: chartColors[idx].border,
+                    borderWidth: 2,
+                    pointBackgroundColor: chartColors[idx].border,
+                    pointRadius: 4
+                }));
+
+                insights = generateMultiSongInsights(selectedSongs);
+            }
+
+        } else if (currentMode === 'regional') {
+            // Regional averages
+            const regional = thematicProfiles.collectionStats.byRegion;
+            datasets = Object.entries(regional).map(([region, data]) => ({
+                label: region,
+                data: data.radarData,
+                backgroundColor: getRegionalColor(region).bg,
+                borderColor: getRegionalColor(region).border,
+                borderWidth: 2,
+                pointBackgroundColor: getRegionalColor(region).border,
+                pointRadius: 4
+            }));
+
+            insights = generateRegionalInsights(regional);
+
+        } else if (currentMode === 'genre') {
+            // Genre averages
+            const genres = thematicProfiles.collectionStats.byGenre;
+            datasets = Object.entries(genres).map(([genre, data]) => ({
+                label: genre,
+                data: data.radarData,
+                backgroundColor: getGenreColor(genre).bg,
+                borderColor: getGenreColor(genre).border,
+                borderWidth: 2,
+                pointBackgroundColor: getGenreColor(genre).border,
+                pointRadius: 4
+            }));
+
+            insights = generateGenreInsights(genres);
+        }
+
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['🌿 Nature', '👨‍👩‍👧 Family', '💗 Emotion', '⚒️ Work', '⏰ Time', '📍 Place'],
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 15,
+                        ticks: {
+                            stepSize: 3,
+                            callback: (value) => value + '%',
+                            font: { size: 11 }
+                        },
+                        pointLabels: {
+                            font: { size: 14, weight: 'bold' }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            font: { size: 13, weight: '600' },
+                            padding: 12,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return context.dataset.label + ': ' + context.parsed.r.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('insightsContent').innerHTML = insights;
+        console.log(`[ThematicRadar] Rendered in ${currentMode} mode`);
+    }
+
+    function generateCurrentSongInsights(song, avgData) {
+        const themes = ['nature', 'family', 'emotion', 'work', 'time', 'place'];
+        const diffs = themes.map((theme, i) => ({
+            theme,
+            song: song.radarData[i],
+            avg: avgData[i],
+            diff: song.radarData[i] - avgData[i]
+        }));
+
+        const maxDiff = diffs.reduce((max, d) => Math.abs(d.diff) > Math.abs(max.diff) ? d : max);
+        const dominant = diffs.reduce((max, d) => d.song > max.song ? d : max);
+
+        const getIcon = (t) => ({ nature: '🌿', family: '👨‍👩‍👧', emotion: '💗', work: '⚒️', time: '⏰', place: '📍' }[t]);
+
+        return `
+            <div style="background: ${maxDiff.diff > 0 ? '#e8f5e9' : '#ffebee'}; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                <div style="font-weight: 600; color: ${maxDiff.diff > 0 ? '#27ae60' : '#e74c3c'}; margin-bottom: 5px;">
+                    ${getIcon(maxDiff.theme)} Most ${maxDiff.diff > 0 ? 'Over' : 'Under'}-Emphasized
+                </div>
+                <div style="font-size: 13px; color: #666;">
+                    <strong>${maxDiff.theme.toUpperCase()}:</strong> ${maxDiff.song.toFixed(2)}%
+                    <br>
+                    (avg: ${maxDiff.avg.toFixed(2)}%, ${maxDiff.diff > 0 ? '+' : ''}${maxDiff.diff.toFixed(2)}%)
+                </div>
+            </div>
+
+            <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #f39c12; margin-bottom: 5px;">
+                    ${getIcon(dominant.theme)} Dominant Theme
+                </div>
+                <div style="font-size: 13px; color: #666;">
+                    <strong>${dominant.theme.toUpperCase()}:</strong> ${dominant.song.toFixed(2)}%
+                </div>
+            </div>
+
+            <div style="font-size: 12px; color: #999; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                <strong>Total Words:</strong> ${song.totalWords}<br>
+                <strong>Phrases:</strong> ${song.totalPhrases}<br>
+                <strong>Region:</strong> ${song.region}<br>
+                <strong>Genre:</strong> ${song.genre}
+            </div>
+        `;
+    }
+
+    function generateMultiSongInsights(songs) {
+        if (songs.length === 0) return '<p>Select songs to compare.</p>';
+
+        // Find most similar pair
+        let mostSimilar = { sim: 0, pair: [0, 1] };
+        for (let i = 0; i < songs.length; i++) {
+            for (let j = i + 1; j < songs.length; j++) {
+                const sim = calculateSimilarity(songs[i].radarData, songs[j].radarData);
+                if (sim > mostSimilar.sim) {
+                    mostSimilar = { sim, pair: [i, j] };
+                }
+            }
+        }
+
+        // Find dominant themes
+        const themeCounts = {};
+        songs.forEach(s => {
+            themeCounts[s.dominantTheme] = (themeCounts[s.dominantTheme] || 0) + 1;
+        });
+
+        return `
+            <div style="margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">Comparing ${songs.length} Songs</div>
+                ${songs.map((s, i) => `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <div style="width: 12px; height: 12px; background: ${chartColors[i].border}; border-radius: 2px;"></div>
+                        <div style="font-size: 12px; color: #666;">${s.songTitle}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            ${mostSimilar.sim > 0 ? `
+                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin-bottom: 10px;">
+                    <div style="font-weight: 600; color: #27ae60; margin-bottom: 5px;">Most Similar Pair</div>
+                    <div style="font-size: 12px; color: #666;">
+                        ${songs[mostSimilar.pair[0]].songTitle}<br>
+                        ${songs[mostSimilar.pair[1]].songTitle}<br>
+                        <strong>${mostSimilar.sim.toFixed(1)}% similarity</strong>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div style="background: #fff3e0; padding: 12px; border-radius: 6px;">
+                <div style="font-weight: 600; color: #f39c12; margin-bottom: 5px;">Dominant Themes</div>
+                ${Object.entries(themeCounts).map(([theme, count]) => `
+                    <div style="font-size: 12px; color: #666;">
+                        ${theme}: ${count} song${count > 1 ? 's' : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    function generateRegionalInsights(regional) {
+        const regions = Object.keys(regional);
+        return `
+            <div style="margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">Regional Patterns</div>
+                ${regions.map(region => {
+                    const data = regional[region];
+                    const dominant = ['nature', 'family', 'emotion', 'work', 'time', 'place']
+                        .reduce((max, theme, i) => data.radarData[i] > max.val ? { theme, val: data.radarData[i] } : max, { theme: 'none', val: 0 });
+
+                    return `
+                        <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; border-left: 3px solid ${getRegionalColor(region).border};">
+                            <div style="font-weight: 600; color: ${getRegionalColor(region).border};">${region} (${data.songs.length} songs)</div>
+                            <div style="font-size: 11px; color: #666;">Emphasizes: ${dominant.theme} (${dominant.val.toFixed(1)}%)</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function generateGenreInsights(genres) {
+        const genreList = Object.keys(genres);
+        return `
+            <div style="margin-bottom: 15px;">
+                <div style="font-weight: 600; color: #2c3e50; margin-bottom: 8px;">Genre Patterns</div>
+                ${genreList.map(genre => {
+                    const data = genres[genre];
+                    const dominant = ['nature', 'family', 'emotion', 'work', 'time', 'place']
+                        .reduce((max, theme, i) => data.radarData[i] > max.val ? { theme, val: data.radarData[i] } : max, { theme: 'none', val: 0 });
+
+                    return `
+                        <div style="margin-bottom: 10px; padding: 10px; background: white; border-radius: 6px; border-left: 3px solid ${getGenreColor(genre).border};">
+                            <div style="font-weight: 600; color: ${getGenreColor(genre).border};">${genre} (${data.songs.length} songs)</div>
+                            <div style="font-size: 11px; color: #666;">Emphasizes: ${dominant.theme} (${dominant.val.toFixed(1)}%)</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    function calculateSimilarity(a, b) {
+        const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
+        const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+        const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+        return magA && magB ? (dot / (magA * magB)) * 100 : 0;
+    }
+
+    function getRegionalColor(region) {
+        const colors = {
+            'Northern': { bg: 'rgba(52, 152, 219, 0.2)', border: '#3498db' },
+            'Southern': { bg: 'rgba(231, 76, 60, 0.2)', border: '#e74c3c' },
+            'Central': { bg: 'rgba(243, 156, 18, 0.2)', border: '#f39c12' },
+            'Highland': { bg: 'rgba(39, 174, 96, 0.2)', border: '#27ae60' }
+        };
+        return colors[region] || chartColors[0];
+    }
+
+    function getGenreColor(genre) {
+        const colors = {
+            'Hò': { bg: 'rgba(52, 152, 219, 0.2)', border: '#3498db' },
+            'Lý': { bg: 'rgba(39, 174, 96, 0.2)', border: '#27ae60' },
+            'Ru': { bg: 'rgba(231, 76, 60, 0.2)', border: '#e74c3c' },
+            'Quan họ': { bg: 'rgba(155, 89, 182, 0.2)', border: '#9b59b6' },
+            'Folk': { bg: 'rgba(149, 165, 166, 0.2)', border: '#95a5a6' }
+        };
+        return colors[genre] || chartColors[0];
+    }
+
+    window.toggleThematicRadar = function() {
+        const content = document.getElementById('thematicRadarContent');
+        const toggle = document.getElementById('thematicRadarCollapse');
+
+        if (content.classList.contains('collapsed')) {
+            content.classList.remove('collapsed');
+            content.style.display = 'block';
+            toggle.textContent = '▼';
+            console.log('[ThematicRadar] Expanded');
+        } else {
+            content.classList.add('collapsed');
+            content.style.display = 'none';
+            toggle.textContent = '▶';
+            console.log('[ThematicRadar] Collapsed');
+        }
+    };
+
+    window.refreshThematicRadar = async function() {
+        await loadData();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData();
+        console.log('[ThematicRadar] Component initialized');
+    });
+
+})();
+</script>
+
+<style>
+#thematicRadarContent.collapsed {
+    display: none !important;
+}
+
+.radar-mode-btn.active {
+    border: 2px solid #3498db !important;
+    background: #e3f2fd !important;
+    color: #3498db !important;
+}
+</style>

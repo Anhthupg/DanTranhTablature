@@ -85,7 +85,7 @@ class DualPanelGenerator {
         // Color scheme
         this.colors = {
             mainNote: '#000000',      // Full black for notes and triangles
-            graceNote: '#FFD700',     // Gold for grace notes
+            graceNote: '#999999',     // Grey for grace notes (yellow reserved for tone marks)
             bentIndicator: '#FF0000', // Red for bent notes
             melisma: '#E74C3C',       // Red for melisma
             string: '#000000',        // Black for used strings
@@ -364,11 +364,18 @@ class DualPanelGenerator {
 
                     // Draw the after-grace note
                     const y = this.calculateYPosition(note.pitch.pitchClass, note.pitch.octave);
-                    svg += `<circle cx="${x}" cy="${y}" r="5" fill="${this.colors.graceNote}"
-                            stroke="#CC9900" stroke-width="1"
+                    svg += `<circle cx="${x}" cy="${y}" r="6" fill="${this.colors.graceNote}"
+                            stroke="#000000" stroke-width="2"
                             data-lyrics="bao" class="lyrics-bao"/>`;
                     svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="8"
-                            fill="#4A3C00" font-weight="bold">${note.pitch.fullNote}</text>`;
+                            fill="#000000" font-weight="bold">${note.pitch.fullNote}</text>`;
+                    // Add slanted dash through after-grace note
+                    const afterDashStartX = x - 5;
+                    const afterDashStartY = y + 5;
+                    const afterDashEndX = x + 5;
+                    const afterDashEndY = y - 5;
+                    svg += `<line x1="${afterDashStartX}" y1="${afterDashStartY}" x2="${afterDashEndX}" y2="${afterDashEndY}"
+                            stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>`;
                     svg += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="6"
                             fill="#666">${index + 1}</text>\n`;
 
@@ -415,11 +422,18 @@ class DualPanelGenerator {
                         data-note-y="${y}" data-band-height="${graceBandHeight}" data-note-x="${x}"/>`;
 
                 svg += `<circle cx="${x}" cy="${y}" r="6" fill="${this.colors.graceNote}"
-                        stroke="#CC9900" stroke-width="2"
+                        stroke="#000000" stroke-width="2"
                         data-lyrics="${associatedLyrics}" class="lyrics-${associatedLyrics}"/>`;
-                // Note name inside grace note
+                // Note name inside grace note (draw first so dash goes on top)
                 svg += `<text x="${x}" y="${y + 2}" text-anchor="middle" font-size="8"
-                        fill="#4A3C00" font-weight="bold">${note.pitch.fullNote}</text>`;
+                        fill="#000000" font-weight="bold">${note.pitch.fullNote}</text>`;
+                // Add slanted dash through grace note (traditional notation - draw AFTER text)
+                const dashStartX = x - 5;
+                const dashStartY = y + 5;
+                const dashEndX = x + 5;
+                const dashEndY = y - 5;
+                svg += `<line x1="${dashStartX}" y1="${dashStartY}" x2="${dashEndX}" y2="${dashEndY}"
+                        stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>`;
                 // Add note number above grace note
                 svg += `<text x="${x}" y="${y - 10}" text-anchor="middle" font-size="6"
                         fill="#666">${index + 1}</text>\n`;
@@ -586,6 +600,49 @@ class DualPanelGenerator {
         // Generate tuning dropdown options
         const tuningDropdownOptions = this.generateTuningDropdownOptions();
 
+        // Generate debug script
+        const debugScript = `
+        <script>
+        // Grace Note Debug Logging - v3
+        console.log('=== GRACE NOTE DEBUG ===');
+        console.log('Grace note color in generator: #999999 (grey)');
+
+        // Wait for DOM to load
+        document.addEventListener('DOMContentLoaded', function() {
+            const graceNotes = document.querySelectorAll('circle[r="6"]');
+            console.log('Total grace notes found: ' + graceNotes.length);
+
+            graceNotes.forEach((note, index) => {
+                const fill = note.getAttribute('fill');
+                const computedFill = window.getComputedStyle(note).fill;
+                console.log('Grace note #' + (index + 1) + ':');
+                console.log('  - HTML fill attribute: ' + fill);
+                console.log('  - Computed fill: ' + computedFill);
+                console.log('  - Expected: #999999 or rgb(153, 153, 153)');
+                console.log('  - Match: ' + (fill === '#999999' || computedFill === 'rgb(153, 153, 153)'));
+            });
+
+            // Check for any CSS overrides
+            const styleSheets = Array.from(document.styleSheets);
+            console.log('Checking ' + styleSheets.length + ' stylesheets for grace note overrides...');
+            styleSheets.forEach((sheet, sheetIndex) => {
+                try {
+                    const rules = Array.from(sheet.cssRules || sheet.rules || []);
+                    rules.forEach(rule => {
+                        if (rule.selectorText && rule.selectorText.includes('circle') && rule.style.fill) {
+                            console.log('Found circle fill rule in stylesheet #' + sheetIndex + ': ' + rule.selectorText + ' { fill: ' + rule.style.fill + ' }');
+                        }
+                    });
+                } catch (e) {
+                    console.log('Cannot access stylesheet #' + sheetIndex + ' (CORS): ' + e.message);
+                }
+            });
+
+            console.log('=== END DEBUG ===');
+        });
+        </script>
+        `;
+
         // Use template with placeholders
         let html = this.htmlTemplate
             .replace(/{{SONG_NAME}}/g, songName)
@@ -604,7 +661,8 @@ class DualPanelGenerator {
             .replace(/{{ALTERNATIVE_TUNING_HEADER}}/g, alternativeTuningHeader)
             .replace(/{{LYRICS_HEADER}}/g, lyricsHeader)
             .replace(/{{INFO_HEADER}}/g, infoHeader)
-            .replace(/{{ANALYSIS_HEADER}}/g, analysisHeader);
+            .replace(/{{ANALYSIS_HEADER}}/g, analysisHeader)
+            .replace(/<\/body>/, debugScript + '\n</body>');
 
         return html;
     }

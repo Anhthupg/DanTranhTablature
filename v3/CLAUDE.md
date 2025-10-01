@@ -14,10 +14,12 @@ Dan Tranh Tablature V3 is a scalable visualization system for Vietnamese 16-stri
 --main-note-stroke: #005959;      /* Dark teal - defines boundaries */
 --main-note-text: #FFFFFF;        /* White - high contrast */
 
-/* Grace Notes - Gold Family */
---grace-note-fill: #FFD700;       /* Gold - ornamental, attention-drawing */
---grace-note-stroke: #CC9900;     /* Dark gold - maintains definition */
---grace-note-text: #4A3C00;       /* Dark brown - readable on gold */
+/* Grace Notes - Grey Family with Slanted Dash */
+--grace-note-fill: #999999;       /* Grey - subtle ornamentation */
+--grace-note-stroke: #000000;     /* Black - clear definition */
+--grace-note-text: #000000;       /* Black - high contrast on grey */
+--grace-note-dash: #000000;       /* Black slanted line (traditional notation) */
+/* Note: Grace notes feature diagonal slash from lower-left to upper-right */
 
 /* Tone Markings - Purple Family */
 --tone-fill: #9B59B6;             /* Purple - tonal indicators */
@@ -593,7 +595,7 @@ const tuningCategories = {
 --kpic-2: #3498DB;          /* Blue accents, badges */
 --kpic-4: #85C1E9;          /* Light blue borders, backgrounds */
 --melisma: #E74C3C;         /* Red close button */
---grace-note: #FFD700;      /* Gold pattern dots */
+--tone-fill: #FFD700;       /* Yellow/gold reserved for tone marks */
 ```
 
 ### User Interface Improvements

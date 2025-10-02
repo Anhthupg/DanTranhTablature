@@ -1,102 +1,70 @@
-# V4.2.13 - Complete Vocabulary Visualization System
+# V4.2.18 - Library Selection & Radar Chart Synchronization
 
-**Date:** September 30, 2025
-**Status:** ✅ Production Ready
+**Date:** October 1, 2025
+**Status:** Production Ready
 
-## Summary
-Complete vocabulary visualization system with 4 integrated components: Interactive Word Cloud, Multi-Song Thematic Radar with similarity-based comparison, 121-Song Radar Gallery, and Detailed Vocabulary Metrics.
+## Issues Fixed
 
-## Complete Feature Set
+### Issue 1: Library Highlight Doesn't Match Clicked Song
+**Problem:** After clicking a song in the library, the page reloads but highlights the first song instead of the clicked one.
 
-### 1. Interactive Word Cloud ☁️
-- 1,413 unique Vietnamese words
-- Frequency-based sizing (12-48px)
-- 7 color-coded semantic categories
-- Click word → shows all songs using it
-- Category filters + limit selector
+**Root Cause:** Library controller didn't read the `?song=` URL parameter to determine which song was loaded.
 
-### 2. Multi-Song Thematic Radar Chart 📊 ⭐ NEW!
-**6 Axes Analysis:**
-- 🌿 Nature: trăng, sông, chiều, hoa, cò
-- 👨‍👩‍👧 Family: chồng, vợ, mẹ, cha, con
-- 💗 Emotion: thương, nhớ, buồn, khổ
-- ⚒️ Work: làm, giã, đập, chèo, kéo
-- ⏰ Time: chiều, sáng, đêm, ngày, mùa
-- 📍 Place: làng, sông, nhà, đò, chùa
+**Solution:** Added URL parameter reading in library controller render method (library-controller.js:97-103)
+```javascript
+const urlParams = new URLSearchParams(window.location.search);
+const urlSong = urlParams.get('song');
+if (urlSong && !this.currentSelectedSong) {
+    this.currentSelectedSong = urlSong;
+}
+```
 
-**4 Comparison Modes:**
-1. **Current vs. Average** - How song differs from collection
-2. **Multi-Song Overlay** - Compare up to 10 songs with:
-   - Manual selection (dropdown)
-   - + Top 5 Similar button
-   - + Top 5 Different button
-   - Shows similarity % between songs
-3. **Regional** - North/South/Central/Highland averages
-4. **Genre** - Hò/Lý/Ru/Quan họ patterns
+### Issue 2: Thematic Radar Chart Shows Wrong Song
+**Problem:** Radar chart always shows "Bà Rằng Bà Rí" regardless of which song is selected from library.
 
-### 3. Song Radar Gallery 🎯
-- All 121 songs with mini radar charts
-- Sort by similarity to current song
-- Filter by region/genre
-- 3 chart sizes
-- Collapsed by default
+**Root Cause:** Radar chart tried to read current song from `window.libraryController.currentSong`, which was never set because the page reloads.
 
-### 4. Vocabulary Details 📚
-- Tabbed interface (Top Words, Themes, Universal, Rare, By Type)
-- 50 most frequent words with English
-- Semantic category breakdowns
+**Solution:** Changed radar chart to read directly from URL parameter (thematic-radar-chart.html:129-136)
+```javascript
+// Before (BROKEN):
+const currentSongName = window.libraryController?.currentSong || 'Bà rằng bà rí';
 
-## Key Data Insights
-
-**Dominant Themes:**
-- Family: 58 songs (47.9%)
-- Nature: 34 songs (28.1%)
-- Work: 9 songs (7.4%)
-
-**Regional Patterns:**
-- Northern: More nature imagery
-- Southern: More work vocabulary
-- Central: Balanced
-
-**Genre Patterns:**
-- Hò: Highest work vocabulary (3.8%)
-- Lý: Highest nature vocabulary (6.2%)
-- Ru: Highest family vocabulary (9.8%)
-
-**Similarity Examples:**
-- "Cậu khóa ơi!" ↔ "Ngày mùa": 93.38%
-- Work songs cluster at 95%+ similarity
+// After (FIXED):
+const urlParams = new URLSearchParams(window.location.search);
+const currentSongName = urlParams.get('song') || 'Bà rằng bà rí';
+```
 
 ## Technical Details
 
-**Similarity Algorithm:**
-- Cosine similarity on 6D vectors
-- Pre-calculated 121×121 matrix
-- Stored in thematic-profiles.json
+### URL as Single Source of Truth
+When library controller selects a song, it reloads the page with `?song=filename`. All components should read this parameter directly instead of relying on JavaScript state that gets lost on reload.
 
-**APIs:**
-- GET /api/thematic-profiles
-- GET /api/vocabulary-metrics
-
-**Performance:**
-- Cached for 1 hour
-- Auto-regenerates when stale
-- Gallery lazy-loads on expand
+**Pattern to follow:**
+```javascript
+const urlParams = new URLSearchParams(window.location.search);
+const currentSong = urlParams.get('song') || 'default-song';
+```
 
 ## Files Modified
 
-**New/Updated:**
-- templates/components/thematic-radar-chart.html (632 lines)
-- templates/components/song-radar-gallery.html (352 lines)
-- generate-thematic-profiles.js (243 lines)
-- vertical-demo-server.js (added API endpoint)
+1. **v4/library-controller.js**
+   - Line 97-103: Added URL parameter reading to sync selection state
 
-**Total System:**
-- 4 visualization components
-- 2 data generators
-- 2 API endpoints
-- 2 cached JSON files
+2. **v4/templates/components/thematic-radar-chart.html**
+   - Line 129-136: Changed to read current song from URL instead of library controller
+
+## Testing Checklist
+
+- [x] Library highlights correct song after selection
+- [x] Radar chart updates to show selected song
+- [x] Word cloud data matches selected song
+- [x] All sections sync with library selection
+- [x] URL parameter correctly passed and read
+
+## Dependencies
+
+Requires V4.2.17 (alternative tuning fix) to be applied first.
 
 ---
 
-**V4.2.13 = Most Advanced Vietnamese Folk Song Analysis System!**
+**V4.2.18 Complete - Library and Radar Chart Properly Synchronized**

@@ -9,13 +9,18 @@ const { renderPhraseAnnotations } = require('./render-phrase-annotations');
 const { GlissandoAnalyzer } = require('./glissando-analyzer');
 const LyricsTableGenerator = require('./generators/lyrics-table-generator');
 
+// V4.2.38: Centralized utilities
+const DataLoader = require('./utils/data-loader');
+const formatters = require('./utils/formatters');
+
 const app = express();
 const port = 3006; // Vertical demo on port 3006
 
-// Create generator instances
+// Create generator and utility instances
 const tablatureGen = new ServerTablatureGenerator();
 const phraseAnnotationGen = new PhraseAnnotationsGenerator();
 const lyricsTableGen = new LyricsTableGenerator();
+const dataLoader = new DataLoader(__dirname);
 
 // Serve the vertical header template with real song data
 app.get('/', (req, res) => {
@@ -32,8 +37,7 @@ app.get('/', (req, res) => {
     // V4.2.14: Check for ?song= query parameter
     const requestedSong = req.query.song;
 
-    const v3ProcessedDir = path.join(__dirname, '..', 'v3', 'data', 'processed');
-
+    // V4.2.38: Use DataLoader for centralized data loading
     // Strip .musicxml.xml extensions (library sends "Song.musicxml.xml", we need "Song")
     let preferredSong = requestedSong
         ? requestedSong.replace('.musicxml.xml', '').replace('.xml', '')
@@ -43,113 +47,85 @@ app.get('/', (req, res) => {
 
     console.log(`Query param: "${requestedSong}" → Preferred: "${preferredSong}"`);
 
-    // Check if preferred song exists
-    if (!fs.existsSync(path.join(v3ProcessedDir, preferredSong, 'relationships.json'))) {
-        console.log(`Song not found: ${preferredSong}, checking available songs...`);
+    // Check if preferred song exists using DataLoader
+    let relationshipsData = dataLoader.loadV3ProcessedData(preferredSong);
+
+    if (!relationshipsData) {
+        console.log(`Song not found: ${preferredSong}, using fallback...`);
 
         // Fall back to first available song
-        const songDirs = fs.readdirSync(v3ProcessedDir).filter(f =>
-            fs.statSync(path.join(v3ProcessedDir, f)).isDirectory() &&
-            fs.existsSync(path.join(v3ProcessedDir, f, 'relationships.json'))
-        );
+        const fallbackSong = dataLoader.findFirstAvailableSong();
 
-        if (songDirs.length === 0) {
+        if (!fallbackSong) {
             return res.status(500).send('No processed songs found in v3 data.');
         }
 
-        songDir = songDirs[0];
+        songDir = fallbackSong;
+        relationshipsData = dataLoader.loadV3ProcessedData(fallbackSong);
         console.log(`Using fallback: ${songDir}`);
     } else {
         console.log(`✓ Loading song: ${songDir}`);
     }
 
-    // Load the song's relationships data which contains lyrics
-    const relationshipsPath = path.join(v3ProcessedDir, songDir, 'relationships.json');
-    const relationshipsData = JSON.parse(fs.readFileSync(relationshipsPath, 'utf8'));
-
-    // Convert relationships data to songData format
-    const songData = {
-        metadata: {
-            title: relationshipsData.metadata?.title || songDir,
-            optimalTuning: relationshipsData.metadata?.optimalTuning || 'C-D-E-G-A',
-            genre: relationshipsData.metadata?.genre || 'Traditional'
-        },
-        notes: relationshipsData.notes ? relationshipsData.notes.map((note, index) => ({
-            index: index, // Add index for glissando analyzer
-            step: note.pitch?.step || note.pitch?.fullNote?.replace(/[0-9]/g, '') || 'C',
-            octave: note.pitch?.octave || parseInt(note.pitch?.fullNote?.match(/[0-9]/)?.[0]) || 4,
-            pitch: (note.pitch?.step || note.pitch?.fullNote?.replace(/[0-9]/g, '') || 'C') + (note.pitch?.octave || parseInt(note.pitch?.fullNote?.match(/[0-9]/)?.[0]) || 4), // Full pitch like "C4"
-            duration: note.duration?.value ? note.duration.value / 4 : 1, // Convert from duration value
-            isGrace: note.isGrace || false,
-            lyric: note.lyrics?.text || ''
-        })) : []
-    };
+    // V4.2.38: Use DataLoader's converter for consistent format
+    const songData = dataLoader.convertV3ToV4Format(relationshipsData, songDir);
 
     // V4.2.0: Generate color-coded lyrics with clickable words and font controls
     let lyricsHTML = '<p style="padding: 20px; text-align: center; color: #999;">No lyrics available for this song.</p>';
 
-    // Try to find MusicXML file
-    let musicXmlPath = path.join(__dirname, 'data', 'musicxml', `${songDir}.musicxml.xml`);
+    // V4.2.38: Use DataLoader to load MusicXML
+    const xmlContent = dataLoader.loadMusicXML(songDir);
 
-    if (!fs.existsSync(musicXmlPath)) {
-        const musicXmlDir = path.join(__dirname, 'data', 'musicxml');
-        const allXmlFiles = fs.readdirSync(musicXmlDir).filter(f => f.endsWith('.musicxml.xml'));
-
-        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd');
-        const normalizedSongDir = removeDiacritics(songDir).toLowerCase().replace(/[_\s]+/g, '');
-        const matchedFile = allXmlFiles.find(f => {
-            const normalized = removeDiacritics(f.replace('.musicxml.xml', '')).toLowerCase().replace(/[_\s]+/g, '');
-            return normalized === normalizedSongDir;
-        });
-
-        if (matchedFile) musicXmlPath = path.join(musicXmlDir, matchedFile);
-    }
-
-    if (fs.existsSync(musicXmlPath)) {
+    if (xmlContent) {
         try {
-            const xmlContent = fs.readFileSync(musicXmlPath, 'utf-8');
-            const lyricMatches = xmlContent.match(/<lyric[^>]*>[\s\S]*?<text>([^<]+)<\/text>[\s\S]*?<\/lyric>/g) || [];
+            // V4.2.38: Use DataLoader's lyric extractor
+            const lyrics = dataLoader.extractLyricsFromXML(xmlContent);
 
-            if (lyricMatches.length > 0) {
-                const lyrics = lyricMatches.map(match => {
-                    const textMatch = match.match(/<text>([^<]+)<\/text>/);
-                    return textMatch ? textMatch[1].trim() : '';
-                }).filter(text => text.length > 0);
+            if (lyrics.length > 0) {
+                // Try to load pre-segmented lyrics data
+                let segmentationResult = dataLoader.loadLyricsSegmentation(songDir);
 
-                if (lyrics.length > 0) {
-                    const segmentationPath = path.join(__dirname, 'data', 'lyrics-segmentations', `${path.basename(musicXmlPath, '.musicxml.xml')}.json`);
-                    let segmentationResult;
-
-                    if (fs.existsSync(segmentationPath)) {
-                        segmentationResult = JSON.parse(fs.readFileSync(segmentationPath, 'utf-8'));
-                        segmentationResult.phrases = segmentationResult.phrases.map(p => ({
-                            ...p,
-                            vietnameseText: p.text || p.vietnameseText
-                        }));
-                    } else {
-                        const syllables = lyrics.map((text, i) => ({ text, index: i, noteIndices: [i], noteDurations: [1.0] }));
-                        const phraseSegmenter = new PhraseSegmenter();
-                        segmentationResult = phraseSegmenter.segment(syllables, songData.notes);
-                    }
-
-                    // V4.2.26: Use LyricsTableGenerator for clean HTML generation
-                    lyricsHTML = lyricsTableGen.generateTable(segmentationResult);
+                if (!segmentationResult) {
+                    // Fall back to on-the-fly segmentation
+                    console.log('No pre-segmented lyrics, generating on-the-fly...');
+                    const syllables = lyrics.map((text, i) => ({ text, index: i, noteIndices: [i], noteDurations: [1.0] }));
+                    const phraseSegmenter = new PhraseSegmenter();
+                    segmentationResult = phraseSegmenter.segment(syllables, songData.notes);
                 }
+
+                // V4.2.26: Use LyricsTableGenerator for clean HTML generation
+                lyricsHTML = lyricsTableGen.generateTable(segmentationResult);
             }
         } catch (err) {
             console.log('Lyrics failed:', err.message);
         }
     }
 
-    // Generate tablatures with V3 duration spacing and V4.0.2 features
-    const optimalTuning = songData.metadata.optimalTuning || 'C-D-E-G-A';
-    const alternativeTunings = ['C-D-F-G-A', 'C-D-E-G-Bb', 'C-Eb-F-G-Bb'].filter(t => t !== optimalTuning);
+    // V4.2.37: Calculate optimal tuning and find best alternative
+    const tuningOptimizer = require('./utils/tuning-optimizer');
+    let optimalTuning = songData.metadata.optimalTuning;
+    let optimalBentCount = 0;
 
-    // V4.2.16: Check for custom tuning parameter
-    const customTuning1 = req.query.tuning1;
-    const comparisonTuning = customTuning1 || alternativeTunings[0];
+    // Get full tuning analysis
+    const tuningAnalysis = tuningOptimizer.analyzeAllTunings(songData.notes);
 
-    console.log(`Comparison tuning: ${comparisonTuning} (custom: ${customTuning1 || 'none'})`);
+    if (!optimalTuning) {
+        optimalTuning = tuningAnalysis.optimal;
+        optimalBentCount = tuningAnalysis.bentNotes;
+        console.log(`Calculated optimal tuning: ${optimalTuning} (${optimalBentCount} bent notes)`);
+    } else {
+        optimalBentCount = tuningOptimizer.countBentNotes(songData.notes, optimalTuning);
+        console.log(`Using stored optimal tuning: ${optimalTuning} (${optimalBentCount} bent notes)`);
+    }
+
+    // Find best alternative (2nd best tuning that's different from optimal)
+    const alternativeResult = tuningAnalysis.allResults.find(r => r.tuning !== optimalTuning);
+    const comparisonTuning = req.query.tuning1 || (alternativeResult ? alternativeResult.tuning : 'C-D-F-G-A');
+    const comparisonBentCount = alternativeResult ? alternativeResult.bentCount :
+                                 tuningOptimizer.countBentNotes(songData.notes, comparisonTuning);
+
+    console.log(`Optimal: ${optimalTuning} (${optimalBentCount} bent)`);
+    console.log(`Alternative: ${comparisonTuning} (${comparisonBentCount} bent)`);
 
     // Generate optimal tuning tablature (bent notes visible/red by default)
     const optimalSVG = tablatureGen.generateSVG(songData, optimalTuning, true);
@@ -172,39 +148,10 @@ app.get('/', (req, res) => {
     let structuralOverviewCards = '<p style="color: #999;">No structural analysis available for this song.</p>';
 
     try {
-        // Load relationships data for this song (with flexible matching)
-        const relationshipsDir = path.join(__dirname, 'data', 'relationships');
-        const allRelFiles = fs.readdirSync(relationshipsDir).filter(f => f.endsWith('-relationships.json'));
+        // V4.2.38: Use DataLoader to load relationships
+        const relationshipsData = dataLoader.loadRelationships(songDir);
 
-        // Normalize function (remove diacritics)
-        const normalize = (str) => str
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[đĐ]/g, 'd')
-            .toLowerCase();
-
-        // Find matching relationship file
-        const cleanSongDir = songDir.replace(/_/g, ' ').toLowerCase();
-        const normalizedSongDir = normalize(cleanSongDir);
-        console.log(`Looking for relationships: songDir="${songDir}", cleaned="${cleanSongDir}", normalized="${normalizedSongDir}"`);
-
-        const matchingRelFile = allRelFiles.find(file => {
-            const fileBase = file.replace('-relationships.json', '');
-            const normalizedFile = normalize(fileBase);
-            const matches = normalizedFile === normalizedSongDir;
-            if (matches) console.log(`  ✓ Matched: ${file}`);
-            return matches;
-        });
-
-        let relationshipsPath = null;
-        if (matchingRelFile) {
-            relationshipsPath = path.join(relationshipsDir, matchingRelFile);
-        } else {
-            relationshipsPath = path.join(relationshipsDir, `${songDir}-relationships.json`);
-        }
-
-        if (fs.existsSync(relationshipsPath)) {
-            const relationshipsData = JSON.parse(fs.readFileSync(relationshipsPath, 'utf8'));
+        if (relationshipsData) {
 
             // V4.2.7: Get positioned notes from last generateSVG call
             const positionedNotes = tablatureGen.getLastGeneratedNotes();
@@ -219,25 +166,10 @@ app.get('/', (req, res) => {
 
             console.log(`Merged X/Y positions into ${relationshipsData.notes.length} notes from ${positionedNotes.length} positioned notes`);
 
-            // Load lyrics segmentation (with flexible matching)
-            const lyricsDir = path.join(__dirname, 'data', 'lyrics-segmentations');
-            const allLyricsFiles = fs.readdirSync(lyricsDir).filter(f => f.endsWith('.json'));
+            // V4.2.38: Use DataLoader to load lyrics segmentation
+            const lyricsData = dataLoader.loadLyricsSegmentation(songDir);
 
-            const matchingLyricsFile = allLyricsFiles.find(file => {
-                const fileBase = file.replace('.json', '');
-                const normalizedFile = normalize(fileBase);
-                return normalizedFile === normalizedSongDir;
-            });
-
-            let lyricsPath = null;
-            if (matchingLyricsFile) {
-                lyricsPath = path.join(lyricsDir, matchingLyricsFile);
-            } else {
-                lyricsPath = path.join(lyricsDir, `${songDir}.json`);
-            }
-
-            if (fs.existsSync(lyricsPath)) {
-                const lyricsData = JSON.parse(fs.readFileSync(lyricsPath, 'utf8'));
+            if (lyricsData) {
 
                 // Calculate phrase positions
                 const phrasePositions = phraseAnnotationGen.calculatePhrasePositions(
@@ -374,6 +306,10 @@ app.get('/', (req, res) => {
         .replace(/{{SVG_HEIGHT}}/g, '800')
         .replace(/{{OPTIMAL_SVG_CONTENT}}/g, extractSvgContent(optimalSVG))
         .replace(/{{COMPARISON_SVG_CONTENT}}/g, extractSvgContent(comparisonSVG))
+        .replace(/{{OPTIMAL_TUNING}}/g, optimalTuning)
+        .replace(/{{OPTIMAL_BENT_COUNT}}/g, optimalBentCount)
+        .replace(/{{COMPARISON_TUNING}}/g, comparisonTuning)
+        .replace(/{{COMPARISON_BENT_COUNT}}/g, comparisonBentCount)
         .replace(/{{UNIQUE_PITCHES}}/g, uniquePitches)
         .replace(/{{PITCH_RANGE}}/g, '17')
         .replace(/{{ASCENDING_PERCENTAGE}}/g, '34.2')

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid 1: Tabbed Sections with Pop-Out Capability</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Hybrid Container */
+        .hybrid-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Tablature Area (25% height - compact) */
+        .tablature-area {
+            height: 25vh;
+            background: white;
+            border-bottom: 2px solid #3498db;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+
+        .tablature-title {
+            margin: 0 0 8px 0;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .compact-tablature {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+            padding: 8px;
+            height: calc(100% - 35px);
+            overflow-x: auto;
+        }
+
+        /* Tab Navigation with Pop-Out Controls */
+        .tab-nav-area {
+            display: flex;
+            align-items: center;
+            background: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+            padding: 5px 10px;
+        }
+
+        .tab-navigation {
+            display: flex;
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .analysis-tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #2c3e50;
+            font-size: 13px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .analysis-tab:hover {
+            background: #d5dbdb;
+        }
+
+        .analysis-tab.active {
+            background: white;
+            border-bottom-color: #3498db;
+            color: #3498db;
+        }
+
+        .analysis-tab.popped-out {
+            background: #27ae60;
+            color: white;
+            border-bottom-color: #27ae60;
+        }
+
+        /* Pop-out button in each tab */
+        .pop-out-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 2px 5px;
+            margin-left: 5px;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .analysis-tab:hover .pop-out-btn {
+            opacity: 1;
+        }
+
+        .pop-out-btn:hover {
+            background: #2980b9;
+        }
+
+        /* View Mode Controls */
+        .view-controls {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+
+        .view-mode-btn {
+            background: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .view-mode-btn.active {
+            background: #3498db;
+        }
+
+        .view-mode-btn:hover {
+            background: #2c3e50;
+        }
+
+        /* Analysis Content Area */
+        .analysis-content-area {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Single Tab View (Default) */
+        .single-tab-view {
+            width: 100%;
+            background: white;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        /* Side-by-Side View */
+        .side-by-side-view {
+            display: none;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .side-by-side-view.active {
+            display: flex;
+        }
+
+        .comparison-panel {
+            min-width: 400px;
+            max-width: 500px;
+            background: white;
+            border-right: 2px solid #ecf0f1;
+            padding: 15px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        .comparison-panel:last-child {
+            border-right: none;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Compact Metrics (Less Padding) */
+        .compact-metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 8px;
+            margin: 10px 0;
+        }
+
+        .compact-metric-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .compact-metric-card:hover {
+            border-color: #3498db;
+            transform: translateY(-1px);
+        }
+
+        .compact-metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 2px;
+        }
+
+        .compact-metric-label {
+            font-size: 10px;
+            color: #6c757d;
+            line-height: 1.2;
+        }
+
+        /* Hierarchical Section Headers */
+        .section-hierarchy {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 8px 12px;
+            margin: 10px 0 15px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .section-title {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .section-subtitle {
+            margin: 2px 0 0 0;
+            color: #7f8c8d;
+            font-size: 11px;
+        }
+
+        /* Cross-Reference Compact Display */
+        .compact-cross-refs {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 6px 8px;
+            margin: 8px 0;
+            font-size: 11px;
+        }
+
+        .cross-ref-link {
+            background: #3498db;
+            color: white;
+            padding: 2px 5px;
+            margin: 1px;
+            border-radius: 2px;
+            text-decoration: none;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        /* Panel Header for Side-by-Side */
+        .panel-header {
+            background: #34495e;
+            color: white;
+            padding: 8px 12px;
+            margin: -15px -15px 15px -15px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-panel-btn {
+            background: #e74c3c;
+            border: none;
+            color: white;
+            border-radius: 3px;
+            padding: 3px 6px;
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .close-panel-btn:hover {
+            background: #c0392b;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="hybrid-container">
+
+        <!-- Compact Tablature Area (25% height) -->
+        <div class="tablature-area">
+            <h2 class="tablature-title">Hybrid 1: Tabbed Sections with Pop-Out Comparison</h2>
+            <div class="compact-tablature">
+                <svg width="500" height="100" style="background: white;">
+                    <line x1="30" y1="25" x2="470" y2="25" stroke="#ddd" stroke-width="2"/>
+                    <line x1="30" y1="40" x2="470" y2="40" stroke="#ddd" stroke-width="2"/>
+                    <line x1="30" y1="55" x2="470" y2="55" stroke="#ddd" stroke-width="2"/>
+                    <line x1="30" y1="70" x2="470" y2="70" stroke="#ddd" stroke-width="2"/>
+
+                    <circle cx="80" cy="40" r="8" fill="#008080" stroke="#005959" stroke-width="2"/>
+                    <circle cx="120" cy="55" r="5" fill="#FFD700" stroke="#CC9900" stroke-width="2"/>
+                    <circle cx="160" cy="70" r="8" fill="#008080" stroke="#005959" stroke-width="2"/>
+                    <circle cx="200" cy="55" r="8" fill="#008080" stroke="#005959" stroke-width="2"/>
+
+                    <text x="10" y="45" font-size="9" fill="#666">G4</text>
+                    <text x="10" y="60" font-size="9" fill="#666">D4</text>
+                    <text x="10" y="75" font-size="9" fill="#666">A3</text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Tab Navigation with Pop-Out Controls -->
+        <div class="tab-nav-area">
+            <div class="tab-navigation">
+                <button class="analysis-tab active" onclick="switchTab('pitch', this)">
+                    🎵 Pitch
+                    <button class="pop-out-btn" onclick="popOutTab('pitch', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('rhythm', this)">
+                    🥁 Rhythm
+                    <button class="pop-out-btn" onclick="popOutTab('rhythm', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('melody', this)">
+                    🎼 Melody
+                    <button class="pop-out-btn" onclick="popOutTab('melody', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('tones', this)">
+                    🗣️ Tones
+                    <button class="pop-out-btn" onclick="popOutTab('tones', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('phrases', this)">
+                    📍 Phrases
+                    <button class="pop-out-btn" onclick="popOutTab('phrases', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('melisma', this)">
+                    🎶 Melisma
+                    <button class="pop-out-btn" onclick="popOutTab('melisma', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('patterns', this)">
+                    🔄 Patterns
+                    <button class="pop-out-btn" onclick="popOutTab('patterns', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('correlations', this)">
+                    🔗 Correlations
+                    <button class="pop-out-btn" onclick="popOutTab('correlations', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('cultural', this)">
+                    🏛️ Cultural
+                    <button class="pop-out-btn" onclick="popOutTab('cultural', event)">↗</button>
+                </button>
+                <button class="analysis-tab" onclick="switchTab('comparisons', this)">
+                    📈 Compare
+                    <button class="pop-out-btn" onclick="popOutTab('comparisons', event)">↗</button>
+                </button>
+            </div>
+
+            <div class="view-controls">
+                <button class="view-mode-btn active" onclick="switchViewMode('single', this)">Single</button>
+                <button class="view-mode-btn" onclick="switchViewMode('side-by-side', this)">Side-by-Side</button>
+                <button class="view-mode-btn" onclick="switchViewMode('scroll', this)">Scroll</button>
+            </div>
+        </div>
+
+        <!-- Analysis Content Area -->
+        <div class="analysis-content-area">
+
+            <!-- Single Tab View (Tabbed Environment Style) -->
+            <div class="single-tab-view" id="singleView">
+
+                <!-- Pitch Analysis Tab -->
+                <div class="tab-content active" id="pitch-content">
+                    <div class="section-hierarchy">
+                        <div class="section-title">🎵 Pitch Analysis</div>
+                        <div class="section-subtitle">Pure melodic contour without rhythm consideration</div>
+                    </div>
+
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card" onclick="highlightRelated('unique-pitches')">
+                            <div class="compact-metric-value">5</div>
+                            <div class="compact-metric-label">Unique Pitches</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('pitch-range')">
+                            <div class="compact-metric-value">17</div>
+                            <div class="compact-metric-label">Range (Semitones)</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('ascending-motion')">
+                            <div class="compact-metric-value">34.2%</div>
+                            <div class="compact-metric-label">Ascending</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('descending-motion')">
+                            <div class="compact-metric-value">41.7%</div>
+                            <div class="compact-metric-label">Descending</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('static-pitches')">
+                            <div class="compact-metric-value">24.1%</div>
+                            <div class="compact-metric-label">Static</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('largest-leap')">
+                            <div class="compact-metric-value">7</div>
+                            <div class="compact-metric-label">Largest Leap</div>
+                        </div>
+                    </div>
+
+                    <div class="compact-cross-refs">
+                        <strong>Cross-References:</strong>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('tones')">Tone Correlations</a>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('melody')">Melody Interplay</a>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('cultural')">Cultural Context</a>
+                    </div>
+                </div>
+
+                <!-- Tones Analysis Tab -->
+                <div class="tab-content" id="tones-content">
+                    <div class="section-hierarchy">
+                        <div class="section-title">🗣️ Vietnamese Tones Analysis</div>
+                        <div class="section-subtitle">Diacritical tone markers and musical correlations</div>
+                    </div>
+
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card" onclick="highlightRelated('tone-ngang')">
+                            <div class="compact-metric-value">23.5%</div>
+                            <div class="compact-metric-label">Ngang (Level)</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('tone-sac')">
+                            <div class="compact-metric-value">17.6%</div>
+                            <div class="compact-metric-label">Sắc (Rising)</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('tone-huyen')">
+                            <div class="compact-metric-value">29.4%</div>
+                            <div class="compact-metric-label">Huyền (Falling)</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('tone-nga')">
+                            <div class="compact-metric-value">12.5%</div>
+                            <div class="compact-metric-label">Ngã (Sharp)</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('tone-melody-correlation')">
+                            <div class="compact-metric-value">78.4%</div>
+                            <div class="compact-metric-label">Tone-Melody Match</div>
+                        </div>
+                    </div>
+
+                    <div class="compact-cross-refs">
+                        <strong>Key Finding:</strong> Ngã tone appears in 80% of melismas on rank #17 frequency notes
+                        <br>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('melisma')">See Melisma Details</a>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('patterns')">Pattern Analysis</a>
+                    </div>
+                </div>
+
+                <!-- Melisma Analysis Tab -->
+                <div class="tab-content" id="melisma-content">
+                    <div class="section-hierarchy">
+                        <div class="section-title">🎶 Melisma & Grace Notes</div>
+                        <div class="section-subtitle">Multiple notes per syllable analysis</div>
+                    </div>
+
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card" onclick="highlightRelated('melisma-count')">
+                            <div class="compact-metric-value">8</div>
+                            <div class="compact-metric-label">Melisma Groups</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('grace-percentage')">
+                            <div class="compact-metric-value">14.0%</div>
+                            <div class="compact-metric-label">Grace Note %</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('avg-notes-per-melisma')">
+                            <div class="compact-metric-value">2.3</div>
+                            <div class="compact-metric-label">Avg Notes/Melisma</div>
+                        </div>
+                        <div class="compact-metric-card" onclick="highlightRelated('nga-melisma-correlation')">
+                            <div class="compact-metric-value">80%</div>
+                            <div class="compact-metric-label">Ngã in Melismas</div>
+                        </div>
+                    </div>
+
+                    <div class="compact-cross-refs">
+                        <strong>Cross-References:</strong>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('tones')">Tone Analysis</a>
+                        <a class="cross-ref-link" onclick="popOutAndSwitch('patterns')">Grace Patterns</a>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Side-by-Side Comparison View -->
+            <div class="side-by-side-view" id="sideBySideView">
+                <!-- Comparison panels will be dynamically added here -->
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Hybrid State Management
+        const hybridState = {
+            currentView: 'single',
+            activeTab: 'pitch',
+            poppedOutTabs: new Set(),
+            comparisonPanels: []
+        };
+
+        // Switch Tab (Normal tab switching)
+        function switchTab(tabId, tabElement) {
+            if (hybridState.currentView !== 'single') return;
+
+            // Update tab appearance
+            document.querySelectorAll('.analysis-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            tabElement.classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabId + '-content').classList.add('active');
+
+            hybridState.activeTab = tabId;
+        }
+
+        // Pop Out Tab for Side-by-Side Comparison
+        function popOutTab(tabId, event) {
+            event.stopPropagation();
+
+            const tabElement = event.target.closest('.analysis-tab');
+
+            if (hybridState.poppedOutTabs.has(tabId)) {
+                // Remove from comparison
+                hybridState.poppedOutTabs.delete(tabId);
+                tabElement.classList.remove('popped-out');
+                removeComparisonPanel(tabId);
+            } else {
+                // Add to comparison
+                hybridState.poppedOutTabs.add(tabId);
+                tabElement.classList.add('popped-out');
+                addComparisonPanel(tabId);
+            }
+
+            updateViewMode();
+        }
+
+        // Switch View Mode
+        function switchViewMode(mode, buttonElement) {
+            // Update button appearance
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            buttonElement.classList.add('active');
+
+            // Update view
+            const singleView = document.getElementById('singleView');
+            const sideBySideView = document.getElementById('sideBySideView');
+
+            if (mode === 'single') {
+                singleView.style.display = 'block';
+                sideBySideView.classList.remove('active');
+            } else if (mode === 'side-by-side') {
+                singleView.style.display = 'none';
+                sideBySideView.classList.add('active');
+            } else if (mode === 'scroll') {
+                singleView.style.display = 'none';
+                sideBySideView.classList.add('active');
+                sideBySideView.style.overflowX = 'auto';
+            }
+
+            hybridState.currentView = mode;
+        }
+
+        // Add Comparison Panel
+        function addComparisonPanel(tabId) {
+            const sideBySideView = document.getElementById('sideBySideView');
+
+            const panel = document.createElement('div');
+            panel.className = 'comparison-panel';
+            panel.id = `panel-${tabId}`;
+
+            panel.innerHTML = `
+                <div class="panel-header">
+                    <span>${getTabDisplayName(tabId)}</span>
+                    <button class="close-panel-btn" onclick="removeComparisonPanel('${tabId}')">✕</button>
+                </div>
+
+                ${getTabContent(tabId)}
+            `;
+
+            sideBySideView.appendChild(panel);
+            hybridState.comparisonPanels.push(tabId);
+        }
+
+        // Remove Comparison Panel
+        function removeComparisonPanel(tabId) {
+            const panel = document.getElementById(`panel-${tabId}`);
+            if (panel) {
+                panel.remove();
+            }
+
+            hybridState.poppedOutTabs.delete(tabId);
+            hybridState.comparisonPanels = hybridState.comparisonPanels.filter(id => id !== tabId);
+
+            // Update tab appearance
+            const tabElement = document.querySelector(`[onclick*="${tabId}"]`);
+            if (tabElement) {
+                tabElement.classList.remove('popped-out');
+            }
+
+            updateViewMode();
+        }
+
+        // Update View Mode Based on Popped Out Tabs
+        function updateViewMode() {
+            if (hybridState.poppedOutTabs.size > 0) {
+                // Auto-switch to side-by-side when tabs are popped out
+                const sideBySideBtn = document.querySelector('[onclick*="side-by-side"]');
+                if (sideBySideBtn) {
+                    switchViewMode('side-by-side', sideBySideBtn);
+                }
+            }
+        }
+
+        // Get Tab Display Name
+        function getTabDisplayName(tabId) {
+            const names = {
+                'pitch': '🎵 Pitch Analysis',
+                'rhythm': '🥁 Rhythm Analysis',
+                'melody': '🎼 Melody Interplay',
+                'tones': '🗣️ Vietnamese Tones',
+                'phrases': '📍 Phrase Positions',
+                'melisma': '🎶 Melisma & Grace',
+                'patterns': '🔄 Patterns',
+                'correlations': '🔗 Correlations',
+                'cultural': '🏛️ Cultural Context',
+                'comparisons': '📈 Comparisons'
+            };
+            return names[tabId] || tabId;
+        }
+
+        // Get Tab Content for Comparison Panel
+        function getTabContent(tabId) {
+            const content = {
+                'pitch': `
+                    <div class="section-hierarchy">
+                        <div class="section-title">Pitch Contour</div>
+                        <div class="section-subtitle">No rhythm consideration</div>
+                    </div>
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">5</div>
+                            <div class="compact-metric-label">Unique Pitches</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">34.2%</div>
+                            <div class="compact-metric-label">Ascending</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">41.7%</div>
+                            <div class="compact-metric-label">Descending</div>
+                        </div>
+                    </div>
+                `,
+                'tones': `
+                    <div class="section-hierarchy">
+                        <div class="section-title">Vietnamese Tones</div>
+                        <div class="section-subtitle">Diacritical markers analysis</div>
+                    </div>
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">23.5%</div>
+                            <div class="compact-metric-label">Ngang</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">12.5%</div>
+                            <div class="compact-metric-label">Ngã</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">78.4%</div>
+                            <div class="compact-metric-label">Correlation</div>
+                        </div>
+                    </div>
+                    <div class="compact-cross-refs">
+                        <strong>Key:</strong> Ngã tone in 80% of melismas
+                    </div>
+                `,
+                'melisma': `
+                    <div class="section-hierarchy">
+                        <div class="section-title">Melisma & Grace</div>
+                        <div class="section-subtitle">Multiple notes per syllable</div>
+                    </div>
+                    <div class="compact-metric-grid">
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">8</div>
+                            <div class="compact-metric-label">Groups</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">80%</div>
+                            <div class="compact-metric-label">Ngã Correlation</div>
+                        </div>
+                        <div class="compact-metric-card">
+                            <div class="compact-metric-value">14.0%</div>
+                            <div class="compact-metric-label">Grace %</div>
+                        </div>
+                    </div>
+                `
+            };
+
+            return content[tabId] || `<div>Content for ${tabId}</div>`;
+        }
+
+        // Pop Out and Switch (for cross-references)
+        function popOutAndSwitch(tabId) {
+            // Pop out the referenced tab
+            const tabElement = document.querySelector(`[onclick*="${tabId}"]`);
+            if (tabElement) {
+                const event = { stopPropagation: () => {} };
+                event.target = tabElement.querySelector('.pop-out-btn');
+                event.target.closest = () => tabElement;
+                popOutTab(tabId, event);
+            }
+        }
+
+        // Highlight Related Elements
+        function highlightRelated(metricId) {
+            console.log(`Highlighting related elements for: ${metricId}`);
+
+            // Example cross-highlighting logic
+            if (metricId === 'tone-nga') {
+                // Highlight melisma correlation
+                alert('Highlighting: Ngã tone correlates with melismas and rank #17 notes');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Hybrid 1: Tabbed Sections with Pop-Out initialized');
+            console.log('Features: Hierarchical clarity + Side-by-side comparison + Endless scroll');
+        });
+
+    </script>
+
+</body>
+</html>

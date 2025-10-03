@@ -469,20 +469,30 @@ class GlissandoController {
             return null;
         }
 
-        // Calculate path endpoints
+        // Get BASE positions from note elements (in case tablature is already zoomed)
+        const candidateBaseCx = parseFloat(candidateNote.element.dataset.baseCx || candidateNote.element.getAttribute('cx'));
+        const candidateBaseCy = parseFloat(candidateNote.element.dataset.baseCy || candidateNote.element.getAttribute('cy'));
+        const targetBaseCx = parseFloat(targetNote.element.dataset.baseCx || targetNote.element.getAttribute('cx'));
+        const targetBaseCy = parseFloat(targetNote.element.dataset.baseCy || targetNote.element.getAttribute('cy'));
+
+        // Use base positions for glissando calculation
+        const candidateBaseNote = { x: candidateBaseCx, y: candidateBaseCy, isDotted: candidateNote.isDotted };
+        const targetBaseNote = { x: targetBaseCx, y: targetBaseCy };
+
+        // Calculate path endpoints using BASE positions
         let xFrom, xTo;
         if (customXDelta !== null) {
             // Use custom X delta (for First/Last special cases)
-            xFrom = candidateNote.x + (customXDelta * 0.5); // Midway with custom delta
-            xTo = candidateNote.x + customXDelta;
+            xFrom = candidateBaseNote.x + (customXDelta * 0.5); // Midway with custom delta
+            xTo = candidateBaseNote.x + customXDelta;
         } else {
             // Standard calculation
-            xFrom = this.calculateXFrom(candidateNote, targetNote);
-            xTo = targetNote.x;
+            xFrom = this.calculateXFrom(candidateBaseNote, targetBaseNote);
+            xTo = targetBaseNote.x;
         }
 
-        const yFrom = this.calculateGlissandoStartY(candidateNote.y, targetNote.y);
-        const yTo = targetNote.y;
+        const yFrom = this.calculateGlissandoStartY(candidateBaseNote.y, targetBaseNote.y);
+        const yTo = targetBaseNote.y;
 
         // Get priority color
         const color = this.getPriorityColor(candidateNoteIndex);
@@ -687,11 +697,15 @@ class GlissandoController {
             return null;
         }
 
-        // Calculate starting position (xDelta before target)
-        const xFrom = targetNote.x - (xDelta * 0.5); // Midway point
-        const xTo = targetNote.x;
-        const yFrom = this.calculateGlissandoStartY(targetNote.y - 50, targetNote.y); // Start from edgemost string
-        const yTo = targetNote.y;
+        // Get BASE positions from note element (in case tablature is already zoomed)
+        const targetBaseCx = parseFloat(targetNote.element.dataset.baseCx || targetNote.element.getAttribute('cx'));
+        const targetBaseCy = parseFloat(targetNote.element.dataset.baseCy || targetNote.element.getAttribute('cy'));
+
+        // Calculate starting position (xDelta before target) using BASE positions
+        const xFrom = targetBaseCx - (xDelta * 0.5); // Midway point
+        const xTo = targetBaseCx;
+        const yFrom = this.calculateGlissandoStartY(targetBaseCy - 50, targetBaseCy); // Start from edgemost string
+        const yTo = targetBaseCy;
 
         // Use black color for special glissandos
         const color = '#000000';

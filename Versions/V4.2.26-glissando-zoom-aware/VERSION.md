@@ -122,3 +122,22 @@ No migration needed - existing glissandos will be regenerated with new attribute
 **Date:** October 3, 2025
 **Status:** Production-ready
 **Backup:** `/Versions/V4.2.26-glissando-zoom-aware/`
+
+## Critical Fix: Base Position Extraction
+
+### Problem
+When glissandos were drawn on an already-zoomed tablature, they used current (zoomed) note positions instead of base positions, causing incorrect placement.
+
+### Solution
+Modified `drawGlissandoForCandidate()` and `drawGlissandoToNote()` to extract base positions from note elements:
+
+```javascript
+// Extract BASE positions (handles pre-zoomed tablature)
+const candidateBaseCx = parseFloat(candidateNote.element.dataset.baseCx || candidateNote.element.getAttribute('cx'));
+const candidateBaseCy = parseFloat(candidateNote.element.dataset.baseCy || candidateNote.element.getAttribute('cy'));
+
+// Use base positions for calculation
+const candidateBaseNote = { x: candidateBaseCx, y: candidateBaseCy, isDotted: candidateNote.isDotted };
+```
+
+**Result:** Glissandos now draw correctly regardless of current zoom level.

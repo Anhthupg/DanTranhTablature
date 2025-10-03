@@ -7,20 +7,13 @@ const PhraseSegmenter = require('./processors/phrase-segmenter');
 const PhraseAnnotationsGenerator = require('./generate-phrase-annotations');
 const { renderPhraseAnnotations } = require('./render-phrase-annotations');
 const { GlissandoAnalyzer } = require('./glissando-analyzer');
-const LyricsTableGenerator = require('./generators/lyrics-table-generator');
-
-// V4.2.38: Centralized utilities
-const DataLoader = require('./utils/data-loader');
-const formatters = require('./utils/formatters');
 
 const app = express();
 const port = 3006; // Vertical demo on port 3006
 
-// Create generator and utility instances
+// Create generator instances
 const tablatureGen = new ServerTablatureGenerator();
 const phraseAnnotationGen = new PhraseAnnotationsGenerator();
-const lyricsTableGen = new LyricsTableGenerator();
-const dataLoader = new DataLoader(__dirname);
 
 // Serve the vertical header template with real song data
 app.get('/', (req, res) => {
@@ -37,7 +30,8 @@ app.get('/', (req, res) => {
     // V4.2.14: Check for ?song= query parameter
     const requestedSong = req.query.song;
 
-    // V4.2.38: Use DataLoader for centralized data loading
+    const v3ProcessedDir = path.join(__dirname, '..', 'v3', 'data', 'processed');
+
     // Strip .musicxml.xml extensions (library sends "Song.musicxml.xml", we need "Song")
     let preferredSong = requestedSong
         ? requestedSong.replace('.musicxml.xml', '').replace('.xml', '')
@@ -47,85 +41,220 @@ app.get('/', (req, res) => {
 
     console.log(`Query param: "${requestedSong}" → Preferred: "${preferredSong}"`);
 
-    // Check if preferred song exists using DataLoader
-    let relationshipsData = dataLoader.loadV3ProcessedData(preferredSong);
-
-    if (!relationshipsData) {
-        console.log(`Song not found: ${preferredSong}, using fallback...`);
+    // Check if preferred song exists
+    if (!fs.existsSync(path.join(v3ProcessedDir, preferredSong, 'relationships.json'))) {
+        console.log(`Song not found: ${preferredSong}, checking available songs...`);
 
         // Fall back to first available song
-        const fallbackSong = dataLoader.findFirstAvailableSong();
+        const songDirs = fs.readdirSync(v3ProcessedDir).filter(f =>
+            fs.statSync(path.join(v3ProcessedDir, f)).isDirectory() &&
+            fs.existsSync(path.join(v3ProcessedDir, f, 'relationships.json'))
+        );
 
-        if (!fallbackSong) {
+        if (songDirs.length === 0) {
             return res.status(500).send('No processed songs found in v3 data.');
         }
 
-        songDir = fallbackSong;
-        relationshipsData = dataLoader.loadV3ProcessedData(fallbackSong);
+        songDir = songDirs[0];
         console.log(`Using fallback: ${songDir}`);
     } else {
         console.log(`✓ Loading song: ${songDir}`);
     }
 
-    // V4.2.38: Use DataLoader's converter for consistent format
-    const songData = dataLoader.convertV3ToV4Format(relationshipsData, songDir);
+    // Load the song's relationships data which contains lyrics
+    const relationshipsPath = path.join(v3ProcessedDir, songDir, 'relationships.json');
+    const relationshipsData = JSON.parse(fs.readFileSync(relationshipsPath, 'utf8'));
+
+    // Convert relationships data to songData format
+    const songData = {
+        metadata: {
+            title: relationshipsData.metadata?.title || songDir,
+            optimalTuning: relationshipsData.metadata?.optimalTuning || 'C-D-E-G-A',
+            genre: relationshipsData.metadata?.genre || 'Traditional'
+        },
+        notes: relationshipsData.notes ? relationshipsData.notes.map((note, index) => ({
+            index: index, // Add index for glissando analyzer
+            step: note.pitch?.step || note.pitch?.fullNote?.replace(/[0-9]/g, '') || 'C',
+            octave: note.pitch?.octave || parseInt(note.pitch?.fullNote?.match(/[0-9]/)?.[0]) || 4,
+            pitch: (note.pitch?.step || note.pitch?.fullNote?.replace(/[0-9]/g, '') || 'C') + (note.pitch?.octave || parseInt(note.pitch?.fullNote?.match(/[0-9]/)?.[0]) || 4), // Full pitch like "C4"
+            duration: note.duration?.value ? note.duration.value / 4 : 1, // Convert from duration value
+            isGrace: note.isGrace || false,
+            lyric: note.lyrics?.text || ''
+        })) : []
+    };
 
     // V4.2.0: Generate color-coded lyrics with clickable words and font controls
     let lyricsHTML = '<p style="padding: 20px; text-align: center; color: #999;">No lyrics available for this song.</p>';
 
-    // V4.2.38: Use DataLoader to load MusicXML
-    const xmlContent = dataLoader.loadMusicXML(songDir);
+    // Try to find MusicXML file
+    let musicXmlPath = path.join(__dirname, 'data', 'musicxml', `${songDir}.musicxml.xml`);
 
-    if (xmlContent) {
+    if (!fs.existsSync(musicXmlPath)) {
+        const musicXmlDir = path.join(__dirname, 'data', 'musicxml');
+        const allXmlFiles = fs.readdirSync(musicXmlDir).filter(f => f.endsWith('.musicxml.xml'));
+
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd');
+        const normalizedSongDir = removeDiacritics(songDir).toLowerCase().replace(/[_\s]+/g, '');
+        const matchedFile = allXmlFiles.find(f => {
+            const normalized = removeDiacritics(f.replace('.musicxml.xml', '')).toLowerCase().replace(/[_\s]+/g, '');
+            return normalized === normalizedSongDir;
+        });
+
+        if (matchedFile) musicXmlPath = path.join(musicXmlDir, matchedFile);
+    }
+
+    if (fs.existsSync(musicXmlPath)) {
         try {
-            // V4.2.38: Use DataLoader's lyric extractor
-            const lyrics = dataLoader.extractLyricsFromXML(xmlContent);
+            const xmlContent = fs.readFileSync(musicXmlPath, 'utf-8');
+            const lyricMatches = xmlContent.match(/<lyric[^>]*>[\s\S]*?<text>([^<]+)<\/text>[\s\S]*?<\/lyric>/g) || [];
 
-            if (lyrics.length > 0) {
-                // Try to load pre-segmented lyrics data
-                let segmentationResult = dataLoader.loadLyricsSegmentation(songDir);
+            if (lyricMatches.length > 0) {
+                const lyrics = lyricMatches.map(match => {
+                    const textMatch = match.match(/<text>([^<]+)<\/text>/);
+                    return textMatch ? textMatch[1].trim() : '';
+                }).filter(text => text.length > 0);
 
-                if (!segmentationResult) {
-                    // Fall back to on-the-fly segmentation
-                    console.log('No pre-segmented lyrics, generating on-the-fly...');
-                    const syllables = lyrics.map((text, i) => ({ text, index: i, noteIndices: [i], noteDurations: [1.0] }));
-                    const phraseSegmenter = new PhraseSegmenter();
-                    segmentationResult = phraseSegmenter.segment(syllables, songData.notes);
+                if (lyrics.length > 0) {
+                    const segmentationPath = path.join(__dirname, 'data', 'lyrics-segmentations', `${path.basename(musicXmlPath, '.musicxml.xml')}.json`);
+                    let segmentationResult;
+
+                    if (fs.existsSync(segmentationPath)) {
+                        segmentationResult = JSON.parse(fs.readFileSync(segmentationPath, 'utf-8'));
+                        segmentationResult.phrases = segmentationResult.phrases.map(p => ({
+                            ...p,
+                            vietnameseText: p.text || p.vietnameseText
+                        }));
+                    } else {
+                        const syllables = lyrics.map((text, i) => ({ text, index: i, noteIndices: [i], noteDurations: [1.0] }));
+                        const phraseSegmenter = new PhraseSegmenter();
+                        segmentationResult = phraseSegmenter.segment(syllables, songData.notes);
+                    }
+
+                    // Generate clickable word HTML
+                    const generateClickableWords = (phrase, i) => {
+                        if (!phrase.wordMapping) return phrase.vietnameseText;
+                        return phrase.wordMapping.map((m, idx) =>
+                            `<span class="syllable" data-phrase="${i}" data-word="${idx}" data-vn="${m.vn}" data-en="${m.en}" style="cursor: pointer; padding: 2px 3px; border-radius: 2px; transition: background 0.2s;" onclick="highlightWord(${i}, ${idx})">${m.vn}</span>`
+                        ).join(' ');
+                    };
+
+                    const generateClickableEnglish = (phrase, i) => {
+                        if (!phrase.english || !phrase.wordMapping) return phrase.english || '';
+                        return phrase.wordMapping.map((m, idx) =>
+                            `<span class="en-word" data-phrase="${i}" data-word="${idx}" data-vn="${m.vn}" data-en="${m.en}" style="cursor: pointer; padding: 2px 3px; border-radius: 2px; transition: background 0.2s;" onclick="highlightWord(${i}, ${idx})">${m.en}</span>`
+                        ).join(' ');
+                    };
+
+                    // Map phrases to note ranges for audio playback
+                    let noteIndex = 0;
+                    const rows = segmentationResult.phrases.map((phrase, i) => {
+                        const lingType = phrase.linguisticType || 'narrative';
+                        const lingColor = {
+                            question: '#4ECDC4', answer: '#95E1D3', exclamatory: '#FF6B6B',
+                            complaint: '#FFD93D', onomatopoeia: '#C3AED6', narrative: '#A8E6CF'
+                        }[lingType] || '#95A5A6';
+
+                        // Calculate note range for this phrase (based on syllable count)
+                        const startNote = noteIndex;
+                        const endNote = noteIndex + phrase.syllableCount - 1;
+                        noteIndex += phrase.syllableCount;
+
+                        return `
+                        <tr data-phrase="${i}" data-start-note="${startNote}" data-end-note="${endNote}" style="border-bottom: 1px solid #e0e0e0; height: 30px;">
+                            <td style="padding: 6px; background: ${lingColor}; color: white; text-align: center; font-weight: 600; font-size: 10px; vertical-align: middle; line-height: 1.2;">
+                                <div style="margin-bottom: 1px;">${lingType}</div>
+                                <div style="font-size: 9px; opacity: 0.9;">${phrase.syllableCount} syl</div>
+                            </td>
+                            <td style="padding: 4px; text-align: center; font-weight: 600; color: #666; font-size: 13px; vertical-align: middle;">${i + 1}</td>
+                            <td style="padding: 4px; text-align: center; vertical-align: middle;">
+                                <div style="display: flex; gap: 3px; justify-content: center; flex-wrap: nowrap;">
+                                    <button title="Play phrase" onclick="if(window.lyricsController) window.lyricsController.playPhrase(${phrase.id})" style="width: 22px; height: 22px; border: 1px solid #27AE60; background: white; border-radius: 3px; cursor: pointer; font-size: 11px; padding: 0; color: #27AE60;">▶</button>
+                                    <button title="Loop phrase" onclick="if(window.lyricsController) window.lyricsController.toggleLoop(${phrase.id}, this)" data-phrase="${phrase.id}" class="loop-btn-${phrase.id}" style="width: 22px; height: 22px; border: 1px solid #3498DB; background: white; border-radius: 3px; cursor: pointer; font-size: 11px; padding: 0; color: #3498DB;">🔁</button>
+                                    <button title="Stop" onclick="if(window.lyricsController) window.lyricsController.stopPhrase(${phrase.id})" style="width: 22px; height: 22px; border: 1px solid #E74C3C; background: white; border-radius: 3px; cursor: pointer; font-size: 11px; padding: 0; color: #E74C3C;">■</button>
+                                    <button class="phrase-control-btn btn-pronunciation" title="Pronunciation" onclick="if(window.lyricsController) window.lyricsController.showPronunciation(${JSON.stringify(phrase)})" style="width: 22px; height: 22px; border: 1px solid #9B59B6; background: white; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 0; color: #9B59B6;">🗣</button>
+                                    <button class="phrase-control-btn btn-info" title="Word meanings" style="width: 22px; height: 22px; border: 1px solid #F39C12; background: white; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 0; color: #F39C12;">📖</button>
+                                    <button title="Google Translate" onclick="window.open('https://translate.google.com/?sl=vi&tl=en&text=${encodeURIComponent(phrase.vietnameseText)}&op=translate', '_blank')" style="width: 22px; height: 22px; border: 1px solid #008080; background: white; border-radius: 3px; cursor: pointer; font-size: 10px; padding: 0; color: #008080;">🌐</button>
+                                </div>
+                            </td>
+                            <td class="vn-text" style="padding: 4px 8px; font-size: 14px; line-height: 1.3; vertical-align: middle; white-space: nowrap;">${generateClickableWords(phrase, i)}</td>
+                            <td class="en-text" style="padding: 4px 8px; font-size: 13px; color: #555; font-style: italic; line-height: 1.3; vertical-align: middle; white-space: nowrap;">${generateClickableEnglish(phrase, i)}</td>
+                        </tr>`;
+                    }).join('');
+
+                    lyricsHTML = `
+                        <div style="margin-bottom: 15px; padding: 12px; background: white; border-radius: 6px;">
+                            <label style="margin-right: 15px;">Font:
+                                <select id="lyricsFont" onchange="changeLyricsFont(this.value)">
+                                    <option>Arial</option>
+                                    <option>Times New Roman</option>
+                                    <option>Roboto</option>
+                                    <option>Georgia</option>
+                                </select>
+                            </label>
+                            <label>Size:
+                                <input type="range" id="lyricsFontSize" min="12" max="28" value="16" oninput="changeLyricsFontSize(this.value)">
+                                <span id="lyricsFontSizeDisplay">16px</span>
+                            </label>
+                        </div>
+                        <table id="lyricsTable" style="width: auto; border-collapse: collapse; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); table-layout: fixed;">
+                            <thead>
+                                <tr style="background: #008080; color: white;">
+                                    <th style="width: 120px; padding: 8px; text-align: center; font-size: 11px;">Type</th>
+                                    <th style="width: 40px; padding: 8px; text-align: center; font-size: 11px;">#</th>
+                                    <th style="width: 140px; padding: 8px; text-align: center; font-size: 11px;">Controls</th>
+                                    <th style="width: 450px; padding: 8px; font-size: 11px;">Tiếng Việt</th>
+                                    <th style="width: 500px; padding: 8px; font-size: 11px;">English</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lyricsTableBody">${rows}</tbody>
+                        </table>
+                        <script>
+                        // Lyrics phrase playback state
+                        window.phraseLoopState = {};
+
+                        function changeLyricsFont(font) {
+                            document.getElementById('lyricsTable').style.fontFamily = font;
+                        }
+                        function changeLyricsFontSize(size) {
+                            document.getElementById('lyricsFontSizeDisplay').textContent = size + 'px';
+                            // Only change lyrics cells, not headers
+                            document.querySelectorAll('#lyricsTable .vn-text').forEach(el => el.style.fontSize = size + 'px');
+                            document.querySelectorAll('#lyricsTable .en-text').forEach(el => el.style.fontSize = Math.round(size * 0.93) + 'px');
+                            // Adjust column widths (Vietnamese and English only)
+                            const ratio = size / 14; // Base 14px
+                            const headers = document.querySelectorAll('#lyricsTable thead th');
+                            headers[3].style.width = Math.round(450 * ratio) + 'px'; // Vietnamese (4th column)
+                            headers[4].style.width = Math.round(500 * ratio) + 'px'; // English (5th column)
+                        }
+                        function highlightWord(phraseId, wordId) {
+                            document.querySelectorAll('.syllable, .en-word').forEach(el => {
+                                el.style.background = ''; el.style.color = ''; el.style.fontWeight = '';
+                            });
+                            document.querySelectorAll(\`[data-phrase="\${phraseId}"][data-word="\${wordId}"]\`).forEach(el => {
+                                el.style.background = '#3498DB'; el.style.color = 'white'; el.style.fontWeight = 'bold';
+                            });
+                        }
+                        // V4.2.6: Removed inline playback functions
+                        // All playback now handled by lyricsController (single source of truth)
+                        // Buttons call: window.lyricsController.playPhrase(phraseId)
+                        </script>
+                    `;
                 }
-
-                // V4.2.26: Use LyricsTableGenerator for clean HTML generation
-                lyricsHTML = lyricsTableGen.generateTable(segmentationResult);
             }
         } catch (err) {
             console.log('Lyrics failed:', err.message);
         }
     }
 
-    // V4.2.37: Calculate optimal tuning and find best alternative
-    const tuningOptimizer = require('./utils/tuning-optimizer');
-    let optimalTuning = songData.metadata.optimalTuning;
-    let optimalBentCount = 0;
+    // Generate tablatures with V3 duration spacing and V4.0.2 features
+    const optimalTuning = songData.metadata.optimalTuning || 'C-D-E-G-A';
+    const alternativeTunings = ['C-D-F-G-A', 'C-D-E-G-Bb', 'C-Eb-F-G-Bb'].filter(t => t !== optimalTuning);
 
-    // Get full tuning analysis
-    const tuningAnalysis = tuningOptimizer.analyzeAllTunings(songData.notes);
+    // V4.2.16: Check for custom tuning parameter
+    const customTuning1 = req.query.tuning1;
+    const comparisonTuning = customTuning1 || alternativeTunings[0];
 
-    if (!optimalTuning) {
-        optimalTuning = tuningAnalysis.optimal;
-        optimalBentCount = tuningAnalysis.bentNotes;
-        console.log(`Calculated optimal tuning: ${optimalTuning} (${optimalBentCount} bent notes)`);
-    } else {
-        optimalBentCount = tuningOptimizer.countBentNotes(songData.notes, optimalTuning);
-        console.log(`Using stored optimal tuning: ${optimalTuning} (${optimalBentCount} bent notes)`);
-    }
-
-    // Find best alternative (2nd best tuning that's different from optimal)
-    const alternativeResult = tuningAnalysis.allResults.find(r => r.tuning !== optimalTuning);
-    const comparisonTuning = req.query.tuning1 || (alternativeResult ? alternativeResult.tuning : 'C-D-F-G-A');
-    const comparisonBentCount = alternativeResult ? alternativeResult.bentCount :
-                                 tuningOptimizer.countBentNotes(songData.notes, comparisonTuning);
-
-    console.log(`Optimal: ${optimalTuning} (${optimalBentCount} bent)`);
-    console.log(`Alternative: ${comparisonTuning} (${comparisonBentCount} bent)`);
+    console.log(`Comparison tuning: ${comparisonTuning} (custom: ${customTuning1 || 'none'})`);
 
     // Generate optimal tuning tablature (bent notes visible/red by default)
     const optimalSVG = tablatureGen.generateSVG(songData, optimalTuning, true);
@@ -148,10 +277,39 @@ app.get('/', (req, res) => {
     let structuralOverviewCards = '<p style="color: #999;">No structural analysis available for this song.</p>';
 
     try {
-        // V4.2.38: Use DataLoader to load relationships
-        const relationshipsData = dataLoader.loadRelationships(songDir);
+        // Load relationships data for this song (with flexible matching)
+        const relationshipsDir = path.join(__dirname, 'data', 'relationships');
+        const allRelFiles = fs.readdirSync(relationshipsDir).filter(f => f.endsWith('-relationships.json'));
 
-        if (relationshipsData) {
+        // Normalize function (remove diacritics)
+        const normalize = (str) => str
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[đĐ]/g, 'd')
+            .toLowerCase();
+
+        // Find matching relationship file
+        const cleanSongDir = songDir.replace(/_/g, ' ').toLowerCase();
+        const normalizedSongDir = normalize(cleanSongDir);
+        console.log(`Looking for relationships: songDir="${songDir}", cleaned="${cleanSongDir}", normalized="${normalizedSongDir}"`);
+
+        const matchingRelFile = allRelFiles.find(file => {
+            const fileBase = file.replace('-relationships.json', '');
+            const normalizedFile = normalize(fileBase);
+            const matches = normalizedFile === normalizedSongDir;
+            if (matches) console.log(`  ✓ Matched: ${file}`);
+            return matches;
+        });
+
+        let relationshipsPath = null;
+        if (matchingRelFile) {
+            relationshipsPath = path.join(relationshipsDir, matchingRelFile);
+        } else {
+            relationshipsPath = path.join(relationshipsDir, `${songDir}-relationships.json`);
+        }
+
+        if (fs.existsSync(relationshipsPath)) {
+            const relationshipsData = JSON.parse(fs.readFileSync(relationshipsPath, 'utf8'));
 
             // V4.2.7: Get positioned notes from last generateSVG call
             const positionedNotes = tablatureGen.getLastGeneratedNotes();
@@ -166,10 +324,25 @@ app.get('/', (req, res) => {
 
             console.log(`Merged X/Y positions into ${relationshipsData.notes.length} notes from ${positionedNotes.length} positioned notes`);
 
-            // V4.2.38: Use DataLoader to load lyrics segmentation
-            const lyricsData = dataLoader.loadLyricsSegmentation(songDir);
+            // Load lyrics segmentation (with flexible matching)
+            const lyricsDir = path.join(__dirname, 'data', 'lyrics-segmentations');
+            const allLyricsFiles = fs.readdirSync(lyricsDir).filter(f => f.endsWith('.json'));
 
-            if (lyricsData) {
+            const matchingLyricsFile = allLyricsFiles.find(file => {
+                const fileBase = file.replace('.json', '');
+                const normalizedFile = normalize(fileBase);
+                return normalizedFile === normalizedSongDir;
+            });
+
+            let lyricsPath = null;
+            if (matchingLyricsFile) {
+                lyricsPath = path.join(lyricsDir, matchingLyricsFile);
+            } else {
+                lyricsPath = path.join(lyricsDir, `${songDir}.json`);
+            }
+
+            if (fs.existsSync(lyricsPath)) {
+                const lyricsData = JSON.parse(fs.readFileSync(lyricsPath, 'utf8'));
 
                 // Calculate phrase positions
                 const phrasePositions = phraseAnnotationGen.calculatePhrasePositions(
@@ -306,10 +479,6 @@ app.get('/', (req, res) => {
         .replace(/{{SVG_HEIGHT}}/g, '800')
         .replace(/{{OPTIMAL_SVG_CONTENT}}/g, extractSvgContent(optimalSVG))
         .replace(/{{COMPARISON_SVG_CONTENT}}/g, extractSvgContent(comparisonSVG))
-        .replace(/{{OPTIMAL_TUNING}}/g, optimalTuning)
-        .replace(/{{OPTIMAL_BENT_COUNT}}/g, optimalBentCount)
-        .replace(/{{COMPARISON_TUNING}}/g, comparisonTuning)
-        .replace(/{{COMPARISON_BENT_COUNT}}/g, comparisonBentCount)
         .replace(/{{UNIQUE_PITCHES}}/g, uniquePitches)
         .replace(/{{PITCH_RANGE}}/g, '17')
         .replace(/{{ASCENDING_PERCENTAGE}}/g, '34.2')
@@ -328,27 +497,12 @@ app.get('/', (req, res) => {
     res.send(populatedTemplate);
 });
 
-// ============================================================================
-// ROUTE MODULES - Extracted for better organization
-// ============================================================================
-require('./routes/static-routes')(app, __dirname);
-require('./routes/api-routes')(app, __dirname, tablatureGen);
-
-// Legacy routes below - will be removed after verification
-// ============================================================================
-
 // Serve static files for any additional resources
 app.use('/static', express.static(path.join(__dirname, 'templates')));
 
 // Serve the client-side tablature generator
 app.get('/static/client-tablature-generator.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'client-tablature-generator.js'));
-});
-
-// Serve vibrato test HTML
-app.get('/vibrato-test.html', (req, res) => {
-    res.setHeader('Content-Type', 'text/html');
-    res.sendFile(path.join(__dirname, 'vibrato-test.html'));
 });
 
 // V4.0.5: Serve the zoom controller
@@ -813,17 +967,6 @@ app.get('/glissando-controller.js', (req, res) => {
     res.sendFile(path.join(__dirname, 'glissando-controller.js'));
 });
 
-// Serve vibrato controller
-app.get('/vibrato-controller.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript');
-    res.sendFile(path.join(__dirname, 'vibrato-controller.js'));
-});
-
-// Serve vibrato test page
-app.get('/vibrato-test', (req, res) => {
-    res.sendFile(path.join(__dirname, 'vibrato-test.html'));
-});
-
 // API route: Get glissando analysis for a song (by name, auto-finds file)
 app.get('/api/glissando-by-name/:songName', (req, res) => {
     try {
@@ -934,12 +1077,6 @@ app.get('/api/glissando/:songFile', (req, res) => {
         console.error('Glissando analysis error:', error);
         res.status(500).json({ error: error.message });
     }
-});
-
-// Tap Chevron Demo Route
-app.get('/tap-chevron-demo', (req, res) => {
-    const componentPath = path.join(__dirname, 'templates/components/tap-chevron-component.html');
-    res.sendFile(componentPath);
 });
 
 app.listen(port, () => {

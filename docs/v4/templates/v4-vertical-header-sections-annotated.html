@@ -635,9 +635,9 @@
                     <div class="tuning-controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
                         <div class="tuning-info" style="display: flex; align-items: center; gap: 10px; flex: 1;">
                             <label style="font-weight: 600; color: #2c3e50;">Tuning System:</label>
-                            <span class="tuning-display" id="optimalTuning" style="font-family: monospace; font-size: 14px; color: #008080; font-weight: bold;">C-D-E-G-A (Standard Pentatonic)</span>
+                            <span class="tuning-display" id="optimalTuning" style="font-family: monospace; font-size: 14px; color: #008080; font-weight: bold;">{{OPTIMAL_TUNING}}</span>
                             <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
-                                <span class="bent-notes-count" id="optimalBentCount" style="color: #E67E22; font-weight: 600;">0 bent notes</span>
+                                <span class="bent-notes-count" id="optimalBentCount" style="color: #E67E22; font-weight: 600;">{{OPTIMAL_BENT_COUNT}} bent notes</span>
                                 <button class="bent-toggle-btn" onclick="toggleBentNotes('optimal')" title="Toggle bent notes visibility"
                                         style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
                                     Show/Hide
@@ -812,7 +812,7 @@
                                 </optgroup>
                             </select>
                             <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
-                                <span class="bent-notes-count" id="alt1BentCount" style="color: #E67E22; font-weight: 600;">2 bent notes</span>
+                                <span class="bent-notes-count" id="alt1BentCount" style="color: #E67E22; font-weight: 600;">{{COMPARISON_BENT_COUNT}} bent notes</span>
                                 <button class="bent-toggle-btn" onclick="toggleBentNotes('alt1')" title="Toggle bent notes visibility"
                                         style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
                                     Show/Hide
@@ -895,7 +895,7 @@
                     <!-- V4.2.24: GLISSANDO SYSTEM FOR ALTERNATIVE TUNING -->
                     <div class="glissando-panel" style="border: none; background: transparent; padding: 0; margin: 8px 0;">
                         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.9rem;">
-                            <span style="font-weight: 600; color: #008080;">Glissando System</span>
+                            <span style="font-weight: 600; color: #008080;">Glissando Á</span>
                             <button id="alt1ToggleAllGlissandosBtn" onclick="alt1ToggleAllGlissandos()" style="padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Draw All</button>
                             <div id="alt1DurationRadioButtons" style="display: flex; gap: 8px; align-items: center;">
                                 <!-- Checkboxes will be inserted here -->
@@ -903,6 +903,11 @@
                             <span id="alt1GlissandoInfo" style="color: #666; font-size: 0.85rem; margin-left: auto;">
                                 Select durations
                             </span>
+
+                            <!-- Vibrato controls inline -->
+                            <div id="alt1VibratoControls" style="display: contents;">
+                                <!-- Vibrato checkboxes will be generated here by VibratoController -->
+                            </div>
                         </div>
                     </div>
 
@@ -1136,8 +1141,16 @@
                                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                                         const sectionContent = altTuning1Section.querySelector('.section-content');
                                         if (sectionContent && !sectionContent.classList.contains('collapsed')) {
-                                            // Section is now expanded - initialize glissando system
-                                            setTimeout(() => initAlt1GlissandoSystem(), 300);
+                                            // Section is now expanded - initialize glissando and vibrato systems
+                                            setTimeout(() => {
+                                                initAlt1GlissandoSystem();
+                                                // Initialize vibrato controller for alt1
+                                                if (window.VibratoController && !window.alt1VibratoController) {
+                                                    window.alt1VibratoController = new VibratoController();
+                                                    window.alt1VibratoController.initialize('alt1Svg', 'alt1VibratoControls');
+                                                    console.log('Alt1 Vibrato Controller initialized');
+                                                }
+                                            }, 300);
                                         }
                                     }
                                 });
@@ -2147,6 +2160,21 @@
                         window.initializeBentNotesState(section);
                     }
 
+                    // Update bent note metrics for the new tuning
+                    // Count only .bent-note circles (most reliable)
+                    const bentNoteCircles = svg.querySelectorAll('.bent-note');
+                    const bentCount = bentNoteCircles.length;
+                    console.log(`[UpdateTuning] Found ${bentCount} bent note circles for ${section}`);
+
+                    // Update the bent count display element
+                    const bentCountElement = document.getElementById(`alt${tuningNumber}BentCount`);
+                    if (bentCountElement) {
+                        bentCountElement.textContent = bentCount === 1 ? '1 bent note' : `${bentCount} bent notes`;
+                        console.log(`[UpdateTuning] Updated alt${tuningNumber}BentCount to: ${bentCount} bent notes`);
+                    } else {
+                        console.warn(`[UpdateTuning] Could not find element alt${tuningNumber}BentCount`);
+                    }
+
                     // Refresh audio controller with new note references
                     if (window.audioController && tuningNumber === 1) {
                         // Only alt1 is connected to audio controller
@@ -2420,6 +2448,15 @@
             }
         }
 
+        // NOTE: Bent note counts now come from server-side tuning optimizer
+        // The template uses {{OPTIMAL_BENT_COUNT}} and {{COMPARISON_BENT_COUNT}} placeholders
+        // No need to count SVG elements - values are pre-calculated and accurate
+        function updateBentNoteCountsFromSVG() {
+            // This function is deprecated but kept for backward compatibility
+            // Bent counts are now injected by server during template rendering
+            console.log('Bent note counts are server-calculated via tuning optimizer');
+        }
+
         // Initialize tablatures on page load
         document.addEventListener('DOMContentLoaded', function() {
             // OLD DEMO TABLATURE REMOVED - Library controller loads real songs now
@@ -2432,6 +2469,25 @@
             // V4.2.14: RE-ENABLED - phrase annotations now generated server-side
             window.libraryController = new LibraryController();
             window.libraryController.initialize();
+
+            // V4.2.37: Set comparison tuning dropdown to match server-calculated value
+            const comparisonTuning = '{{COMPARISON_TUNING}}';
+            const altTuning1Select = document.getElementById('altTuning1Select');
+            if (altTuning1Select && comparisonTuning) {
+                // Find option with matching value
+                const options = altTuning1Select.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === comparisonTuning) {
+                        altTuning1Select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Update bent note counts from actual SVG content
+            setTimeout(() => {
+                updateBentNoteCountsFromSVG();
+            }, 500); // Wait for SVGs to load
 
             // V4.0.5: Initialize zoom controller (replaces old applyZoom calls)
             window.zoomController = new ZoomController();

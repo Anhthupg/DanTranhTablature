@@ -79,7 +79,9 @@ class V4RelationshipsGenerator {
 
                 if (!pitch) continue;
 
-                const fullNote = `${pitch.step}${pitch.octave}`;
+                // Include accidental in pitch name
+                const accidental = pitch.alter === -1 ? 'b' : (pitch.alter === 1 ? '#' : '');
+                const fullNote = `${pitch.step}${accidental}${pitch.octave}`;
 
                 // Extract duration (grace notes have no duration in MusicXML)
                 const duration = isGrace ? 0 : (noteData.duration ? parseFloat(noteData.duration[0]) : 0);

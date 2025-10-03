@@ -18,7 +18,8 @@ class VibratoController {
 
         // Vibrato parameters (user-adjustable via sliders)
         // Musical units (not pixels - will be converted based on zoom)
-        this.amplitudeCents = 100; // Pitch variation in cents (40-400 range)
+        this.amplitudeCents = 100; // Pitch variation in cents, peak-to-trough (40-400 range)
+                                    // Example: 100 cents = semitone = ±50 cents from center
         this.cyclesPerQuarter = 3; // Cycles per quarter note (1-10 range)
 
         this.STROKE_WIDTH = 3; // Match string line weight
@@ -305,7 +306,8 @@ class VibratoController {
                     const zoomY = window.zoomController ? window.zoomController.getZoomY('optimal') : 1.0;
 
                     // Calculate amplitude in pixels (zoom-aware)
-                    // cents → base pixels → apply Y-zoom
+                    // cents (peak-to-trough) → base pixels → apply Y-zoom
+                    // Example: 100¢ × 0.3px/¢ × 1.0 = 30px peak-to-trough (±15px from center)
                     const amplitudePx = this.amplitudeCents * this.CENTS_TO_PX_BASE * zoomY;
 
                     // Calculate frequency (zoom-aware)
@@ -316,7 +318,7 @@ class VibratoController {
                     // Calculate total cycles
                     const cycles = quarterNotes * this.cyclesPerQuarter;
 
-                    console.log(`Zoom X=${zoomX}, Y=${zoomY}, amp=${amplitudePx}px (${this.amplitudeCents}¢), cycles=${cycles.toFixed(2)} (${this.cyclesPerQuarter}/qtr × ${quarterNotes.toFixed(2)}qtrs)`);
+                    console.log(`Zoom X=${zoomX}, Y=${zoomY}, amp=${amplitudePx}px peak-to-trough (${this.amplitudeCents}¢ = ±${this.amplitudeCents/2}¢), cycles=${cycles.toFixed(2)} (${this.cyclesPerQuarter}/qtr × ${quarterNotes.toFixed(2)}qtrs)`);
 
                     const vibratoPath = this.vibratoGenerator.createVibratoPath(
                         startX,

@@ -572,6 +572,60 @@ class ZoomController {
                 text.setAttribute('y', scaledY);
             }
         });
+
+        // V4.2.26: Transform glissando chevrons (path endpoints scale, chevron size stays constant)
+        svg.querySelectorAll('polyline.glissando-chevron').forEach(polyline => {
+            const baseStartX = parseFloat(polyline.getAttribute('data-base-start-x'));
+            const baseStartY = parseFloat(polyline.getAttribute('data-base-start-y'));
+            const baseEndX = parseFloat(polyline.getAttribute('data-base-end-x'));
+            const baseEndY = parseFloat(polyline.getAttribute('data-base-end-y'));
+            const chevronIndex = parseInt(polyline.getAttribute('data-chevron-index'));
+
+            if (isNaN(baseStartX) || isNaN(baseStartY) || isNaN(baseEndX) || isNaN(baseEndY) || isNaN(chevronIndex)) {
+                return; // Skip if missing data
+            }
+
+            // Transform path endpoints with zoom (pivot at 60 for X, no pivot for Y)
+            const scaledStartX = 60 + (baseStartX - 60) * xZoom;
+            const scaledStartY = baseStartY * yZoom;
+            const scaledEndX = 60 + (baseEndX - 60) * xZoom;
+            const scaledEndY = baseEndY * yZoom;
+
+            // Recalculate path with zoomed endpoints
+            const dx = scaledEndX - scaledStartX;
+            const dy = scaledEndY - scaledStartY;
+            const pathLength = Math.sqrt(dx * dx + dy * dy);
+
+            // Unit vectors
+            const unitX = dx / pathLength;
+            const unitY = dy / pathLength;
+            const perpX = -unitY;
+            const perpY = unitX;
+
+            // Chevron geometry - CONSTANT SIZE (not scaled)
+            const chevronWidth = 14;
+            const chevronDepth = 9;
+            const halfWidth = chevronWidth / 2;
+
+            // Spacing and arm offsets - CONSTANT SIZE
+            const spacingX = unitX * chevronDepth;
+            const spacingY = unitY * chevronDepth;
+            const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
+            const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
+            const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
+            const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+
+            // Calculate this chevron's position
+            const pointX = scaledStartX + spacingX * chevronIndex;
+            const pointY = scaledStartY + spacingY * chevronIndex;
+            const leftX = pointX + leftArmX;
+            const leftY = pointY + leftArmY;
+            const rightX = pointX + rightArmX;
+            const rightY = pointY + rightArmY;
+
+            // Update points
+            polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+        });
     }
 
     /**

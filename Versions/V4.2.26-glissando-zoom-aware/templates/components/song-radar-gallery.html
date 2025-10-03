@@ -1,0 +1,351 @@
+<!-- Song Radar Gallery - All 121 Songs in Collapsible Grid -->
+<!-- Sortable by similarity, region, genre, dominant theme -->
+
+<div class="analysis-section" id="songRadarGallery" style="margin-top: 20px;">
+
+    <!-- Horizontal Header -->
+    <div class="section-header" onclick="toggleRadarGallery()" style="background: #3498db; color: white; padding: 15px 20px; cursor: pointer; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 18px;">🎯 Song Radar Gallery (121)</h3>
+        <span class="collapse-indicator" id="songRadarGalleryCollapse" style="font-size: 18px;">▶</span>
+    </div>
+
+    <!-- Section Content (Initially Collapsed) -->
+    <div class="section-content collapsed" id="songRadarGalleryContent" style="background: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+        <!-- Controls -->
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
+                <div>
+                    <label style="font-weight: 600; color: #555; margin-right: 8px;">Sort By:</label>
+                    <select id="radarSortBy" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <option value="title">Song Title (A-Z)</option>
+                        <option value="similarity" selected>Similarity to Current Song</option>
+                        <option value="dominant-theme">Dominant Theme</option>
+                        <option value="region">Region</option>
+                        <option value="genre">Genre</option>
+                        <option value="nature">Nature % (High→Low)</option>
+                        <option value="family">Family % (High→Low)</option>
+                        <option value="work">Work % (High→Low)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-weight: 600; color: #555; margin-right: 8px;">Filter:</label>
+                    <select id="radarFilterBy" style="padding: 6px 12px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">
+                        <option value="all">All Songs (121)</option>
+                        <option value="Northern">Northern Only</option>
+                        <option value="Southern">Southern Only</option>
+                        <option value="Central">Central Only</option>
+                        <option value="Hò">Hò Genre Only</option>
+                        <option value="Lý">Lý Genre Only</option>
+                        <option value="Ru">Ru Genre Only</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <label style="font-weight: 600; color: #555;">Chart Size:</label>
+                    <button onclick="setRadarSize('small')" style="padding: 5px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px;">Small</button>
+                    <button onclick="setRadarSize('medium')" class="active-size" style="padding: 5px 10px; border: 2px solid #3498db; background: #e3f2fd; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">Medium</button>
+                    <button onclick="setRadarSize('large')" style="padding: 5px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 12px;">Large</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid of Mini Radar Charts -->
+        <div id="radarGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+            <!-- Populated by JavaScript -->
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">
+                Loading radar charts...
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// Song Radar Gallery Component
+(function() {
+    let thematicProfiles = null;
+    let currentChartSize = 'medium';
+    const chartSizes = {
+        small: { width: 200, height: 200, fontSize: 9 },
+        medium: { width: 280, height: 280, fontSize: 10 },
+        large: { width: 350, height: 350, fontSize: 11 }
+    };
+
+    async function loadThematicProfiles() {
+        try {
+            const response = await fetch('/api/thematic-profiles');
+            thematicProfiles = await response.json();
+
+            renderRadarGallery();
+            attachGalleryListeners();
+
+            console.log(`[RadarGallery] Loaded ${thematicProfiles.profiles.length} song profiles`);
+        } catch (error) {
+            console.error('[RadarGallery] Error loading profiles:', error);
+        }
+    }
+
+    function renderRadarGallery() {
+        if (!thematicProfiles) return;
+
+        const sortBy = document.getElementById('radarSortBy')?.value || 'similarity';
+        const filterBy = document.getElementById('radarFilterBy')?.value || 'all';
+
+        // Filter profiles
+        let profiles = thematicProfiles.profiles.filter(p => {
+            if (filterBy === 'all') return true;
+            return p.region === filterBy || p.genre === filterBy;
+        });
+
+        // Sort profiles
+        profiles = sortProfiles(profiles, sortBy);
+
+        // Render grid
+        const grid = document.getElementById('radarGrid');
+        const size = chartSizes[currentChartSize];
+
+        grid.innerHTML = profiles.map((profile, idx) => `
+            <div class="radar-card" data-song="${profile.songName}" style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px; transition: all 0.3s; cursor: pointer;"
+                 onclick="selectSongFromRadar('${profile.songName}')"
+                 onmouseover="this.style.borderColor='#3498db'; this.style.boxShadow='0 4px 12px rgba(52,152,219,0.3)'"
+                 onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='none'">
+
+                <!-- Song Info -->
+                <div style="margin-bottom: 10px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px;">
+                    <div style="font-weight: 600; color: #2c3e50; font-size: 14px; margin-bottom: 4px;">${profile.songTitle}</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <span style="background: #e3f2fd; color: #3498db; padding: 2px 8px; border-radius: 10px; font-size: 10px;">${profile.region}</span>
+                        <span style="background: #f3e5f5; color: #9b59b6; padding: 2px 8px; border-radius: 10px; font-size: 10px;">${profile.genre}</span>
+                        <span style="background: ${getDominantThemeColor(profile.dominantTheme)}22; color: ${getDominantThemeColor(profile.dominantTheme)}; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600;">
+                            ${getDominantThemeIcon(profile.dominantTheme)} ${profile.dominantTheme}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Mini Radar Chart -->
+                <canvas id="miniRadar${idx}" width="${size.width}" height="${size.height}"></canvas>
+
+                <!-- Quick Stats -->
+                <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                    ${Object.entries(profile.themePercentages)
+                        .filter(([k, v]) => k !== 'other' && parseFloat(v) > 0)
+                        .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))
+                        .slice(0, 3)
+                        .map(([theme, pct]) => `${getDominantThemeIcon(theme)} ${theme}: ${pct}%`)
+                        .join(' • ')}
+                </div>
+
+                ${sortBy === 'similarity' && profile.similarSongs && profile.similarSongs[0] ? `
+                    <div style="margin-top: 8px; padding: 8px; background: #e8f5e9; border-radius: 4px; font-size: 11px;">
+                        <strong style="color: #27ae60;">Similar to current: ${profile.similarSongs[0].similarity}%</strong>
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+
+        // Create mini radar charts
+        setTimeout(() => {
+            profiles.forEach((profile, idx) => {
+                createMiniRadar(`miniRadar${idx}`, profile, size);
+            });
+        }, 100);
+
+        console.log(`[RadarGallery] Rendered ${profiles.length} radar charts (sorted by ${sortBy})`);
+    }
+
+    function sortProfiles(profiles, sortBy) {
+        if (sortBy === 'title') {
+            return profiles.sort((a, b) => a.songTitle.localeCompare(b.songTitle));
+        } else if (sortBy === 'similarity') {
+            // Sort by similarity to currently playing song
+            const currentSong = window.libraryController?.currentSong?.replace(/\.musicxml\.xml$/i, '') || profiles[0].songName;
+            const currentProfile = profiles.find(p => p.songName.toLowerCase().includes(currentSong.toLowerCase())) || profiles[0];
+
+            return profiles.sort((a, b) => {
+                const simA = a.similarSongs?.find(s => s.songName === currentProfile.songName)?.similarity || 0;
+                const simB = b.similarSongs?.find(s => s.songName === currentProfile.songName)?.similarity || 0;
+                return parseFloat(simB) - parseFloat(simA);
+            });
+        } else if (sortBy === 'dominant-theme') {
+            return profiles.sort((a, b) => a.dominantTheme.localeCompare(b.dominantTheme));
+        } else if (sortBy === 'region') {
+            return profiles.sort((a, b) => a.region.localeCompare(b.region));
+        } else if (sortBy === 'genre') {
+            return profiles.sort((a, b) => a.genre.localeCompare(b.genre));
+        } else if (['nature', 'family', 'work'].includes(sortBy)) {
+            return profiles.sort((a, b) => parseFloat(b.themePercentages[sortBy]) - parseFloat(a.themePercentages[sortBy]));
+        }
+        return profiles;
+    }
+
+    function createMiniRadar(canvasId, profile, size) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: ['🌿', '👨‍👩‍👧', '💗', '⚒️', '⏰', '📍'],
+                datasets: [{
+                    data: profile.radarData,
+                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#3498db',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3498db',
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: false,
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 15,
+                        ticks: {
+                            display: false,
+                            stepSize: 5
+                        },
+                        pointLabels: {
+                            font: { size: size.fontSize, weight: 'bold' }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                const labels = ['Nature', 'Family', 'Emotion', 'Work', 'Time', 'Place'];
+                                return labels[context.dataIndex] + ': ' + context.parsed.r.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function getDominantThemeColor(theme) {
+        const colors = {
+            nature: '#27ae60',
+            family: '#e74c3c',
+            emotion: '#f39c12',
+            work: '#3498db',
+            time: '#9b59b6',
+            place: '#1abc9c',
+            other: '#95a5a6',
+            none: '#95a5a6'
+        };
+        return colors[theme] || '#95a5a6';
+    }
+
+    function getDominantThemeIcon(theme) {
+        const icons = {
+            nature: '🌿',
+            family: '👨‍👩‍👧',
+            emotion: '💗',
+            work: '⚒️',
+            time: '⏰',
+            place: '📍',
+            other: '💬',
+            none: '💬'
+        };
+        return icons[theme] || '💬';
+    }
+
+    window.selectSongFromRadar = function(songName) {
+        // Load song in main viewer
+        if (window.libraryController) {
+            window.libraryController.selectSong(songName + '.musicxml.xml');
+        }
+        console.log(`[RadarGallery] Selected song: ${songName}`);
+    };
+
+    window.setRadarSize = function(size) {
+        currentChartSize = size;
+
+        // Update button states
+        document.querySelectorAll('[onclick^="setRadarSize"]').forEach(btn => {
+            btn.style.border = '1px solid #ddd';
+            btn.style.background = 'white';
+            btn.style.fontWeight = 'normal';
+            btn.classList.remove('active-size');
+        });
+        event.target.style.border = '2px solid #3498db';
+        event.target.style.background = '#e3f2fd';
+        event.target.style.fontWeight = '600';
+        event.target.classList.add('active-size');
+
+        renderRadarGallery();
+    };
+
+    function attachGalleryListeners() {
+        const sortSelect = document.getElementById('radarSortBy');
+        const filterSelect = document.getElementById('radarFilterBy');
+
+        if (sortSelect) {
+            sortSelect.addEventListener('change', renderRadarGallery);
+        }
+
+        if (filterSelect) {
+            filterSelect.addEventListener('change', renderRadarGallery);
+        }
+    }
+
+    // Toggle function for this specific section
+    window.toggleRadarGallery = function() {
+        const content = document.getElementById('songRadarGalleryContent');
+        const toggle = document.getElementById('songRadarGalleryCollapse');
+
+        if (content.classList.contains('collapsed')) {
+            // Expand
+            content.classList.remove('collapsed');
+            content.style.display = 'block';
+            toggle.textContent = '▼';
+
+            // Render charts if not already rendered
+            if (!content.dataset.rendered) {
+                renderRadarGallery();
+                content.dataset.rendered = 'true';
+            }
+
+            console.log('[RadarGallery] Expanded - rendering 121 charts');
+        } else {
+            // Collapse
+            content.classList.add('collapsed');
+            content.style.display = 'none';
+            toggle.textContent = '▶';
+            console.log('[RadarGallery] Collapsed');
+        }
+    };
+
+    // Initialize when DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+        loadThematicProfiles();
+        console.log('[RadarGallery] Component initialized (collapsed by default)');
+    });
+
+    // Expose refresh method
+    window.refreshRadarGallery = loadThematicProfiles;
+
+})();
+</script>
+
+<style>
+.radar-card {
+    position: relative;
+}
+
+.radar-card:hover {
+    transform: translateY(-2px);
+}
+
+#songRadarGalleryContent.collapsed {
+    display: none !important;
+}
+</style>

@@ -368,6 +368,7 @@ class GlissandoController {
 
     /**
      * Generate glissando chevrons
+     * ZOOM-AWARE: Stores base path endpoints, chevron arms stay constant size
      */
     generateGlissando(params) {
         const {
@@ -402,7 +403,7 @@ class GlissandoController {
         const spacingX = unitX * chevronDepth;
         const spacingY = unitY * chevronDepth;
 
-        // Calculate arm offsets (from chevron point)
+        // Calculate arm offsets (from chevron point) - CONSTANT SIZE
         const halfWidth = chevronWidth / 2;
         const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
         const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
@@ -425,6 +426,14 @@ class GlissandoController {
 
             // Create polyline element
             const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+
+            // Store BASE path endpoints for zoom transformation
+            polyline.setAttribute('data-base-start-x', startX);
+            polyline.setAttribute('data-base-start-y', startY);
+            polyline.setAttribute('data-base-end-x', endX);
+            polyline.setAttribute('data-base-end-y', endY);
+            polyline.setAttribute('data-chevron-index', i);  // Which chevron in the path
+
             polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
             polyline.setAttribute('stroke', color);
             polyline.setAttribute('stroke-width', strokeWidth);

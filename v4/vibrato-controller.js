@@ -173,13 +173,13 @@ class VibratoController {
             this.enabled[pitchClass] = false;
         });
 
-        // Amplitude slider (cents)
+        // Amplitude slider (cents) - displays peak-to-trough range
         const ampLabel = document.createElement('label');
         ampLabel.style.display = 'flex';
         ampLabel.style.alignItems = 'center';
         ampLabel.style.gap = '4px';
         ampLabel.style.marginLeft = '10px';
-        ampLabel.innerHTML = '<span style="font-size: 11px;">±</span>';
+        ampLabel.innerHTML = '<span style="font-size: 11px;">Depth:</span>';
 
         const ampSlider = document.createElement('input');
         ampSlider.type = 'range';
@@ -190,13 +190,14 @@ class VibratoController {
         ampSlider.style.width = '80px';
 
         const ampValue = document.createElement('span');
-        ampValue.textContent = this.amplitudeCents + '¢';
+        // Show both peak-to-trough and ± from center for clarity
+        ampValue.textContent = this.amplitudeCents + '¢ (±' + (this.amplitudeCents/2) + '¢)';
         ampValue.style.fontSize = '11px';
-        ampValue.style.minWidth = '40px';
+        ampValue.style.minWidth = '80px';
 
         ampSlider.addEventListener('input', (e) => {
             this.amplitudeCents = parseFloat(e.target.value);
-            ampValue.textContent = this.amplitudeCents + '¢';
+            ampValue.textContent = this.amplitudeCents + '¢ (±' + (this.amplitudeCents/2) + '¢)';
             this.updateVibratos();
         });
 

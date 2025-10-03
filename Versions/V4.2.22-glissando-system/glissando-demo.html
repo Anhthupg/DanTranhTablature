@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfect Glissando Demo - Dan Tranh Tablature</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #008080;
+            margin: 0 0 20px 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: 2px solid #e1e8ed;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            border-color: #FFD700;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        }
+
+        button.active {
+            background: #FFD700;
+            border-color: #FFD700;
+            color: #333;
+        }
+
+        .svg-container {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: visible;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        svg {
+            display: block;
+        }
+
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-left: 4px solid #008080;
+            border-radius: 4px;
+        }
+
+        .info h3 {
+            margin: 0 0 10px 0;
+            color: #008080;
+            font-size: 1.1rem;
+        }
+
+        .info p {
+            margin: 5px 0;
+            line-height: 1.6;
+        }
+
+        .string {
+            stroke: #999;
+            stroke-width: 3;
+        }
+
+        .note {
+            fill: #666;
+            stroke: #333;
+            stroke-width: 2;
+        }
+
+        .note-text {
+            fill: white;
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .glissando-chevron {
+            stroke: black;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: miter;
+        }
+
+        .candidate-note {
+            fill: #FFD700;
+            stroke: #CC9900;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6));
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Perfect Glissando Demo - Vietnamese Dan Tranh</h1>
+
+        <div class="controls">
+            <button onclick="drawGlissando1()">Draw Glissando 1</button>
+            <button onclick="drawGlissando2()">Draw Glissando 2</button>
+            <button onclick="drawGlissando3()">Draw Glissando 3</button>
+            <button onclick="drawAllGlissandos()" style="background: #FFD700; border-color: #FFD700;">Draw All</button>
+            <button onclick="clearAll()">Clear All</button>
+        </div>
+
+        <div class="svg-container">
+            <svg id="demoSvg" width="1200" height="600">
+                <!-- String lines (7 strings) -->
+                <line class="string" data-string-number="7" x1="100" y1="100" x2="1100" y2="100"/>
+                <line class="string" data-string-number="8" x1="100" y1="150" x2="1100" y2="150"/>
+                <line class="string" data-string-number="9" x1="100" y1="220" x2="1100" y2="220"/>
+                <line class="string" data-string-number="10" x1="100" y1="270" x2="1100" y2="270"/>
+                <line class="string" data-string-number="11" x1="100" y1="320" x2="1100" y2="320"/>
+                <line class="string" data-string-number="12" x1="100" y1="390" x2="1100" y2="390"/>
+                <line class="string" data-string-number="13" x1="100" y1="440" x2="1100" y2="440"/>
+
+                <!-- String labels -->
+                <text x="50" y="100" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">G4</text>
+                <text x="50" y="150" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">A4</text>
+                <text x="50" y="220" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">C5</text>
+                <text x="50" y="270" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">D5</text>
+                <text x="50" y="320" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">E5</text>
+                <text x="50" y="390" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">G5</text>
+                <text x="50" y="440" text-anchor="middle" dominant-baseline="middle" fill="#666" font-size="14">A5</text>
+
+                <!-- Example notes -->
+                <!-- Glissando 1: Long note E5 → following note G5 -->
+                <circle class="note candidate-note" data-note-index="1" data-duration="8" cx="250" cy="320" r="12"/>
+                <text class="note-text" x="250" y="320">11</text>
+                <circle class="note" data-note-index="2" data-duration="1" cx="510" cy="390" r="12"/>
+                <text class="note-text" x="510" y="390">12</text>
+
+                <!-- Glissando 2: Long note D5 → following note C5 (ascending) -->
+                <circle class="note candidate-note" data-note-index="3" data-duration="8" cx="600" cy="270" r="12"/>
+                <text class="note-text" x="600" y="270">10</text>
+                <circle class="note" data-note-index="4" data-duration="1" cx="850" cy="220" r="12"/>
+                <text class="note-text" x="850" y="220">9</text>
+
+                <!-- Glissando 3: Long note A5 → grace note → main note A4 (big jump) -->
+                <circle class="note candidate-note" data-note-index="5" data-duration="8" data-dotted="true" cx="950" cy="440" r="12"/>
+                <text class="note-text" x="950" y="440">13</text>
+                <circle class="note" data-note-index="6" data-duration="0.25" cx="1080" cy="320" r="6"/>
+                <text class="note-text" x="1080" y="320" font-size="10">G</text>
+                <circle class="note" data-note-index="7" data-duration="1" cx="1120" cy="150" r="12"/>
+                <text class="note-text" x="1120" y="150">8</text>
+            </svg>
+        </div>
+
+        <div class="info">
+            <h3>Perfect Glissando Path Calculation</h3>
+            <p><strong>Y-From:</strong> Edgemost string (closest string to target note)</p>
+            <p><strong>X-From:</strong> Midway between candidate and target (or 1/3 for dotted notes)</p>
+            <p><strong>Y-To & X-To:</strong> Immediate following note position (includes grace notes)</p>
+            <p><strong>Chevrons:</strong> Perpendicular to path, 14px wide, 9px spacing</p>
+
+            <div id="drawInfo" style="margin-top: 15px; padding: 10px; background: white; border-radius: 4px;">
+                Click buttons above to draw glissando paths with chevrons.
+            </div>
+        </div>
+    </div>
+
+    <script src="/glissando-controller.js"></script>
+    <script>
+        // Initialize controller
+        const controller = window.glissandoController;
+        controller.initialize('demoSvg');
+
+        // Define example candidates
+        const exampleCandidates = [
+            { noteIndex: 1, duration: 8, isDotted: false },  // E5 → G5 (descending)
+            { noteIndex: 3, duration: 8, isDotted: false },  // D5 → C5 (ascending)
+            { noteIndex: 5, duration: 8, isDotted: true }    // A5 → grace → A4 (big jump, dotted)
+        ];
+
+        function drawGlissando1() {
+            controller.loadCandidates([exampleCandidates[0]]);
+            controller.drawAllGlissandos();
+            updateInfo('Glissando 1: E5 → G5 (descending, midway start, edgemost string)');
+            document.querySelectorAll('.controls button')[0].classList.add('active');
+        }
+
+        function drawGlissando2() {
+            controller.clearAllGlissandos();
+            controller.loadCandidates([exampleCandidates[1]]);
+            controller.drawAllGlissandos();
+            updateInfo('Glissando 2: D5 → C5 (ascending, midway start, edgemost string)');
+            resetButtons();
+            document.querySelectorAll('.controls button')[1].classList.add('active');
+        }
+
+        function drawGlissando3() {
+            controller.clearAllGlissandos();
+            controller.loadCandidates([exampleCandidates[2]]);
+            controller.drawAllGlissandos();
+            updateInfo('Glissando 3: A5 → A4 (dotted note, 1/3 start position, targets grace note)');
+            resetButtons();
+            document.querySelectorAll('.controls button')[2].classList.add('active');
+        }
+
+        function drawAllGlissandos() {
+            controller.clearAllGlissandos();
+            controller.loadCandidates(exampleCandidates);
+            controller.drawAllGlissandos();
+            updateInfo('All 3 glissandos drawn with Perfect Glissando positioning!');
+            resetButtons();
+            document.querySelectorAll('.controls button')[3].classList.add('active');
+        }
+
+        function clearAll() {
+            controller.clearAllGlissandos();
+            updateInfo('Cleared all glissando paths. Click buttons to redraw.');
+            resetButtons();
+        }
+
+        function updateInfo(message) {
+            document.getElementById('drawInfo').innerHTML = `
+                <strong style="color: #27AE60;">✓ ${message}</strong>
+            `;
+        }
+
+        function resetButtons() {
+            document.querySelectorAll('.controls button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        // Auto-draw all on load
+        setTimeout(() => {
+            drawAllGlissandos();
+        }, 500);
+    </script>
+</body>
+</html>

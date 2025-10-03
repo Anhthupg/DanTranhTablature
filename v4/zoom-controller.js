@@ -15,6 +15,7 @@ class ZoomController {
         this.zoomState = this.initializeZoomState();
         this.initialized = false;
         this.zoomLinked = true;  // Default: zoom is linked between sections
+        this.onZoomChangeCallbacks = {}; // Callbacks to execute when zoom changes
     }
 
     /**
@@ -234,6 +235,9 @@ class ZoomController {
         // Apply zoom to current section
         this.applyZoom(section);
 
+        // Trigger callbacks for this section
+        this.triggerZoomChange(section);
+
         // If zoom is linked and not skipping sync, update other sections
         if (this.zoomLinked && !skipSync) {
             this.sections.forEach(otherSection => {
@@ -250,6 +254,9 @@ class ZoomController {
 
                     // Apply zoom
                     this.applyZoom(otherSection);
+
+                    // Trigger callbacks for other section
+                    this.triggerZoomChange(otherSection);
                 }
             });
         }
@@ -792,6 +799,58 @@ class ZoomController {
      */
     resetAll() {
         this.sections.forEach(section => this.resetZoom(section));
+    }
+
+    /**
+     * Get current X zoom level for a section
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @returns {number} - Current X zoom multiplier (1.0 = 100%)
+     */
+    getZoomX(section) {
+        return this.zoomState[section]?.x || 1.0;
+    }
+
+    /**
+     * Get current Y zoom level for a section
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @returns {number} - Current Y zoom multiplier (1.0 = 100%)
+     */
+    getZoomY(section) {
+        return this.zoomState[section]?.y || 1.0;
+    }
+
+    /**
+     * Register a callback to execute when zoom changes
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @param {Function} callback - Function to call when zoom changes
+     */
+    onZoomChange(section, callback) {
+        if (!this.onZoomChangeCallbacks[section]) {
+            this.onZoomChangeCallbacks[section] = [];
+        }
+        this.onZoomChangeCallbacks[section].push(callback);
+        console.log(`[ZoomController] Registered callback for ${section}, total callbacks: ${this.onZoomChangeCallbacks[section].length}`);
+    }
+
+    /**
+     * Trigger all callbacks for a section
+     * @param {string} section - Section name
+     */
+    triggerZoomChange(section) {
+        const callbacks = this.onZoomChangeCallbacks[section];
+        console.log(`[ZoomController] Triggering callbacks for ${section}, count: ${callbacks ? callbacks.length : 0}`);
+        if (callbacks && callbacks.length > 0) {
+            callbacks.forEach((callback, index) => {
+                try {
+                    console.log(`[ZoomController] Executing callback ${index} for ${section}`);
+                    callback();
+                } catch (error) {
+                    console.error(`Zoom callback error for ${section}:`, error);
+                }
+            });
+        } else {
+            console.log(`[ZoomController] No callbacks registered for ${section}`);
+        }
     }
 }
 

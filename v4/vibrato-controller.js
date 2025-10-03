@@ -16,9 +16,14 @@ class VibratoController {
         this.enabled = {}; // { 'C': true, 'D': false, ... }
         this.vibratoGenerator = null; // Reference to VibratoSineWaveGenerator
 
-        // Vibrato parameters
-        this.AMPLITUDE = 10; // Wave depth in pixels
-        this.FREQUENCY = 3;  // Number of cycles
+        // Vibrato parameters (user-adjustable via sliders)
+        // Musical units (not pixels - will be converted based on zoom)
+        this.amplitudeCents = 100; // Pitch variation in cents (40-400 range)
+        this.cyclesPerQuarter = 3; // Cycles per quarter note (1-10 range)
+
+        this.STROKE_WIDTH = 3; // Match string line weight
+        this.CENTS_TO_PX_BASE = 0.3; // Base: 0.3px per cent (from pentatonic spacing)
+        this.QUARTER_NOTE_PX_BASE = 85; // Base: quarter note = 85px
         this.HALF_NOTE_DURATION_PX = 85 * 0.5; // Half note in pixels (duration * 85)
     }
 
@@ -50,7 +55,42 @@ class VibratoController {
             this.vibratoGenerator = new VibratoSineWaveGenerator();
         }
 
+        // Register callback to redraw vibratos when zoom changes
+        if (window.zoomController) {
+            // Determine section name from svgId (e.g., 'optimalSvg' → 'optimal')
+            const section = svgId.replace('Svg', '').replace('svg', '');
+            window.zoomController.onZoomChange(section, () => {
+                console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos...`);
+                this.updateVibratos();
+            });
+            console.log(`Vibrato registered for zoom changes on section: ${section}`);
+        }
+
         console.log(`Vibrato initialized for ${usedPitchClasses.length} pitch classes:`, usedPitchClasses);
+    }
+
+    /**
+     * Ensure zoom callback is registered (defensive - handles SVG reload cases)
+     */
+    ensureZoomCallback() {
+        if (!window.zoomController) return;
+
+        // Determine section name from svgId (e.g., 'optimalSvg' → 'optimal')
+        const section = this.currentSvgId.replace('Svg', '').replace('svg', '');
+
+        // Check if callback already registered
+        const callbacks = window.zoomController.onZoomChangeCallbacks[section];
+        if (callbacks && callbacks.length > 0) {
+            // Already registered
+            return;
+        }
+
+        // Register callback
+        window.zoomController.onZoomChange(section, () => {
+            console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos...`);
+            this.updateVibratos();
+        });
+        console.log(`[Vibrato] Registered zoom callback for ${section}`);
     }
 
     /**
@@ -91,48 +131,109 @@ class VibratoController {
         // Clear existing content
         container.innerHTML = '';
 
+        // Single-line layout: title, checkboxes, sliders all inline
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '12px';
+
         // Create title
-        const title = document.createElement('div');
-        title.textContent = 'Vibrato by Pitch Class:';
-        title.style.marginBottom = '8px';
+        const title = document.createElement('span');
+        title.textContent = 'Vibrato Rung on:';
         title.style.fontWeight = 'bold';
-        container.appendChild(title);
+        wrapper.appendChild(title);
 
-        // Create radio buttons for each pitch class
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '12px';
-        buttonContainer.style.flexWrap = 'wrap';
-
+        // Create checkboxes inline
         pitchClasses.forEach(pitchClass => {
             const label = document.createElement('label');
             label.style.display = 'flex';
             label.style.alignItems = 'center';
             label.style.cursor = 'pointer';
+            label.style.gap = '2px';
 
-            const radio = document.createElement('input');
-            radio.type = 'checkbox'; // Use checkbox for independent toggles
-            radio.id = `vibrato-${pitchClass}`;
-            radio.name = `vibrato-${pitchClass}`;
-            radio.value = pitchClass;
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `vibrato-${pitchClass}`;
+            checkbox.name = `vibrato-${pitchClass}`;
+            checkbox.value = pitchClass;
 
-            radio.addEventListener('change', (e) => {
+            checkbox.addEventListener('change', (e) => {
                 this.toggleVibrato(pitchClass, e.target.checked);
             });
 
             const span = document.createElement('span');
             span.textContent = pitchClass;
-            span.style.marginLeft = '4px';
 
-            label.appendChild(radio);
+            label.appendChild(checkbox);
             label.appendChild(span);
-            buttonContainer.appendChild(label);
+            wrapper.appendChild(label);
 
             // Initialize state
             this.enabled[pitchClass] = false;
         });
 
-        container.appendChild(buttonContainer);
+        // Amplitude slider (cents)
+        const ampLabel = document.createElement('label');
+        ampLabel.style.display = 'flex';
+        ampLabel.style.alignItems = 'center';
+        ampLabel.style.gap = '4px';
+        ampLabel.style.marginLeft = '10px';
+        ampLabel.innerHTML = '<span style="font-size: 11px;">±</span>';
+
+        const ampSlider = document.createElement('input');
+        ampSlider.type = 'range';
+        ampSlider.min = '40';
+        ampSlider.max = '400';
+        ampSlider.step = '10';
+        ampSlider.value = this.amplitudeCents;
+        ampSlider.style.width = '80px';
+
+        const ampValue = document.createElement('span');
+        ampValue.textContent = this.amplitudeCents + '¢';
+        ampValue.style.fontSize = '11px';
+        ampValue.style.minWidth = '40px';
+
+        ampSlider.addEventListener('input', (e) => {
+            this.amplitudeCents = parseFloat(e.target.value);
+            ampValue.textContent = this.amplitudeCents + '¢';
+            this.updateVibratos();
+        });
+
+        ampLabel.appendChild(ampSlider);
+        ampLabel.appendChild(ampValue);
+        wrapper.appendChild(ampLabel);
+
+        // Frequency slider (cycles per quarter note)
+        const freqLabel = document.createElement('label');
+        freqLabel.style.display = 'flex';
+        freqLabel.style.alignItems = 'center';
+        freqLabel.style.gap = '4px';
+        freqLabel.innerHTML = '<span style="font-size: 11px;">Speed:</span>';
+
+        const freqSlider = document.createElement('input');
+        freqSlider.type = 'range';
+        freqSlider.min = '1';
+        freqSlider.max = '10';
+        freqSlider.step = '0.5';
+        freqSlider.value = this.cyclesPerQuarter;
+        freqSlider.style.width = '80px';
+
+        const freqValue = document.createElement('span');
+        freqValue.textContent = this.cyclesPerQuarter + 'x';
+        freqValue.style.fontSize = '11px';
+        freqValue.style.minWidth = '30px';
+
+        freqSlider.addEventListener('input', (e) => {
+            this.cyclesPerQuarter = parseFloat(e.target.value);
+            freqValue.textContent = this.cyclesPerQuarter + 'x';
+            this.updateVibratos();
+        });
+
+        freqLabel.appendChild(freqSlider);
+        freqLabel.appendChild(freqValue);
+        wrapper.appendChild(freqLabel);
+
+        container.appendChild(wrapper);
     }
 
     /**
@@ -162,6 +263,9 @@ class VibratoController {
         if (!this.vibratoGenerator) {
             this.vibratoGenerator = window.vibratoGenerator || new VibratoSineWaveGenerator();
         }
+
+        // Ensure zoom callback is registered (defensive - handles SVG reload)
+        this.ensureZoomCallback();
 
         // Clear existing vibratos
         this.vibratoGenerator.clearVibratos(svg);
@@ -196,14 +300,33 @@ class VibratoController {
 
                 // Only draw if there's space
                 if (endX > startX) {
+                    // Get current zoom levels
+                    const zoomX = window.zoomController ? window.zoomController.getZoomX('optimal') : 1.0;
+                    const zoomY = window.zoomController ? window.zoomController.getZoomY('optimal') : 1.0;
+
+                    // Calculate amplitude in pixels (zoom-aware)
+                    // cents → base pixels → apply Y-zoom
+                    const amplitudePx = this.amplitudeCents * this.CENTS_TO_PX_BASE * zoomY;
+
+                    // Calculate frequency (zoom-aware)
+                    // Length in current pixels (already scaled by X-zoom)
+                    const lengthPx = endX - startX;
+                    // Convert to quarter notes (unscaled)
+                    const quarterNotes = lengthPx / (this.QUARTER_NOTE_PX_BASE * zoomX);
+                    // Calculate total cycles
+                    const cycles = quarterNotes * this.cyclesPerQuarter;
+
+                    console.log(`Zoom X=${zoomX}, Y=${zoomY}, amp=${amplitudePx}px (${this.amplitudeCents}¢), cycles=${cycles.toFixed(2)} (${this.cyclesPerQuarter}/qtr × ${quarterNotes.toFixed(2)}qtrs)`);
+
                     const vibratoPath = this.vibratoGenerator.createVibratoPath(
                         startX,
                         note.y,
                         endX,
                         note.y,
                         {
-                            amplitude: this.AMPLITUDE,
-                            frequency: this.FREQUENCY
+                            amplitude: amplitudePx,
+                            frequency: cycles,
+                            strokeWidth: this.STROKE_WIDTH
                         }
                     );
 

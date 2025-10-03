@@ -23,7 +23,7 @@ class VibratoController {
         this.cyclesPerQuarter = 3; // Cycles per quarter note (1-10 range)
 
         this.STROKE_WIDTH = 3; // Match string line weight
-        this.CENTS_TO_PX_BASE = 0.3; // Base: 0.3px per cent (from pentatonic spacing)
+        this.CENTS_TO_PX_BASE = 0.125; // Base: 0.125px per cent (optimal vibrato spacing)
         this.QUARTER_NOTE_PX_BASE = 85; // Base: quarter note = 85px
         this.HALF_NOTE_DURATION_PX = 85 * 0.5; // Half note in pixels (duration * 85)
     }

@@ -295,7 +295,7 @@ class VibratoController {
                 // Calculate vibrato end position
                 const startX = note.x + note.radius; // Start at note edge (center + radius)
                 const endX = nextNote
-                    ? nextNote.x - nextNote.radius // End at next note edge
+                    ? nextNote.x // End at next note CENTER (so wave peak touches it)
                     : note.x + this.HALF_NOTE_DURATION_PX; // Or half note duration
 
                 console.log(`Note ${note.pitch} at x=${note.x}, y=${note.y}, startX=${startX}, endX=${endX}, length=${endX-startX}px`);
@@ -316,10 +316,11 @@ class VibratoController {
                     const lengthPx = endX - startX;
                     // Convert to quarter notes (unscaled)
                     const quarterNotes = lengthPx / (this.QUARTER_NOTE_PX_BASE * zoomX);
-                    // Calculate total cycles
-                    const cycles = quarterNotes * this.cyclesPerQuarter;
+                    // Calculate total cycles and round to ensure wave ends at peak (phase = 0)
+                    const cyclesRaw = quarterNotes * this.cyclesPerQuarter;
+                    const cycles = Math.round(cyclesRaw); // Round to nearest integer for complete cycles
 
-                    console.log(`Zoom X=${zoomX}, Y=${zoomY}, amp=${amplitudePx}px peak-to-trough (${this.amplitudeCents}¢ = ±${this.amplitudeCents/2}¢), cycles=${cycles.toFixed(2)} (${this.cyclesPerQuarter}/qtr × ${quarterNotes.toFixed(2)}qtrs)`);
+                    console.log(`Zoom X=${zoomX}, Y=${zoomY}, amp=${amplitudePx}px peak-to-trough (${this.amplitudeCents}¢ = ±${this.amplitudeCents/2}¢), cycles=${cycles} (rounded from ${cyclesRaw.toFixed(2)})`);
 
                     const vibratoPath = this.vibratoGenerator.createVibratoPath(
                         startX,

@@ -573,17 +573,50 @@ class ZoomController {
             }
         });
 
-        // V4.2.26: Transform glissando chevrons (path endpoints scale, chevron size stays constant)
-        svg.querySelectorAll('polyline.glissando-chevron').forEach(polyline => {
+        // V4.2.28: Transform glissando chevrons with dynamic count (add more chevrons when zoomed)
+        const allChevrons = Array.from(svg.querySelectorAll('polyline.glissando-chevron'));
+        if (allChevrons.length > 0) {
+            // Use the centralized transformation logic that regenerates chevrons as needed
+            this.transformGlissandoChevrons(svg, allChevrons, xZoom, yZoom);
+        }
+    }
+
+    /**
+     * Transform glissando chevrons with dynamic chevron count
+     * Regenerates chevrons if path length changes significantly
+     * @param {SVGElement} svg - The SVG element
+     * @param {Array} chevrons - Array of glissando chevron polyline elements
+     * @param {number} xZoom - X-axis zoom level
+     * @param {number} yZoom - Y-axis zoom level
+     */
+    transformGlissandoChevrons(svg, chevrons, xZoom, yZoom) {
+        // Group chevrons by their glissando path (same start/end points)
+        const pathGroups = new Map();
+        chevrons.forEach(polyline => {
             const baseStartX = parseFloat(polyline.getAttribute('data-base-start-x'));
             const baseStartY = parseFloat(polyline.getAttribute('data-base-start-y'));
             const baseEndX = parseFloat(polyline.getAttribute('data-base-end-x'));
             const baseEndY = parseFloat(polyline.getAttribute('data-base-end-y'));
-            const chevronIndex = parseInt(polyline.getAttribute('data-chevron-index'));
 
-            if (isNaN(baseStartX) || isNaN(baseStartY) || isNaN(baseEndX) || isNaN(baseEndY) || isNaN(chevronIndex)) {
+            if (isNaN(baseStartX) || isNaN(baseStartY) || isNaN(baseEndX) || isNaN(baseEndY)) {
                 return; // Skip if missing data
             }
+
+            const pathKey = `${baseStartX},${baseStartY},${baseEndX},${baseEndY}`;
+            if (!pathGroups.has(pathKey)) {
+                pathGroups.set(pathKey, {
+                    baseStartX, baseStartY, baseEndX, baseEndY,
+                    chevrons: [],
+                    color: polyline.getAttribute('stroke'),
+                    opacity: polyline.getAttribute('stroke-opacity')
+                });
+            }
+            pathGroups.get(pathKey).chevrons.push(polyline);
+        });
+
+        // Regenerate each glissando path with correct chevron count
+        pathGroups.forEach(pathGroup => {
+            const { baseStartX, baseStartY, baseEndX, baseEndY, chevrons: oldChevrons, color, opacity } = pathGroup;
 
             // Transform path endpoints with zoom (pivot at 60 for X, no pivot for Y)
             const scaledStartX = 60 + (baseStartX - 60) * xZoom;
@@ -591,40 +624,95 @@ class ZoomController {
             const scaledEndX = 60 + (baseEndX - 60) * xZoom;
             const scaledEndY = baseEndY * yZoom;
 
-            // Recalculate path with zoomed endpoints
+            // Calculate zoomed path length
             const dx = scaledEndX - scaledStartX;
             const dy = scaledEndY - scaledStartY;
             const pathLength = Math.sqrt(dx * dx + dy * dy);
 
-            // Unit vectors
-            const unitX = dx / pathLength;
-            const unitY = dy / pathLength;
-            const perpX = -unitY;
-            const perpY = unitX;
-
-            // Chevron geometry - CONSTANT SIZE (not scaled)
+            // Chevron geometry - CONSTANT SIZE
             const chevronWidth = 14;
             const chevronDepth = 9;
-            const halfWidth = chevronWidth / 2;
 
-            // Spacing and arm offsets - CONSTANT SIZE
-            const spacingX = unitX * chevronDepth;
-            const spacingY = unitY * chevronDepth;
-            const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
-            const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
-            const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
-            const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+            // Calculate correct number of chevrons for zoomed path
+            const numChevrons = Math.floor(pathLength / chevronDepth);
 
-            // Calculate this chevron's position
-            const pointX = scaledStartX + spacingX * chevronIndex;
-            const pointY = scaledStartY + spacingY * chevronIndex;
-            const leftX = pointX + leftArmX;
-            const leftY = pointY + leftArmY;
-            const rightX = pointX + rightArmX;
-            const rightY = pointY + rightArmY;
+            // If chevron count changed, regenerate all chevrons for this path
+            if (numChevrons !== oldChevrons.length) {
+                console.log(`[Glissando Zoom] Regenerating: ${oldChevrons.length} → ${numChevrons} chevrons`);
 
-            // Update points
-            polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+                // Remove old chevrons
+                oldChevrons.forEach(c => c.remove());
+
+                // Generate new chevrons
+                const firstNote = svg.querySelector('circle');
+
+                // Unit vectors
+                const unitX = dx / pathLength;
+                const unitY = dy / pathLength;
+                const perpX = -unitY;
+                const perpY = unitX;
+
+                const halfWidth = chevronWidth / 2;
+                const spacingX = unitX * chevronDepth;
+                const spacingY = unitY * chevronDepth;
+                const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
+                const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
+                const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
+                const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+
+                for (let i = 0; i < numChevrons; i++) {
+                    const pointX = scaledStartX + spacingX * i;
+                    const pointY = scaledStartY + spacingY * i;
+                    const leftX = pointX + leftArmX;
+                    const leftY = pointY + leftArmY;
+                    const rightX = pointX + rightArmX;
+                    const rightY = pointY + rightArmY;
+
+                    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                    polyline.setAttribute('data-base-start-x', baseStartX);
+                    polyline.setAttribute('data-base-start-y', baseStartY);
+                    polyline.setAttribute('data-base-end-x', baseEndX);
+                    polyline.setAttribute('data-base-end-y', baseEndY);
+                    polyline.setAttribute('data-chevron-index', i);
+                    polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+                    polyline.setAttribute('stroke', color);
+                    polyline.setAttribute('stroke-width', 2);
+                    polyline.setAttribute('stroke-opacity', opacity);
+                    polyline.setAttribute('fill', 'none');
+                    polyline.setAttribute('stroke-linecap', 'round');
+                    polyline.setAttribute('stroke-linejoin', 'miter');
+                    polyline.classList.add('glissando-chevron');
+
+                    svg.insertBefore(polyline, firstNote);
+                }
+            } else {
+                // Same count, just update positions
+                oldChevrons.forEach(polyline => {
+                    const chevronIndex = parseInt(polyline.getAttribute('data-chevron-index'));
+
+                    const unitX = dx / pathLength;
+                    const unitY = dy / pathLength;
+                    const perpX = -unitY;
+                    const perpY = unitX;
+
+                    const halfWidth = chevronWidth / 2;
+                    const spacingX = unitX * chevronDepth;
+                    const spacingY = unitY * chevronDepth;
+                    const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
+                    const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
+                    const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
+                    const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+
+                    const pointX = scaledStartX + spacingX * chevronIndex;
+                    const pointY = scaledStartY + spacingY * chevronIndex;
+                    const leftX = pointX + leftArmX;
+                    const leftY = pointY + leftArmY;
+                    const rightX = pointX + rightArmX;
+                    const rightY = pointY + rightArmY;
+
+                    polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+                });
+            }
         });
     }
 
@@ -643,58 +731,12 @@ class ZoomController {
         // Only transform if zoom is not at 100%
         if (xZoom === 1.0 && yZoom === 1.0) return;
 
-        chevrons.forEach(polyline => {
-            const baseStartX = parseFloat(polyline.getAttribute('data-base-start-x'));
-            const baseStartY = parseFloat(polyline.getAttribute('data-base-start-y'));
-            const baseEndX = parseFloat(polyline.getAttribute('data-base-end-x'));
-            const baseEndY = parseFloat(polyline.getAttribute('data-base-end-y'));
-            const chevronIndex = parseInt(polyline.getAttribute('data-chevron-index'));
+        // Get SVG element from first chevron
+        if (chevrons.length === 0) return;
+        const svg = chevrons[0].parentNode;
 
-            if (isNaN(baseStartX) || isNaN(baseStartY) || isNaN(baseEndX) || isNaN(baseEndY) || isNaN(chevronIndex)) {
-                return; // Skip if missing data
-            }
-
-            // Transform path endpoints with zoom (pivot at 60 for X, no pivot for Y)
-            const scaledStartX = 60 + (baseStartX - 60) * xZoom;
-            const scaledStartY = baseStartY * yZoom;
-            const scaledEndX = 60 + (baseEndX - 60) * xZoom;
-            const scaledEndY = baseEndY * yZoom;
-
-            // Recalculate path with zoomed endpoints
-            const dx = scaledEndX - scaledStartX;
-            const dy = scaledEndY - scaledStartY;
-            const pathLength = Math.sqrt(dx * dx + dy * dy);
-
-            // Unit vectors
-            const unitX = dx / pathLength;
-            const unitY = dy / pathLength;
-            const perpX = -unitY;
-            const perpY = unitX;
-
-            // Chevron geometry - CONSTANT SIZE (not scaled)
-            const chevronWidth = 14;
-            const chevronDepth = 9;
-            const halfWidth = chevronWidth / 2;
-
-            // Spacing and arm offsets - CONSTANT SIZE
-            const spacingX = unitX * chevronDepth;
-            const spacingY = unitY * chevronDepth;
-            const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
-            const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
-            const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
-            const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
-
-            // Calculate this chevron's position
-            const pointX = scaledStartX + spacingX * chevronIndex;
-            const pointY = scaledStartY + spacingY * chevronIndex;
-            const leftX = pointX + leftArmX;
-            const leftY = pointY + leftArmY;
-            const rightX = pointX + rightArmX;
-            const rightY = pointY + rightArmY;
-
-            // Update points
-            polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
-        });
+        // Use centralized transformation logic
+        this.transformGlissandoChevrons(svg, chevrons, xZoom, yZoom);
     }
 
     /**

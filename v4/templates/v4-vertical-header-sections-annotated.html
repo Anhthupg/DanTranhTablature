@@ -27,6 +27,9 @@
     <!-- V4.2.5: External Phrase Bars Controller (Phrase-to-Note Visualization) -->
     <script src="/phrase-bars-controller.js"></script>
 
+    <!-- V4.2.28: External Vibrato Controller (Pitch Class Vibrato System) -->
+    <script src="/vibrato-controller.js"></script>
+
     <style>
         /* V4 Focused Sections with Vertical Headers - Annotated with UI Terminology */
 
@@ -76,6 +79,22 @@
 
         .note, .grace-note, .bent-note, .note-circle {
             cursor: pointer;  /* Show clickable cursor */
+        }
+
+        /* V4.2.28: Vibrato Sine Wave Styles */
+        .vibrato-sinewave {
+            stroke: #FF0000;
+            stroke-width: 2px;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .vibrato-sinewave:hover {
+            opacity: 1.0;
+            stroke-width: 2.5px;
         }
 
         .v4-container {
@@ -679,6 +698,11 @@
 
                     <!-- GLISSANDO SUGGESTIONS PANEL -->
                     {{GLISSANDO_PANEL}}
+
+                    <!-- V4.2.28: VIBRATO CONTROLS PANEL -->
+                    <div id="optimalVibratoControls" style="margin: 15px 0; padding: 12px; background: #f9f9f9; border-radius: 6px; border: 2px solid #FF0000;">
+                        <!-- Vibrato checkboxes will be generated here by VibratoController -->
+                    </div>
 
                     <!-- OPTIMAL TUNING TABLATURE -->
                     <!-- POSITION: x=0 (relative to content), y=after controls -->
@@ -2406,6 +2430,59 @@
             if (linkCheckbox && linkCheckbox.checked) {
                 window.zoomController.setZoomLinked(true);
             }
+
+            // V4.2.28: Initialize vibrato sine wave generator (inline - required by controller)
+            class VibratoSineWaveGenerator {
+                constructor() {
+                    this.defaultAmplitude = 10;
+                    this.defaultFrequency = 3;
+                    this.defaultStrokeWidth = 2;
+                }
+
+                generateSineWave(startX, startY, endX, endY, amplitude, frequency) {
+                    const distance = endX - startX;
+                    const segments = Math.max(50, Math.floor(distance / 2));
+                    const points = [];
+
+                    for (let i = 0; i <= segments; i++) {
+                        const t = i / segments;
+                        const x = startX + distance * t;
+                        const angle = t * frequency * Math.PI * 2;
+                        const y = startY + (Math.sin(angle) + 1) * amplitude / 2;
+                        points.push(`${x},${y}`);
+                    }
+
+                    return `M ${points.join(' L ')}`;
+                }
+
+                createVibratoPath(startX, startY, endX, endY, options = {}) {
+                    const amplitude = options.amplitude || this.defaultAmplitude;
+                    const frequency = options.frequency || this.defaultFrequency;
+                    const strokeWidth = options.strokeWidth || this.defaultStrokeWidth;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('class', 'vibrato-sinewave');
+                    path.setAttribute('d', this.generateSineWave(startX, startY, endX, endY, amplitude, frequency));
+                    path.setAttribute('stroke-width', strokeWidth);
+
+                    path.dataset.vibratoStart = `${startX},${startY}`;
+                    path.dataset.vibratoEnd = `${endX},${endY}`;
+                    path.dataset.vibratoAmplitude = amplitude;
+                    path.dataset.vibratoFrequency = frequency;
+
+                    return path;
+                }
+
+                clearVibratos(svg) {
+                    const vibratos = svg.querySelectorAll('.vibrato-sinewave');
+                    vibratos.forEach(v => v.remove());
+                }
+            }
+
+            // V4.2.28: Initialize vibrato controllers for optimal tablature
+            window.vibratoGenerator = new VibratoSineWaveGenerator();
+            window.optimalVibratoController = new VibratoController();
+            window.optimalVibratoController.initialize('optimalSvg', 'optimalVibratoControls');
 
             // V4.2.14: Initialize bent note button colors to match default state (visible/red)
             document.querySelectorAll('.bent-toggle-btn').forEach(btn => {

@@ -201,11 +201,13 @@ class ServerTablatureGenerator {
             .resonance-triangle-bent { fill: #FF0000; opacity: 0.35; }
 
             /* V4.0.2 Bent Note Indicators (toggle-able) */
+            /* UNIFIED LEFT-HAND TECHNIQUE WEIGHT: stroke-width: 4 for bent, vibrato, glissando, slurs, taps */
             .bent-indicator { fill: #FF0000; font-size: 12px; font-weight: bold; }
             .bent-line { stroke: #FF0000; stroke-width: 4; stroke-linecap: round; }
             .bent-elements { display: ${showBentNotes ? 'block' : 'none'}; }
 
             /* V4.2.21 Glissando Markers */
+            /* Uses unified left-hand technique stroke-width: 4 (set in glissando-controller.js) */
             .glissando-marker { stroke-linecap: round; opacity: 0.8; }
         </style>
     </defs>

@@ -22,6 +22,9 @@ class VibratoController {
                                     // Example: 100 cents = semitone = ±50 cents from center
         this.cyclesPerQuarter = 3; // Cycles per quarter note (1-10 range)
 
+        // Tap position (0, 1/3, or 2/3 of note duration)
+        this.tapPosition = null; // null = no tap, 0 = start, 1/3 = early, 2/3 = late
+
         this.STROKE_WIDTH = 3; // Match string line weight
         this.CENTS_TO_PX_BASE = 0.125; // Base: 0.125px per cent (optimal vibrato spacing)
         this.QUARTER_NOTE_PX_BASE = 85; // Base: quarter note = 85px
@@ -56,13 +59,14 @@ class VibratoController {
             this.vibratoGenerator = new VibratoSineWaveGenerator();
         }
 
-        // Register callback to redraw vibratos when zoom changes
+        // Register callback to redraw vibratos and tap chevrons when zoom changes
         if (window.zoomController) {
             // Determine section name from svgId (e.g., 'optimalSvg' → 'optimal')
             const section = svgId.replace('Svg', '').replace('svg', '');
             window.zoomController.onZoomChange(section, () => {
-                console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos...`);
+                console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos and taps...`);
                 this.updateVibratos();
+                this.updateTaps();
             });
             console.log(`Vibrato registered for zoom changes on section: ${section}`);
         }
@@ -88,8 +92,9 @@ class VibratoController {
 
         // Register callback
         window.zoomController.onZoomChange(section, () => {
-            console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos...`);
+            console.log(`[Vibrato] Zoom changed for ${section}, redrawing vibratos and taps...`);
             this.updateVibratos();
+            this.updateTaps();
         });
         console.log(`[Vibrato] Registered zoom callback for ${section}`);
     }
@@ -141,7 +146,8 @@ class VibratoController {
         // Create title
         const title = document.createElement('span');
         title.textContent = 'Vibrato Rung on:';
-        title.style.fontWeight = 'bold';
+        title.style.fontWeight = '600';
+        title.style.color = '#2c3e50';
         wrapper.appendChild(title);
 
         // Create checkboxes inline
@@ -234,6 +240,61 @@ class VibratoController {
         freqLabel.appendChild(freqSlider);
         freqLabel.appendChild(freqValue);
         wrapper.appendChild(freqLabel);
+
+        // Tap position controls
+        const tapLabel = document.createElement('label');
+        tapLabel.style.display = 'flex';
+        tapLabel.style.alignItems = 'center';
+        tapLabel.style.gap = '8px';
+        tapLabel.style.marginLeft = '5px';
+
+        const tapTitle = document.createElement('span');
+        tapTitle.textContent = 'Tap Mổ at:';
+        tapTitle.style.fontWeight = '600';
+        tapTitle.style.color = '#2c3e50';
+        tapLabel.appendChild(tapTitle);
+
+        // Three exclusive checkboxes for tap positions
+        const tapPositions = [
+            { value: 0, label: '0' },
+            { value: 1/3, label: '1/3' },
+            { value: 2/3, label: '2/3' }
+        ];
+
+        tapPositions.forEach(pos => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = `tap-${pos.label.replace('/', '-')}`;
+            checkbox.value = pos.value;
+
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    // Uncheck other tap checkboxes (exclusive)
+                    tapPositions.forEach(p => {
+                        const otherCheckbox = document.getElementById(`tap-${p.label.replace('/', '-')}`);
+                        if (otherCheckbox && otherCheckbox !== e.target) {
+                            otherCheckbox.checked = false;
+                        }
+                    });
+                    this.tapPosition = pos.value;
+                } else {
+                    this.tapPosition = null;
+                }
+                this.updateTaps();
+            });
+
+            const label = document.createElement('label');
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.gap = '2px';
+            label.style.cursor = 'pointer';
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(pos.label));
+            tapLabel.appendChild(label);
+        });
+
+        wrapper.appendChild(tapLabel);
 
         container.appendChild(wrapper);
     }
@@ -416,6 +477,75 @@ class VibratoController {
         });
 
         this.updateVibratos();
+    }
+
+    /**
+     * Update tap chevrons on dotted notes
+     */
+    updateTaps() {
+        const svg = document.getElementById(this.currentSvgId);
+        if (!svg) {
+            console.warn('SVG not found:', this.currentSvgId);
+            return;
+        }
+
+        // Ensure zoom callback is registered (defensive - handles late initialization)
+        this.ensureZoomCallback();
+
+        // Clear existing tap chevrons
+        const existingTaps = svg.querySelectorAll('.tap-chevron');
+        existingTaps.forEach(tap => tap.remove());
+
+        // If no tap position selected, we're done
+        if (this.tapPosition === null) return;
+
+        // Find all dotted notes (duration = 0.75, 1.5, etc.)
+        const dottedNotes = svg.querySelectorAll('circle[data-duration]');
+        const validDottedNotes = Array.from(dottedNotes).filter(note => {
+            const duration = parseFloat(note.getAttribute('data-duration'));
+            // Dotted notes: 0.75 (dotted 8th), 1.5 (dotted quarter), etc.
+            return duration === 0.75 || duration === 1.5 || duration === 3.0;
+        });
+
+        console.log(`Found ${validDottedNotes.length} dotted notes for tap position ${this.tapPosition}`);
+
+        // Get current zoom levels - determine section from svgId
+        const section = this.currentSvgId.replace('Svg', '').replace('svg', '');
+        const zoomX = window.zoomController ? window.zoomController.getZoomX(section) : 1.0;
+
+        // Draw tap chevron for each dotted note
+        validDottedNotes.forEach(note => {
+            const noteX = parseFloat(note.getAttribute('cx'));
+            const noteY = parseFloat(note.getAttribute('cy'));
+            const duration = parseFloat(note.getAttribute('data-duration'));
+            const isGrace = note.classList.contains('grace-note');
+
+            // Calculate chevron position
+            const chevronX = noteX + (duration * this.QUARTER_NOTE_PX_BASE * this.tapPosition * zoomX);
+
+            // Tap drops 300 cents (0.125px/cent = 37.5px)
+            const pitchDropPx = 300 * this.CENTS_TO_PX_BASE;
+            const chevronBottomY = noteY + pitchDropPx;
+
+            // Create chevron (V shape pointing down)
+            const armSpread = 14; // 7px each side
+            const halfArm = armSpread / 2;
+
+            const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            chevron.setAttribute('points', `${chevronX - halfArm},${noteY} ${chevronX},${chevronBottomY} ${chevronX + halfArm},${noteY}`);
+            chevron.setAttribute('class', 'tap-chevron');
+            chevron.setAttribute('fill', 'none');
+            chevron.setAttribute('stroke', '#FF0000');
+            chevron.setAttribute('stroke-width', '4');
+            chevron.setAttribute('stroke-linecap', 'round');
+            chevron.setAttribute('stroke-linejoin', 'round');
+
+            // Insert tap chevron before notes (so it appears behind)
+            const firstNote = svg.querySelector('circle');
+            svg.insertBefore(chevron, firstNote);
+
+            console.log(`Tap chevron at x=${chevronX}, duration=${duration}, position=${this.tapPosition}`);
+        });
     }
 }
 

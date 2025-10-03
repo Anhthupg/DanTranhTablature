@@ -1000,6 +1000,12 @@ app.get('/api/glissando/:songFile', (req, res) => {
     }
 });
 
+// Tap Chevron Demo Route
+app.get('/tap-chevron-demo', (req, res) => {
+    const componentPath = path.join(__dirname, 'templates/components/tap-chevron-component.html');
+    res.sendFile(componentPath);
+});
+
 app.listen(port, () => {
     console.log(`🚀 Vertical Header Demo Server running on http://localhost:${port}`);
     console.log(`📋 Features:`);

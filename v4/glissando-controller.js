@@ -24,7 +24,7 @@ class GlissandoController {
         this.glissandoPaths = [];
         this.chevronWidth = 14;
         this.chevronDepth = 9;
-        this.strokeWidth = 2;
+        this.strokeWidth = 4;  // Unified left-hand technique weight (bent, vibrato, glissando, slurs, taps)
 
         // Duration-to-color mapping
         // Maps duration values to colors (will be populated during analysis)

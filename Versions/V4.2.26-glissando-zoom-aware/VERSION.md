@@ -128,16 +128,58 @@ No migration needed - existing glissandos will be regenerated with new attribute
 ### Problem
 When glissandos were drawn on an already-zoomed tablature, they used current (zoomed) note positions instead of base positions, causing incorrect placement.
 
+### Root Cause
+The `extractNotesFromSVG()` function read current `cx`/`cy` attributes, which contained zoomed values when tablature was pre-zoomed.
+
 ### Solution
-Modified `drawGlissandoForCandidate()` and `drawGlissandoToNote()` to extract base positions from note elements:
+Modified `extractNotesFromSVG()` and `extractStringsFromSVG()` to prefer base positions when available:
 
 ```javascript
 // Extract BASE positions (handles pre-zoomed tablature)
-const candidateBaseCx = parseFloat(candidateNote.element.dataset.baseCx || candidateNote.element.getAttribute('cx'));
-const candidateBaseCy = parseFloat(candidateNote.element.dataset.baseCy || candidateNote.element.getAttribute('cy'));
+// Prefer dataset.baseCx/baseCy if they exist (means tablature was zoomed)
+// Otherwise use current cx/cy (means tablature is at 100% zoom)
+const cx = parseFloat(circle.dataset.baseCx || circle.getAttribute('cx'));
+const cy = parseFloat(circle.dataset.baseCy || circle.getAttribute('cy'));
 
-// Use base positions for calculation
-const candidateBaseNote = { x: candidateBaseCx, y: candidateBaseCy, isDotted: candidateNote.isDotted };
+// For string lines:
+const y = parseFloat(line.dataset.baseY1 || line.getAttribute('y1'));
 ```
 
-**Result:** Glissandos now draw correctly regardless of current zoom level.
+**Result:**
+- Glissandos now draw correctly regardless of current zoom level
+- All internal note positions (this.notes array) always contain base positions
+- No redundant base position extraction needed in drawing functions
+
+### Critical Enhancement: Immediate Zoom Application
+
+**Problem:** After drawing glissandos on pre-zoomed tablature, they appeared at wrong positions because:
+1. Glissandos generated with base positions (correct)
+2. But NOT transformed to match current zoom level
+3. Appeared at 100% zoom positions on 268% zoomed tablature
+
+**Solution:** Added immediate zoom application after drawing:
+
+```javascript
+// In glissando-controller.js drawGlissandoForCandidate() and drawGlissandoToNote():
+// CRITICAL: Apply current zoom to newly drawn glissandos
+if (window.zoomController) {
+    const svgId = this.svg.id;
+    const section = svgId.replace('Svg', ''); // e.g., 'optimalSvg' → 'optimal'
+    window.zoomController.applyZoomToGlissandos(section, chevrons);
+}
+```
+
+**Added to zoom-controller.js:**
+```javascript
+applyZoomToGlissandos(section, chevrons) {
+    // Transform specific chevrons to current zoom level
+    // Uses same transformation logic as main transformElements()
+    // Only runs if zoom ≠ 100%
+}
+```
+
+**Final Result:**
+- ✅ Draw glissandos at 100% zoom → appear correctly
+- ✅ Zoom first to 268%, then draw glissandos → appear correctly
+- ✅ Draw glissandos, then zoom → transform correctly
+- ✅ Chevron size stays constant (14×9px) at all zoom levels

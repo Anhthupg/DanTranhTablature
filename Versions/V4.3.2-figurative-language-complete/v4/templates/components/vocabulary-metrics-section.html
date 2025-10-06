@@ -1,0 +1,448 @@
+<!-- Vietnamese Vocabulary Metrics Section -->
+<!-- Shows linguistic insights from 121+ folk songs -->
+
+<!-- WORD CLOUD FIRST -->
+{{WORD_CLOUD_COMPONENT}}
+
+<!-- THEMATIC RADAR CHART (Multi-song overlay) -->
+{{RADAR_CHART_COMPONENT}}
+
+<!-- SONG RADAR GALLERY (Collapsible) -->
+{{SONG_RADAR_GALLERY_COMPONENT}}
+
+<!-- WORD JOURNEY SANKEY DIAGRAM -->
+{{WORD_JOURNEY_SANKEY_COMPONENT}}
+
+<div class="analysis-section" id="vocabularyMetrics" style="margin-top: 30px;">
+    <div class="section-header" onclick="toggleSection('vocabularyMetrics')" style="background: #9B59B6; color: white; padding: 15px 20px; cursor: pointer; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 18px;">📚 Vietnamese Vocabulary Insights (121 Folk Songs)</h3>
+        <span class="collapse-indicator" id="vocabularyMetricsCollapse">▼</span>
+    </div>
+
+    <div class="section-content" id="vocabularyMetricsContent" style="background: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+        <!-- Overview Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Total Words</div>
+                <div id="vocab-total-words" style="font-size: 32px; font-weight: bold;">-</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Across all songs</div>
+            </div>
+
+            <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 20px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Unique Words</div>
+                <div id="vocab-unique-words" style="font-size: 32px; font-weight: bold;">-</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Vietnamese vocabulary</div>
+            </div>
+
+            <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 20px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Vocabulary Diversity</div>
+                <div id="vocab-diversity" style="font-size: 32px; font-weight: bold;">-</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Unique / Total ratio</div>
+            </div>
+
+            <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white; padding: 20px; border-radius: 8px;">
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Songs Analyzed</div>
+                <div id="vocab-song-count" style="font-size: 32px; font-weight: bold;">-</div>
+                <div style="font-size: 12px; opacity: 0.8; margin-top: 5px;">Folk song collection</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="vocab-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+            <button class="vocab-tab active" data-tab="top-words" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 3px solid #9B59B6; color: #9B59B6;">Top Words</button>
+            <button class="vocab-tab" data-tab="themes" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666;">Themes</button>
+            <button class="vocab-tab" data-tab="universal" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666;">Universal Words</button>
+            <button class="vocab-tab" data-tab="rare" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666;">Rare Words</button>
+            <button class="vocab-tab" data-tab="linguistic" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 600; color: #666;">By Phrase Type</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="vocab-tab-content">
+            <!-- Content populated by JavaScript -->
+        </div>
+
+    </div>
+</div>
+
+<script>
+// Vocabulary Metrics Component
+(function() {
+    let vocabularyData = null;
+
+    // Load vocabulary metrics
+    async function loadVocabularyMetrics() {
+        try {
+            const response = await fetch('/api/vocabulary-metrics');
+            vocabularyData = await response.json();
+
+            updateOverviewCards();
+            renderTopWordsTab();
+            attachTabListeners();
+
+            console.log('[VocabularyMetrics] Loaded metrics:', vocabularyData.overview);
+        } catch (error) {
+            console.error('[VocabularyMetrics] Error loading metrics:', error);
+        }
+    }
+
+    function updateOverviewCards() {
+        if (!vocabularyData) return;
+
+        document.getElementById('vocab-total-words').textContent = vocabularyData.overview.totalWords.toLocaleString();
+        document.getElementById('vocab-unique-words').textContent = vocabularyData.overview.uniqueWords.toLocaleString();
+        document.getElementById('vocab-diversity').textContent = vocabularyData.overview.vocabularyDiversity;
+        document.getElementById('vocab-song-count').textContent = vocabularyData.overview.totalSongs;
+    }
+
+    function renderTopWordsTab() {
+        if (!vocabularyData) return;
+
+        const content = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">What Vietnamese Folk Songs Sing About</h4>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                    The most frequently used words reveal the core themes of traditional Vietnamese music:
+                    emotional expressions (ơi, ơ), family relationships (con, em, bà), and narrative elements (mà, là, ta).
+                    These 121 songs contain <strong>${vocabularyData.overview.uniqueWords} unique Vietnamese words</strong>
+                    across <strong>${vocabularyData.overview.totalWords} total words</strong>.
+                </p>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                    <tr style="background: #9B59B6; color: white;">
+                        <th style="padding: 10px; text-align: center; width: 60px;">#</th>
+                        <th style="padding: 10px; text-align: left; width: 150px;">Vietnamese</th>
+                        <th style="padding: 10px; text-align: left; width: 200px;">English</th>
+                        <th style="padding: 10px; text-align: right; width: 100px;">Frequency</th>
+                        <th style="padding: 10px; text-align: right; width: 80px;">% of Total</th>
+                        <th style="padding: 10px; text-align: right; width: 100px;">In # Songs</th>
+                        <th style="padding: 10px; text-align: right; width: 80px;">% Songs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${vocabularyData.topWords.slice(0, 50).map((word, i) => `
+                        <tr style="border-bottom: 1px solid #e0e0e0; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                            <td style="padding: 8px; text-align: center; font-weight: 600; color: #9B59B6;">${i + 1}</td>
+                            <td style="padding: 8px; font-weight: 600; color: #2c3e50; font-size: 16px;">${word.word}</td>
+                            <td style="padding: 8px; color: #666; font-style: italic;">${word.english || word.word}</td>
+                            <td style="padding: 8px; text-align: right; font-weight: 600;">${word.frequency}</td>
+                            <td style="padding: 8px; text-align: right; color: #3498db;">${word.percentage}%</td>
+                            <td style="padding: 8px; text-align: right;">${word.appearsInSongs}</td>
+                            <td style="padding: 8px; text-align: right; color: #27ae60;">${word.songPercentage}%</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div style="margin-top: 15px; padding: 12px; background: #fff3e0; border-radius: 6px; border-left: 4px solid #f39c12;">
+                <strong>💡 For Language Learners:</strong> These are the most essential words in Vietnamese folk music.
+                Learning these ${vocabularyData.topWords.slice(0, 50).length} words gives you vocabulary coverage for understanding traditional songs.
+            </div>
+        `;
+
+        document.getElementById('vocab-tab-content').innerHTML = content;
+
+        // Load English translations for top words
+        loadWordTranslations(vocabularyData.topWords.slice(0, 50));
+    }
+
+    async function loadWordTranslations(words) {
+        // Fetch from translation API or use local dictionary
+        try {
+            const response = await fetch('/api/word-translations');
+            const translations = await response.json();
+
+            words.forEach((word, i) => {
+                const enEl = document.getElementById(`word-en-${i}`);
+                if (enEl && translations[word.word]) {
+                    enEl.textContent = translations[word.word];
+                } else if (enEl) {
+                    enEl.textContent = word.word; // Fallback to Vietnamese if no translation
+                }
+            });
+        } catch (error) {
+            console.log('[VocabularyMetrics] Translation API not available, showing Vietnamese');
+        }
+    }
+
+    function attachTabListeners() {
+        document.querySelectorAll('.vocab-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Update active state
+                document.querySelectorAll('.vocab-tab').forEach(t => {
+                    t.classList.remove('active');
+                    t.style.borderBottom = 'none';
+                    t.style.color = '#666';
+                });
+                tab.classList.add('active');
+                tab.style.borderBottom = '3px solid #9B59B6';
+                tab.style.color = '#9B59B6';
+
+                // Render corresponding content
+                const tabName = tab.dataset.tab;
+                switch(tabName) {
+                    case 'top-words': renderTopWordsTab(); break;
+                    case 'themes': renderThemesTab(); break;
+                    case 'universal': renderUniversalWordsTab(); break;
+                    case 'rare': renderRareWordsTab(); break;
+                    case 'linguistic': renderLinguisticTab(); break;
+                }
+            });
+        });
+    }
+
+    function renderThemesTab() {
+        if (!vocabularyData) return;
+
+        const themes = vocabularyData.semanticCategories;
+        const themeColors = {
+            nature: '#27ae60',
+            family: '#e74c3c',
+            emotion: '#f39c12',
+            work: '#3498db',
+            time: '#9b59b6',
+            place: '#1abc9c'
+        };
+
+        const themeDescriptions = {
+            nature: 'Natural imagery dominates Vietnamese folk songs - moon, rivers, flowers, birds represent emotions and life journeys.',
+            family: 'Family roles and relationships are central themes, reflecting Confucian social structure.',
+            emotion: 'Emotional vocabulary ranges from love (thương) to suffering (khổ), often intertwined.',
+            work: 'Work-related words reflect agricultural society and communal labor traditions.',
+            time: 'Time references (evening, morning, night) carry emotional and symbolic meanings.',
+            place: 'Places (village, river, bridge) serve as settings for life events and encounters.'
+        };
+
+        let content = `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Thematic Vocabulary Analysis</h4>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                    Vietnamese folk songs draw from six main semantic categories. This reveals what traditional music sings about.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
+        `;
+
+        Object.entries(themes).forEach(([category, data]) => {
+            const color = themeColors[category] || '#666';
+            content += `
+                <div style="background: white; border: 2px solid ${color}; border-radius: 8px; padding: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: ${color}; text-transform: capitalize; display: flex; justify-content: space-between; align-items: center;">
+                        <span>${category}</span>
+                        <span style="background: ${color}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px;">
+                            ${data.uniqueWords} words
+                        </span>
+                    </h4>
+                    <p style="font-size: 13px; color: #666; margin: 0 0 12px 0; line-height: 1.5;">
+                        ${themeDescriptions[category]}
+                    </p>
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 12px; color: #999; margin-bottom: 5px;">
+                            ${data.totalOccurrences} occurrences (${data.percentage}% of all words)
+                        </div>
+                        <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div style="background: ${color}; height: 100%; width: ${data.percentage}%;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <div style="font-weight: 600; font-size: 12px; color: #555; margin-bottom: 8px;">Top Words:</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            ${data.topWords.slice(0, 12).map(w => `
+                                <span style="background: ${color}22; color: ${color}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    ${w.word} (${w.count})
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        content += `</div>`;
+
+        document.getElementById('vocab-tab-content').innerHTML = content;
+    }
+
+    function renderUniversalWordsTab() {
+        if (!vocabularyData) return;
+
+        const universal = vocabularyData.universalWords;
+
+        const content = `
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">🌍 Universal Words - Core Vietnamese Folk Vocabulary</h4>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                    These ${universal.length} words appear in 50% or more of all songs, representing the essential vocabulary
+                    of Vietnamese traditional music. Master these first!
+                </p>
+            </div>
+
+            ${universal.length === 0 ? `
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📖</div>
+                    <div>No words appear in 50%+ of songs - the vocabulary is highly diverse!</div>
+                </div>
+            ` : `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #27ae60; color: white;">
+                            <th style="padding: 10px; text-align: left;">Vietnamese</th>
+                            <th style="padding: 10px; text-align: left;">English</th>
+                            <th style="padding: 10px; text-align: right;">Total Uses</th>
+                            <th style="padding: 10px; text-align: right;">In Songs</th>
+                            <th style="padding: 10px; text-align: right;">Coverage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${universal.map(w => `
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 10px; font-weight: 600; font-size: 16px;">${w.word}</td>
+                                <td style="padding: 10px; color: #666; font-style: italic;">[English]</td>
+                                <td style="padding: 10px; text-align: right;">${w.frequency}</td>
+                                <td style="padding: 10px; text-align: right;">${w.appearsInSongs}</td>
+                                <td style="padding: 10px; text-align: right; color: #27ae60; font-weight: 600;">${w.songPercentage}%</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `}
+        `;
+
+        document.getElementById('vocab-tab-content').innerHTML = content;
+    }
+
+    function renderRareWordsTab() {
+        if (!vocabularyData) return;
+
+        const rare = vocabularyData.rareWords;
+
+        const content = `
+            <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f39c12;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">🎯 Rare & Unique Words</h4>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                    These ${rare.length} words appear in only ONE song each, representing unique vocabulary,
+                    regional dialects, or song-specific terminology. They showcase the diversity of Vietnamese folk traditions.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">
+                ${rare.slice(0, 50).map(w => `
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                            <span style="font-weight: 600; font-size: 16px; color: #2c3e50;">${w.word}</span>
+                            <span style="background: #f39c12; color: white; padding: 2px 8px; border-radius: 10px; font-size: 11px;">
+                                ${w.frequency}×
+                            </span>
+                        </div>
+                        <div style="font-size: 12px; color: #999; font-style: italic;">
+                            Only in: ${w.songName}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            ${rare.length > 50 ? `
+                <div style="text-align: center; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                    Showing 50 of ${rare.length} rare words
+                </div>
+            ` : ''}
+        `;
+
+        document.getElementById('vocab-tab-content').innerHTML = content;
+    }
+
+    function renderLinguisticTab() {
+        if (!vocabularyData) return;
+
+        const linguistic = vocabularyData.linguisticTypes;
+        const typeColors = {
+            exclamatory: '#FF6B6B',
+            question: '#4ECDC4',
+            answer: '#95E1D3',
+            narrative: '#A8E6CF',
+            complaint: '#FFD93D',
+            onomatopoeia: '#C3AED6'
+        };
+
+        const typeDescriptions = {
+            exclamatory: 'Words used in emotional exclamations and calls for attention (ơi, này, etc.)',
+            question: 'Interrogative vocabulary creating dialogue and audience engagement',
+            answer: 'Response words that complete call-and-response patterns',
+            narrative: 'Storytelling vocabulary advancing the plot and describing scenes',
+            complaint: 'Words expressing hardship, often with humor and cultural acceptance',
+            onomatopoeia: 'Sound-imitating words adding vivid imagery and humor'
+        };
+
+        let content = `
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+                <h4 style="margin: 0 0 10px 0; color: #2c3e50;">🗣️ Vocabulary by Phrase Type</h4>
+                <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                    Different types of phrases use distinct vocabulary. Questions use interrogatives (gì, ai, đâu),
+                    complaints use suffering words (khổ, đau), exclamations use vocatives (ơi, này).
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+        `;
+
+        Object.entries(linguistic).forEach(([type, data]) => {
+            const color = typeColors[type] || '#666';
+            content += `
+                <div style="background: white; border: 2px solid ${color}; border-radius: 8px; padding: 15px;">
+                    <h4 style="margin: 0 0 8px 0; color: ${color}; text-transform: capitalize; display: flex; justify-content: space-between;">
+                        <span>${type}</span>
+                        <span style="background: ${color}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">
+                            ${data.uniqueWords} words
+                        </span>
+                    </h4>
+                    <p style="font-size: 12px; color: #666; margin: 0 0 10px 0; line-height: 1.4;">
+                        ${typeDescriptions[type]}
+                    </p>
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 11px; color: #999; margin-bottom: 4px;">
+                            ${data.totalOccurrences} occurrences (${data.percentage}%)
+                        </div>
+                        <div style="background: #e9ecef; border-radius: 3px; height: 6px;">
+                            <div style="background: ${color}; height: 100%; width: ${Math.min(parseFloat(data.percentage), 100)}%;"></div>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;">
+                        ${data.topWords.slice(0, 10).map(w => `
+                            <span style="background: ${color}22; color: ${color}; padding: 3px 7px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+                                ${w.word} (${w.count})
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        content += `</div>`;
+        document.getElementById('vocab-tab-content').innerHTML = content;
+    }
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        loadVocabularyMetrics();
+        console.log('[VocabularyMetrics] Component initialized');
+    });
+
+    // Expose refresh method for library updates
+    window.refreshVocabularyMetrics = loadVocabularyMetrics;
+
+})();
+</script>
+
+<style>
+.vocab-tab.active {
+    border-bottom: 3px solid #9B59B6 !important;
+    color: #9B59B6 !important;
+}
+
+.vocab-tab:hover {
+    background: #f8f9fa;
+}
+</style>

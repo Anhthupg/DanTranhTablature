@@ -1,74 +1,97 @@
-# 🎵 Dan Tranh Tablature v3.7.0 - Complete Vietnamese Music Library
+# Đàn Tranh Tablature V4.3.6
 
-## 🌟 Advanced Musical Analysis & Visualization System
+Vietnamese 16-String Zither Tablature System with Advanced Linguistic-Musical Analysis
 
-**Release Date**: September 2025
-**Version**: v3.7.0+
-**Status**: Production-ready with 128+ Vietnamese traditional songs
-**Live Site**: https://anhthupg.github.io/DanTranhTablature/
+## 🌐 Live Demo
 
-## ✨ Revolutionary Features
+**GitHub Pages:** https://anhthupg.github.io/DanTranhTablature/
 
-### 🎼 Complete Musical Relationship System
-- **128+ Vietnamese Traditional Songs** with full dual-panel analysis
-- **Grace Note Relationships** - Precise before/after-grace note tracking
-- **Melisma Detection** - Multi-note syllable analysis with Vietnamese lyrics
-- **Advanced Tuning Comparison** - Optimal vs traditional tuning efficiency analysis
-- **Interactive Pattern Analysis** - KPIC/KRIC rhythm and pitch pattern visualization
+**Note:** The full application requires a local server to run due to dynamic content generation.
 
-### 🎯 Technical Excellence
-- **Mathematical Tuning Validation** - Proves traditional Vietnamese tuning choices are optimal
-- **Vietnamese Character Support** - Perfect Unicode handling for all song names
-- **Scalable Architecture** - Ready for 1000+ songs with efficient metadata system
-- **4-Theme Interface** - White, Light Grey, Dark Grey, Black themes
-- **Mobile Responsive** - Works perfectly on all devices
+## 🚀 Quick Start
 
-### 🔧 Advanced Tools
-- **Musical Relationship Parser** - Extracts complete musical structures from MusicXML
-- **Dual-Panel Visualization** - Compare multiple tuning systems side-by-side
-- **Interactive Controls** - Zoom, theme switching, bent note highlighting
-- **Real-time Analysis** - Live tuning efficiency calculations
+### Local Development
 
-## 🎵 Featured Songs Include:
-- Cô nói sao (She says what)
-- Bài chòi (Card game song)
-- Bà rằng bà rí (She says this and that)
-- Hát ru (Lullabies) from various regions
-- Traditional folk songs from Northern, Central, and Southern Vietnam
-
-## 🚀 For Developers
-
-### Quick Start
 ```bash
-cd v3
-node server.js
-# Opens http://localhost:8080
+# Clone repository
+git clone git@github.com:Anhthupg/DanTranhTablature.git
+cd DanTranhTablature
+
+# Install dependencies
+npm install
+
+# Run V4 server
+node v4/vertical-demo-server.js
+
+# Open in browser
+http://localhost:3006
 ```
 
-### Key Files
-- `v3/musical-relationship-parser.js` - Advanced MusicXML analysis
-- `v3/generate-dual-panel-viewer.js` - Visualization generator
-- `v3/auto-import.js` - Scalable song processing system
-- `v3/index.html` - Main library interface
+## ✨ Features
 
-## 🌍 Cultural Impact
+### Interactive Tablature
+- **126+ Vietnamese traditional songs**
+- Real-time zoom controls (X and Y axis)
+- Interactive note highlighting
+- Audio playback support
 
-This system preserves and modernizes Vietnamese traditional music through:
-- **Digital preservation** of rare traditional songs
-- **Educational tools** for Dan Tranh (16-string zither) learning
-- **Mathematical validation** of traditional tuning wisdom
-- **Cross-cultural musical analysis** capabilities
+### Linguistic Analysis
+- **Vietnamese-English lyrics mapping**
+- Phrase-by-phrase segmentation
+- Syllable-level alignment
+- Cultural context annotations
 
-## 📊 Technical Specifications
+### Musical Analysis
+- **Optimal tuning detection**
+- Bent note visualization
+- Grace note analysis
+- Phrase structure diagrams
 
-- **Architecture**: Scalable static web application
-- **Compatibility**: GitHub Pages, Netlify, Vercel, Firebase
-- **Performance**: Optimized for fast loading with SVG thumbnails
-- **Accessibility**: Full Unicode Vietnamese character support
-- **Analysis**: Advanced musical relationship tracking and pattern recognition
+### V4.3.6 Highlights
+- ✅ Syllable count fix for accurate alignment
+- ✅ Complete tablature system for all songs
+- ✅ Automated deployment script
+- ✅ Enhanced phrase analysis
+
+## 📁 Project Structure
+
+```
+DanTranhTablature/
+├── v4/                          # V4 application
+│   ├── vertical-demo-server.js  # Main server
+│   ├── data/                    # Song data
+│   ├── templates/               # HTML templates
+│   └── services/                # Business logic
+├── docs/                        # GitHub Pages
+└── deploy.sh                    # Automated deployment
+```
+
+## 🛠️ Development
+
+### Deployment
+
+```bash
+# Automated deployment to GitHub
+./deploy.sh "Your commit message"
+```
+
+## 🎵 Song Collection
+
+- **126 Vietnamese traditional songs**
+- Multiple regions (Northern, Southern, Central)
+- Various genres (Lullabies, Work Songs, Festival Songs)
+
+## 📖 Documentation
+
+- `CLAUDE.md` - V4 architecture documentation
+- `DEPLOYMENT-GUIDE.md` - Deployment instructions
+
+## 🤝 Contributing
+
+This is an active research project. Contributions welcome!
 
 ---
 
-**Experience the future of traditional music visualization at**: https://anhthupg.github.io/DanTranhTablature/
-
-*Preserving Vietnamese musical heritage through cutting-edge technology* 🇻🇳🎵
+**Version:** V4.3.6 - Syllable Count Fix  
+**Last Updated:** October 9, 2025  
+**Repository:** https://github.com/Anhthupg/DanTranhTablature

@@ -2,18 +2,23 @@
  * Pattern Analyzer - Tier 2 Pattern Calculation
  *
  * Analyzes musical and linguistic patterns across dimensions:
- * - KPIC: Kinetic Pitch Interval Contour (pitch transitions)
- * - KRIC: Kinetic Rhythm Interval Contour (rhythm transitions)
- * - KWIC: Keyword In Context (word positioning)
- * - KTIC: Kinetic Tone Interval Contour (Vietnamese tone sequences)
+ * - KPIC: Key Pitch In Context (pitch transitions + positions)
+ * - KDIC: Key Duration In Context (duration transitions + positions)
+ * - KTIC: Key Tone In Context (Vietnamese tone transitions + positions)
+ * - KSIC: Key Syllable In Context (syllable positioning - Vietnamese)
+ * - KRIC: Key Rhyme In Context (rhyme positions + key rhyme identification)
  * - Context patterns: Pronouns, modifiers, reduplication
  */
 
 const fs = require('fs');
 const path = require('path');
+const DataLoader = require('./utils/data-loader');
 
 class PatternAnalyzer {
     constructor() {
+        // Initialize DataLoader for name resolution (V4.3.5)
+        this.dataLoader = new DataLoader(__dirname);
+
         // Vietnamese tone markers
         this.toneMap = {
             'ngang': /[aăâeêioôơuưy]/,  // Level (no mark)
@@ -33,45 +38,67 @@ class PatternAnalyzer {
 
     /**
      * Analyze patterns for a single song
+     * @param {string} songName - Backend ID or display name
      */
     async analyzeSong(songName) {
         console.log(`\n[Pattern Analyzer] Analyzing: ${songName}`);
 
-        // Load relationships (note-to-word mappings)
-        const relPath = path.join(__dirname, 'data', 'relationships', `${songName}-relationships.json`);
+        // Convert to backend ID for consistent file naming (V4.3.5)
+        const backendId = this.dataLoader.toBackendId(songName);
+        if (!backendId) {
+            throw new Error(`Failed to resolve song name: ${songName}`);
+        }
+        console.log(`[Pattern Analyzer] Backend ID: ${backendId}`);
+
+        // Load relationships (note-to-word mappings) - uses backend ID
+        const relPath = path.join(__dirname, 'data', 'relationships', `${backendId}-relationships.json`);
+        if (!fs.existsSync(relPath)) {
+            throw new Error(`Missing relationships: ${backendId}-relationships.json`);
+        }
         const relationships = JSON.parse(fs.readFileSync(relPath, 'utf-8'));
 
-        // Load lyrics segmentation
-        const lyricsPath = path.join(__dirname, 'data', 'lyrics-segmentations', `${songName}.json`);
+        // Load lyrics segmentation - uses backend ID
+        const lyricsPath = path.join(__dirname, 'data', 'lyrics-segmentations', `${backendId}.json`);
+        if (!fs.existsSync(lyricsPath)) {
+            throw new Error(`Missing lyrics segmentation: ${backendId}.json`);
+        }
         const lyricsData = JSON.parse(fs.readFileSync(lyricsPath, 'utf-8'));
 
-        // Load MusicXML for full note data
-        const musicXMLPath = path.join(__dirname, 'data', 'musicxml', `${songName}.musicxml.xml`);
-        const musicXML = fs.readFileSync(musicXMLPath, 'utf-8');
+        // Load MusicXML - use DataLoader to find correct filename (V4.3.5)
+        const musicXML = this.dataLoader.loadMusicXML(backendId);
+        if (!musicXML) {
+            throw new Error(`Failed to load MusicXML for ${backendId}`);
+        }
+        console.log(`[Pattern Analyzer] Loaded MusicXML successfully`);
         const notes = await this.extractNotesFromMusicXML(musicXML);
 
         const patterns = {
-            songName,
+            songName: lyricsData.songTitle || songName,  // Use display name from lyrics
+            backendId,  // V4.3.5: Add backend ID for reference
             generatedDate: new Date().toISOString(),
 
             // KPIC: Pitch patterns
             kpic: this.analyzeKPIC(relationships, notes),
 
-            // KRIC: Rhythm patterns
-            kric: this.analyzeKRIC(relationships, notes),
+            // KDIC: Duration patterns (main notes + grace notes separate)
+            kdic: this.analyzeKDIC(relationships, notes),
 
-            // KWIC: Word positioning (lyrics-based, rhythm-based, pitch-based)
-            kwic: this.analyzeKWIC(lyricsData, relationships, notes),
+            // KTIC: Tone patterns (uses relationships for correct tone data)
+            ktic: this.analyzeKTIC(relationships),
 
-            // KTIC: Tone patterns
-            ktic: this.analyzeKTIC(lyricsData),
+            // KSIC: Key Syllable In Context
+            // Note: Vietnamese uses syllables, not words - "Key Syllable In Context"
+            ksic: this.analyzeKSIC(lyricsData, relationships, notes),
+
+            // KRIC: Rhyme patterns (positions + key rhyme identification)
+            kric: this.analyzeKRIC(lyricsData),
 
             // Context patterns
             context: this.analyzeContextPatterns(lyricsData, relationships)
         };
 
-        // Save patterns
-        const outputPath = path.join(__dirname, 'data', 'patterns', `${songName}-patterns.json`);
+        // Save patterns - use backend ID for filename (V4.3.5)
+        const outputPath = path.join(__dirname, 'data', 'patterns', `${backendId}-patterns.json`);
         this.ensureDirectoryExists(path.dirname(outputPath));
         fs.writeFileSync(outputPath, JSON.stringify(patterns, null, 2));
         console.log(`[Pattern Analyzer] Saved patterns to: ${outputPath}`);
@@ -80,7 +107,7 @@ class PatternAnalyzer {
     }
 
     /**
-     * KPIC: Kinetic Pitch Interval Contour
+     * KPIC: Key Pitch In Context
      * Analyzes pitch transitions (e.g., D4→G4, G4→A4)
      */
     analyzeKPIC(relationships, notes) {
@@ -144,10 +171,10 @@ class PatternAnalyzer {
     }
 
     /**
-     * KRIC: Kinetic Rhythm Interval Contour
-     * Analyzes rhythm transitions - SEPARATE grace notes from main notes
+     * KDIC: Key Duration In Context
+     * Analyzes duration transitions AND positions - SEPARATE grace notes from main notes
      */
-    analyzeKRIC(relationships, notes) {
+    analyzeKDIC(relationships, notes) {
         const mainRhythms = {
             twoNote: {},
             threeNote: {}
@@ -156,6 +183,18 @@ class PatternAnalyzer {
         const graceRhythms = {
             twoNote: {},
             threeNote: {}
+        };
+
+        const mainPositions = {
+            beginning: {},  // { "2": 15, "1": 8 } (2=8th, 1=quarter)
+            middle: {},
+            ending: {}      // { "4": 12, "2": 10 } (4=half, 2=8th)
+        };
+
+        const gracePositions = {
+            beginning: {},  // { "g8th": 5, "g16th": 2 }
+            middle: {},
+            ending: {}
         };
 
         const noteMap = {};
@@ -173,6 +212,7 @@ class PatternAnalyzer {
             }
         }
 
+        // Transition analysis for main notes
         for (let i = 0; i < mainNotes.length - 1; i++) {
             const pattern2 = `${mainNotes[i].duration}→${mainNotes[i+1].duration}`;
             mainRhythms.twoNote[pattern2] = (mainRhythms.twoNote[pattern2] || 0) + 1;
@@ -183,7 +223,29 @@ class PatternAnalyzer {
             }
         }
 
-        // Process GRACE notes separately (use isGrace flag, ignore duration=0)
+        // Position analysis for main notes (which durations at phrase beginning/middle/ending)
+        // Use relationships to map back to phrase positions
+        for (let i = 0; i < relationships.wordToNoteMap.length; i++) {
+            const mapping = relationships.wordToNoteMap[i];
+            const mainNote = noteMap[mapping.mainNoteId];
+
+            if (!mainNote || mainNote.isGrace) continue;
+
+            // Determine phrase position (simplified: first/last 2 syllables of song)
+            let position;
+            if (i < 2) {
+                position = 'beginning';
+            } else if (i >= relationships.wordToNoteMap.length - 2) {
+                position = 'ending';
+            } else {
+                position = 'middle';
+            }
+
+            const durationType = this.getDurationName(mainNote.duration);
+            mainPositions[position][durationType] = (mainPositions[position][durationType] || 0) + 1;
+        }
+
+        // Process GRACE notes separately
         const graceNotes = notes.filter(n => n.isGrace);
 
         // Group grace notes by type
@@ -211,10 +273,18 @@ class PatternAnalyzer {
             mainNotes: {
                 twoNotePatterns: this.sortByFrequency(mainRhythms.twoNote),
                 threeNotePatterns: this.sortByFrequency(mainRhythms.threeNote),
+                positions: {
+                    beginning: this.sortByFrequency(mainPositions.beginning),
+                    middle: this.sortByFrequency(mainPositions.middle),
+                    ending: this.sortByFrequency(mainPositions.ending)
+                },
                 statistics: {
                     totalNotes: mainNotes.length,
                     uniqueTwoNotePatterns: Object.keys(mainRhythms.twoNote).length,
-                    uniqueThreeNotePatterns: Object.keys(mainRhythms.threeNote).length
+                    uniqueThreeNotePatterns: Object.keys(mainRhythms.threeNote).length,
+                    uniqueBeginningDurations: Object.keys(mainPositions.beginning).length,
+                    uniqueMiddleDurations: Object.keys(mainPositions.middle).length,
+                    uniqueEndingDurations: Object.keys(mainPositions.ending).length
                 }
             },
             graceNotes: {
@@ -230,10 +300,29 @@ class PatternAnalyzer {
     }
 
     /**
-     * KWIC: Keyword In Context
-     * Three separate analyses: lyrics-based, rhythm-based, pitch-based
+     * Convert duration value to readable name
      */
-    analyzeKWIC(lyricsData, relationships, notes) {
+    getDurationName(duration) {
+        const durationMap = {
+            0.125: '32nd',
+            0.25: '16th',
+            0.5: '8th',
+            1: 'quarter',
+            2: 'half',
+            3: 'dotted-half',
+            4: 'whole',
+            8: 'double-whole'
+        };
+
+        return durationMap[duration] || `${duration}`;
+    }
+
+    /**
+     * KSIC: Key Syllable In Context
+     * Three separate analyses: lyrics-based, rhythm-based, pitch-based
+     * (Vietnamese uses syllables, not words)
+     */
+    analyzeKSIC(lyricsData, relationships, notes) {
         // Build note map
         const noteMap = {};
         notes.forEach(note => {
@@ -247,6 +336,18 @@ class PatternAnalyzer {
             ending: {}
         };
 
+        // Track total occurrences from RELATIONSHIPS (individual syllables)
+        const totalOccurrences = {};
+
+        // Count from relationships.wordToNoteMap (individual syllables as they appear in music)
+        for (const mapping of relationships.wordToNoteMap) {
+            if (mapping.syllable) {
+                const syllableLower = mapping.syllable.toLowerCase().replace(/[.,;!?]/g, '').trim();
+                totalOccurrences[syllableLower] = (totalOccurrences[syllableLower] || 0) + 1;
+            }
+        }
+
+        // Track phrase positions from LLM wordMapping (for phrase analysis)
         for (const phrase of lyricsData.phrases) {
             const words = phrase.wordMapping || [];
             const totalWords = words.length;
@@ -268,6 +369,29 @@ class PatternAnalyzer {
             });
         }
 
+        // Also track multi-syllable sequences from relationships (actual sung syllables)
+        const multiSyllableSequences = {
+            twoSyllable: {},
+            threeSyllable: {}
+        };
+
+        // Get clean syllables from relationships
+        const cleanSyllables = relationships.wordToNoteMap.map(m =>
+            m.syllable ? m.syllable.toLowerCase().replace(/[.,;!?]/g, '').trim() : ''
+        ).filter(s => s);
+
+        // 2-syllable sequences
+        for (let i = 0; i < cleanSyllables.length - 1; i++) {
+            const sequence = `${cleanSyllables[i]} ${cleanSyllables[i + 1]}`;
+            multiSyllableSequences.twoSyllable[sequence] = (multiSyllableSequences.twoSyllable[sequence] || 0) + 1;
+        }
+
+        // 3-syllable sequences
+        for (let i = 0; i < cleanSyllables.length - 2; i++) {
+            const sequence = `${cleanSyllables[i]} ${cleanSyllables[i + 1]} ${cleanSyllables[i + 2]}`;
+            multiSyllableSequences.threeSyllable[sequence] = (multiSyllableSequences.threeSyllable[sequence] || 0) + 1;
+        }
+
         // 2. RHYTHM-BASED: Position in rhythmic pattern
         // Group by rhythmic phrases (sequences with consistent rhythm)
         const rhythmPositions = this.analyzeRhythmicPositions(relationships, noteMap);
@@ -281,10 +405,17 @@ class PatternAnalyzer {
                 beginningWords: this.sortByFrequency(lyricsPositions.beginning),
                 middleWords: this.sortByFrequency(lyricsPositions.middle),
                 endingWords: this.sortByFrequency(lyricsPositions.ending),
+                totalOccurrences: this.sortByFrequency(totalOccurrences),
+                twoSyllableSequences: this.sortByFrequency(multiSyllableSequences.twoSyllable),
+                threeSyllableSequences: this.sortByFrequency(multiSyllableSequences.threeSyllable),
                 statistics: {
                     uniqueBeginningWords: Object.keys(lyricsPositions.beginning).length,
                     uniqueMiddleWords: Object.keys(lyricsPositions.middle).length,
-                    uniqueEndingWords: Object.keys(lyricsPositions.ending).length
+                    uniqueEndingWords: Object.keys(lyricsPositions.ending).length,
+                    uniqueSyllables: Object.keys(totalOccurrences).length,
+                    totalSyllables: Object.values(totalOccurrences).reduce((sum, count) => sum + count, 0),
+                    uniqueTwoSyllableSequences: Object.keys(multiSyllableSequences.twoSyllable).length,
+                    uniqueThreeSyllableSequences: Object.keys(multiSyllableSequences.threeSyllable).length
                 }
             },
             rhythmBased: rhythmPositions,
@@ -475,29 +606,30 @@ class PatternAnalyzer {
     }
 
     /**
-     * KTIC: Kinetic Tone Interval Contour
-     * Analyzes Vietnamese tone sequences
+     * KTIC: Key Tone In Context
+     * Analyzes Vietnamese tone transitions
+     * ✅ Uses relationships.wordToNoteMap (same source as matcher)
      */
-    analyzeKTIC(lyricsData) {
+    analyzeKTIC(relationships) {
         const toneSequences = {
             twoTone: {},
             threeTone: {}
         };
 
-        for (const phrase of lyricsData.phrases) {
-            const words = phrase.wordMapping || [];
-            const tones = words.map(word => this.detectTone(word.vn));
+        // Get tones from relationships (already correctly detected)
+        const tones = relationships.wordToNoteMap
+            .filter(mapping => mapping.tone)  // Only syllables with tones
+            .map(mapping => mapping.tone);
 
-            for (let i = 0; i < tones.length - 1; i++) {
-                // 2-tone pattern
-                const pattern2 = `${tones[i]}→${tones[i+1]}`;
-                toneSequences.twoTone[pattern2] = (toneSequences.twoTone[pattern2] || 0) + 1;
+        for (let i = 0; i < tones.length - 1; i++) {
+            // 2-tone pattern
+            const pattern2 = `${tones[i]}→${tones[i+1]}`;
+            toneSequences.twoTone[pattern2] = (toneSequences.twoTone[pattern2] || 0) + 1;
 
-                // 3-tone pattern
-                if (i < tones.length - 2) {
-                    const pattern3 = `${tones[i]}→${tones[i+1]}→${tones[i+2]}`;
-                    toneSequences.threeTone[pattern3] = (toneSequences.threeTone[pattern3] || 0) + 1;
-                }
+            // 3-tone pattern
+            if (i < tones.length - 2) {
+                const pattern3 = `${tones[i]}→${tones[i+1]}→${tones[i+2]}`;
+                toneSequences.threeTone[pattern3] = (toneSequences.threeTone[pattern3] || 0) + 1;
             }
         }
 
@@ -505,9 +637,242 @@ class PatternAnalyzer {
             twoTonePatterns: this.sortByFrequency(toneSequences.twoTone),
             threeTonePatterns: this.sortByFrequency(toneSequences.threeTone),
             statistics: {
+                totalSyllablesWithTones: tones.length,
                 uniqueTwoTonePatterns: Object.keys(toneSequences.twoTone).length,
                 uniqueThreeTonePatterns: Object.keys(toneSequences.threeTone).length
             }
+        };
+    }
+
+    /**
+     * KRIC: Key Rhyme In Context
+     * Analyzes which rhyme families occur at phrase positions + identifies key rhymes
+     */
+    analyzeKRIC(lyricsData) {
+        const positions = {
+            beginning: {},  // { "ôi-family": 12, "a-family": 8 }
+            middle: {},
+            ending: {}      // { "ôi-family": 18, "ang-family": 7 }
+        };
+
+        for (const phrase of lyricsData.phrases) {
+            const words = phrase.wordMapping || [];
+            const totalWords = words.length;
+
+            words.forEach((word, index) => {
+                // Extract rhyme family (vowel + final consonant, tone-independent)
+                const rhymeFamily = this.getRhymeFamily(word.vn);
+
+                // Determine position
+                let position;
+                if (index === 0) {
+                    position = 'beginning';
+                } else if (index === totalWords - 1) {
+                    position = 'ending';
+                } else {
+                    position = 'middle';
+                }
+
+                // Count frequency
+                positions[position][rhymeFamily] = (positions[position][rhymeFamily] || 0) + 1;
+            });
+        }
+
+        return {
+            beginningRhymes: this.sortByFrequency(positions.beginning),
+            middleRhymes: this.sortByFrequency(positions.middle),
+            endingRhymes: this.sortByFrequency(positions.ending),
+            keyRhymes: this.identifyKeyRhymes(positions),
+            statistics: {
+                uniqueBeginningRhymes: Object.keys(positions.beginning).length,
+                uniqueMiddleRhymes: Object.keys(positions.middle).length,
+                uniqueEndingRhymes: Object.keys(positions.ending).length
+            }
+        };
+    }
+
+    /**
+     * Extract rhyme family from Vietnamese syllable
+     * Removes tone marks and classifies into 60+ rhyme families
+     */
+    getRhymeFamily(syllable) {
+        // Remove tone marks to get rhyme core
+        const normalized = this.removeTones(syllable.toLowerCase());
+
+        // Vietnamese rhyme families (60+ patterns)
+        const rhymeFamilies = {
+            'a': /^.*[aă]$/,
+            'â': /^.*â$/,
+            'e': /^.*e$/,
+            'ê': /^.*ê$/,
+            'i': /^.*[iy]$/,
+            'o': /^.*o$/,
+            'ô': /^.*ô$/,
+            'ơ': /^.*ơ$/,
+            'u': /^.*u$/,
+            'ư': /^.*ư$/,
+            'ai': /^.*ai$/,
+            'ao': /^.*ao$/,
+            'ay': /^.*ay$/,
+            'ây': /^.*ây$/,
+            'eo': /^.*eo$/,
+            'êu': /^.*êu$/,
+            'ia': /^.*ia$/,
+            'iê': /^.*iê$/,
+            'iu': /^.*iu$/,
+            'oa': /^.*oa$/,
+            'oă': /^.*oă$/,
+            'oe': /^.*oe$/,
+            'oi': /^.*oi$/,
+            'ôi': /^.*ôi$/,
+            'ơi': /^.*ơi$/,
+            'ua': /^.*ua$/,
+            'uâ': /^.*uâ$/,
+            'ui': /^.*ui$/,
+            'ưa': /^.*ưa$/,
+            'ưi': /^.*ưi$/,
+            'ươ': /^.*ươ$/,
+            'uô': /^.*uô$/,
+            'uy': /^.*uy$/,
+            'ưu': /^.*ưu$/,
+            'an': /^.*[aă]n$/,
+            'ăn': /^.*ăn$/,
+            'âm': /^.*âm$/,
+            'ân': /^.*ân$/,
+            'ang': /^.*ang$/,
+            'ăng': /^.*ăng$/,
+            'âng': /^.*âng$/,
+            'anh': /^.*anh$/,
+            'ănh': /^.*ănh$/,
+            'ânh': /^.*ânh$/,
+            'em': /^.*em$/,
+            'ên': /^.*ên$/,
+            'eng': /^.*eng$/,
+            'ênh': /^.*ênh$/,
+            'im': /^.*im$/,
+            'in': /^.*in$/,
+            'inh': /^.*inh$/,
+            'om': /^.*om$/,
+            'on': /^.*on$/,
+            'ông': /^.*ông$/,
+            'ong': /^.*ong$/,
+            'oong': /^.*oong$/,
+            'um': /^.*um$/,
+            'un': /^.*un$/,
+            'ung': /^.*ung$/,
+            'uông': /^.*uông$/,
+            'ươn': /^.*ươn$/,
+            'ương': /^.*ương$/
+        };
+
+        for (const [family, pattern] of Object.entries(rhymeFamilies)) {
+            if (pattern.test(normalized)) {
+                return `${family}-family`;
+            }
+        }
+
+        return 'other-family';
+    }
+
+    /**
+     * Remove Vietnamese tone marks to get rhyme core
+     */
+    removeTones(text) {
+        const toneMap = {
+            'á': 'a', 'à': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a',
+            'ắ': 'ă', 'ằ': 'ă', 'ẳ': 'ă', 'ẵ': 'ă', 'ặ': 'ă',
+            'ấ': 'â', 'ầ': 'â', 'ẩ': 'â', 'ẫ': 'â', 'ậ': 'â',
+            'é': 'e', 'è': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e',
+            'ế': 'ê', 'ề': 'ê', 'ể': 'ê', 'ễ': 'ê', 'ệ': 'ê',
+            'í': 'i', 'ì': 'i', 'ỉ': 'i', 'ĩ': 'i', 'ị': 'i',
+            'ó': 'o', 'ò': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o',
+            'ố': 'ô', 'ồ': 'ô', 'ổ': 'ô', 'ỗ': 'ô', 'ộ': 'ô',
+            'ớ': 'ơ', 'ờ': 'ơ', 'ở': 'ơ', 'ỡ': 'ơ', 'ợ': 'ơ',
+            'ú': 'u', 'ù': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u',
+            'ứ': 'ư', 'ừ': 'ư', 'ử': 'ư', 'ữ': 'ư', 'ự': 'ư',
+            'ý': 'y', 'ỳ': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y'
+        };
+
+        let result = text;
+        for (const [toned, base] of Object.entries(toneMap)) {
+            result = result.replace(new RegExp(toned, 'g'), base);
+        }
+        return result;
+    }
+
+    /**
+     * Identify key rhymes: structural, cohesive, ornamental, signature
+     */
+    identifyKeyRhymes(positions) {
+        // Aggregate all rhymes across positions
+        const allRhymes = {};
+        ['beginning', 'middle', 'ending'].forEach(pos => {
+            Object.entries(positions[pos]).forEach(([rhyme, count]) => {
+                allRhymes[rhyme] = (allRhymes[rhyme] || 0) + count;
+            });
+        });
+
+        const total = Object.values(allRhymes).reduce((sum, count) => sum + count, 0);
+        const endingTotal = Object.values(positions.ending).reduce((sum, count) => sum + count, 0);
+
+        return {
+            structural: Object.entries(allRhymes)
+                .filter(([rhyme, count]) => {
+                    const endingFreq = (positions.ending[rhyme] || 0) / endingTotal;
+                    return endingFreq > 0.75;  // Appears at >75% of phrase endings
+                })
+                .map(([rhyme, count]) => ({
+                    rhyme,
+                    count,
+                    function: 'phrase_ending',
+                    importance: 'high',
+                    explanation: 'Marks major phrase boundaries, creates form structure'
+                })),
+
+            cohesive: Object.entries(allRhymes)
+                .filter(([rhyme, count]) => {
+                    const freq = count / total;
+                    const linesSpanned = [
+                        positions.beginning[rhyme] || 0,
+                        positions.middle[rhyme] || 0,
+                        positions.ending[rhyme] || 0
+                    ].filter(c => c > 0).length;
+                    return freq > 0.2 && linesSpanned >= 2;  // Top 20% frequency + spans multiple positions
+                })
+                .map(([rhyme, count]) => ({
+                    rhyme,
+                    count,
+                    function: 'internal_cohesion',
+                    importance: 'medium',
+                    explanation: 'Most frequent rhyme, creates unity across lines'
+                })),
+
+            ornamental: Object.entries(allRhymes)
+                .filter(([rhyme, count]) => count / total < 0.05)  // <5% frequency
+                .map(([rhyme, count]) => ({
+                    rhyme,
+                    count,
+                    function: 'decorative',
+                    importance: 'low',
+                    explanation: 'Rare, decorative variation'
+                })),
+
+            signature: (() => {
+                // Find rhyme with highest ending position frequency
+                const endingRhymes = Object.entries(positions.ending);
+                if (endingRhymes.length === 0) return null;
+
+                const [rhyme, count] = endingRhymes.reduce((max, curr) =>
+                    curr[1] > max[1] ? curr : max
+                );
+
+                return {
+                    rhyme,
+                    count,
+                    reason: 'Defines refrain, appears at all structural cadences',
+                    characterization: 'Song ending formula'
+                };
+            })()
         };
     }
 

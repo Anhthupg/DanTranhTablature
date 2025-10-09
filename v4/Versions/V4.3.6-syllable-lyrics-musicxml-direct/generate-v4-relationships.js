@@ -1,0 +1,305 @@
+/**
+ * V4 Relationships Generator
+ * Creates word-to-note mapping from MusicXML and LLM lyrics segmentation
+ *
+ * Rules:
+ * - Each syllable maps to 1+ notes (most common: 1, melisma: multiple)
+ * - Grace notes belong to their main note's syllable
+ * - Multiple syllables NEVER share one note
+ */
+
+const fs = require('fs');
+const path = require('path');
+const xml2js = require('xml2js');
+const DataLoader = require('./utils/data-loader');
+
+class V4RelationshipsGenerator {
+    constructor() {
+        this.parser = new xml2js.Parser();
+        this.dataLoader = new DataLoader(__dirname);
+    }
+
+    async generateRelationships(songName) {
+        console.log(`\n[V4 Relationships] Generating for: ${songName}`);
+
+        // Convert to backend ID (lowercase-hyphen-no-tones)
+        const backendId = this.dataLoader.toBackendId(songName);
+        console.log(`[V4 Relationships] Backend ID: ${backendId}`);
+
+        // Load MusicXML using data-loader (handles naming automatically)
+        const musicXML = this.dataLoader.loadMusicXML(songName);
+        if (!musicXML) {
+            throw new Error(`MusicXML not found for song: ${songName}`);
+        }
+        const parsedXML = await this.parser.parseStringPromise(musicXML);
+
+        // Load LLM lyrics segmentation using data-loader
+        const lyricsData = this.dataLoader.loadLyricsSegmentation(songName);
+        if (!lyricsData) {
+            throw new Error(`Lyrics segmentation not found for song: ${songName}`);
+        }
+
+        // Extract notes from MusicXML
+        const notes = this.extractNotes(parsedXML);
+        console.log(`[V4 Relationships] Extracted ${notes.length} total notes`);
+
+        // Map syllables to notes
+        const relationships = this.mapSyllablesToNotes(notes, lyricsData);
+        console.log(`[V4 Relationships] Mapped ${relationships.wordToNoteMap.length} syllables to notes`);
+
+        // Save relationships using backend ID
+        const outputPath = path.join(__dirname, 'data', 'relationships', `${backendId}-relationships.json`);
+        this.ensureDirectoryExists(path.dirname(outputPath));
+        fs.writeFileSync(outputPath, JSON.stringify(relationships, null, 2));
+        console.log(`[V4 Relationships] Saved to: ${outputPath}\n`);
+
+        return relationships;
+    }
+
+    extractNotes(parsedXML) {
+        const notes = [];
+        let noteIndex = 0;
+        let measureNumber = 1;
+
+        const parts = parsedXML['score-partwise'].part;
+        if (!parts || parts.length === 0) {
+            throw new Error('No parts found in MusicXML');
+        }
+
+        const part = parts[0]; // First part (main melody)
+        const measures = part.measure;
+
+        for (const measure of measures) {
+            measureNumber = parseInt(measure.$.number) || measureNumber;
+            const measureNotes = measure.note || [];
+
+            for (const noteData of measureNotes) {
+                // Skip rests
+                if (noteData.rest) continue;
+
+                // Determine if grace note
+                const isGrace = !!noteData.grace;
+
+                // Extract pitch
+                const pitch = noteData.pitch ? {
+                    step: noteData.pitch[0].step[0],
+                    octave: parseInt(noteData.pitch[0].octave[0]),
+                    alter: noteData.pitch[0].alter ? parseInt(noteData.pitch[0].alter[0]) : 0
+                } : null;
+
+                if (!pitch) continue;
+
+                // Include accidental in pitch name
+                const accidental = pitch.alter === -1 ? 'b' : (pitch.alter === 1 ? '#' : '');
+                const fullNote = `${pitch.step}${accidental}${pitch.octave}`;
+
+                // Extract duration (grace notes have no duration in MusicXML)
+                const duration = isGrace ? 0 : (noteData.duration ? parseFloat(noteData.duration[0]) : 0);
+
+                // Extract lyrics (handle both plain strings and formatted text objects)
+                let lyrics = null;
+                if (noteData.lyric && noteData.lyric[0] && noteData.lyric[0].text) {
+                    const textData = noteData.lyric[0].text[0];
+                    // Handle formatted text: {"_":"Xô:","$":{"font-weight":"bold"}}
+                    if (typeof textData === 'object' && textData._) {
+                        lyrics = textData._;
+                    } else if (typeof textData === 'string') {
+                        lyrics = textData;
+                    }
+                }
+
+                // Check for ties/slurs
+                const notations = noteData.notations || [];
+                let hasTieStart = false;
+                let hasTieStop = false;
+                let hasSlurStart = false;
+                let hasSlurStop = false;
+
+                for (const notation of notations) {
+                    if (notation.tied) {
+                        for (const tie of notation.tied) {
+                            if (tie.$.type === 'start') hasTieStart = true;
+                            if (tie.$.type === 'stop') hasTieStop = true;
+                        }
+                    }
+                    if (notation.slur) {
+                        for (const slur of notation.slur) {
+                            if (slur.$.type === 'start') hasSlurStart = true;
+                            if (slur.$.type === 'stop') hasSlurStop = true;
+                        }
+                    }
+                }
+
+                notes.push({
+                    id: `note_${noteIndex}`,
+                    index: noteIndex,
+                    measureNumber,
+                    pitch: fullNote,
+                    duration,
+                    isGrace,
+                    lyrics,
+                    hasTieStart,
+                    hasTieStop,
+                    hasSlurStart,
+                    hasSlurStop
+                });
+
+                noteIndex++;
+            }
+        }
+
+        return notes;
+    }
+
+    mapSyllablesToNotes(notes, lyricsData) {
+        const wordToNoteMap = [];
+        const noteToWordMap = {};
+
+        // SIMPLE APPROACH: Just use lyrics directly from MusicXML (already in each note)
+        // Don't try to match with LLM phrases - just map what's there
+        const notesWithLyrics = notes.filter(n => n.lyrics);
+        console.log(`[V4 Relationships] ${notesWithLyrics.length} notes with lyrics (from MusicXML)`);
+
+        // Process each note with lyrics
+        for (let i = 0; i < notesWithLyrics.length; i++) {
+            const mainNote = notesWithLyrics[i];
+            const syllable = mainNote.lyrics.trim();
+
+            // Collect melisma notes (tied notes after this one with no lyrics)
+            const syllableNotes = [mainNote];
+            let checkIndex = mainNote.index + 1;
+            while (checkIndex < notes.length) {
+                const nextNote = notes[checkIndex];
+                if (nextNote.isGrace) {
+                    checkIndex++;
+                    continue;
+                }
+                if (!nextNote.lyrics && (nextNote.hasTieStop || nextNote.hasSlurStop)) {
+                    syllableNotes.push(nextNote);
+                    checkIndex++;
+                } else {
+                    break;
+                }
+            }
+
+            // Find grace notes immediately before this note
+            const graceNotesBefore = [];
+            for (let j = mainNote.index - 1; j >= 0; j--) {
+                if (notes[j].isGrace) {
+                    graceNotesBefore.unshift(notes[j]);
+                } else {
+                    break;
+                }
+            }
+
+            // Find grace notes immediately after this note
+            const graceNotesAfter = [];
+            for (let j = mainNote.index + 1; j < notes.length; j++) {
+                if (notes[j].isGrace) {
+                    if (notes[j].hasSlurStop && !notes[j].hasSlurStart) {
+                        graceNotesAfter.push(notes[j]);
+                    } else if (notes[j].hasSlurStart && !notes[j].hasSlurStop) {
+                        break;
+                    } else {
+                        graceNotesAfter.push(notes[j]);
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            // For now, assign a simple sequential phrase ID
+            const phraseId = Math.floor(i / 6) + 1;
+
+            // All notes for this syllable
+            const allNotesForSyllable = [
+                ...graceNotesBefore,
+                ...syllableNotes,
+                ...graceNotesAfter
+            ];
+
+            // Create mapping
+            const mapping = {
+                phraseId,
+                wordIndex: i,  // Position in sequence
+                syllable,
+                translation: null,  // No translation from MusicXML
+                noteIds: allNotesForSyllable.map(n => n.id),
+                mainNoteId: mainNote.id,
+                hasGraceNotes: graceNotesBefore.length > 0 || graceNotesAfter.length > 0,
+                graceNotesBefore: graceNotesBefore.map(n => n.id),
+                graceNotesAfter: graceNotesAfter.map(n => n.id),
+                isMelisma: syllableNotes.length > 1,
+                melismaNotes: syllableNotes.length > 1 ? syllableNotes.slice(1).map(n => n.id) : []
+            };
+
+            wordToNoteMap.push(mapping);
+
+            // Reverse mapping (note → word)
+            for (const note of allNotesForSyllable) {
+                noteToWordMap[note.id] = {
+                    phraseId,
+                    wordIndex: i,
+                    syllable,
+                    translation: null,
+                    isMainNote: note.id === mainNote.id,
+                    isGraceNote: note.isGrace,
+                    isMelismaNote: syllableNotes.includes(note) && note.id !== mainNote.id
+                };
+            }
+        }
+
+        return {
+            metadata: {
+                songName: lyricsData.songTitle,
+                totalNotes: notes.length,
+                mainNotes: notes.filter(n => !n.isGrace).length,
+                graceNotes: notes.filter(n => n.isGrace).length,
+                totalSyllables: wordToNoteMap.length,
+                melismaCount: wordToNoteMap.filter(m => m.isMelisma).length,
+                generatedDate: new Date().toISOString()
+            },
+            wordToNoteMap,
+            noteToWordMap,
+            notes // Full note data for reference
+        };
+    }
+
+    normalizeSyllable(syllable) {
+        // Handle non-string inputs
+        if (!syllable || typeof syllable !== 'string') {
+            console.warn(`[V4 Relationships] WARNING: Invalid syllable (not a string): ${JSON.stringify(syllable)}`);
+            return '';
+        }
+        // Remove diacritics, punctuation, and lowercase for matching
+        return syllable.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[,\.!?;:]/g, '')  // Remove punctuation
+            .trim();
+    }
+
+    ensureDirectoryExists(dirPath) {
+        if (!fs.existsSync(dirPath)) {
+            fs.mkdirSync(dirPath, { recursive: true });
+        }
+    }
+}
+
+// CLI usage
+if (require.main === module) {
+    const songName = process.argv[2] || 'Bà rằng bà rí';
+    const generator = new V4RelationshipsGenerator();
+
+    generator.generateRelationships(songName)
+        .then(() => {
+            console.log('[V4 Relationships] Generation complete!');
+            process.exit(0);
+        })
+        .catch(err => {
+            console.error('[V4 Relationships] Error:', err);
+            process.exit(1);
+        });
+}
+
+module.exports = V4RelationshipsGenerator;

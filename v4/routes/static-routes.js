@@ -72,6 +72,12 @@ module.exports = function(app, baseDir) {
         res.sendFile(path.join(baseDir, 'templates', 'components', 'debug-label-generator.js'));
     });
 
+    // V4.3.5: Pattern visualization controller
+    app.get('/pattern-visualization-controller.js', (req, res) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.sendFile(path.join(baseDir, 'controllers', 'pattern-visualization-controller.js'));
+    });
+
     // Glissando controller
     app.get('/glissando-controller.js', (req, res) => {
         res.setHeader('Content-Type', 'application/javascript');
@@ -86,4 +92,7 @@ module.exports = function(app, baseDir) {
 
     // Serve tablature SVG files
     app.use('/data/tablatures', require('express').static(path.join(baseDir, 'data', 'tablatures')));
+
+    // Serve pattern analysis JSON files (V4.3.5: Tier 3 patterns)
+    app.use('/data/patterns', require('express').static(path.join(baseDir, 'data', 'patterns')));
 };

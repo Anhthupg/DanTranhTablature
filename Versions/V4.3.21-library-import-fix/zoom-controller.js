@@ -1,0 +1,885 @@
+/**
+ * V4 Zoom Controller - Centralized Zoom Management
+ * Prevents common issues: stretching, cropping, scroll failures
+ *
+ * Architecture:
+ * - Single source of truth for zoom state
+ * - Element-by-element transformation (V3 approach)
+ * - Automatic base position management
+ * - Clear initialization sequence
+ */
+
+class ZoomController {
+    constructor() {
+        this.sections = ['optimal', 'alt1', 'alt2', 'alt3', 'annotated'];
+        this.zoomState = this.initializeZoomState();
+        this.initialized = false;
+        this.zoomLinked = true;  // Default: zoom is linked between sections
+        this.onZoomChangeCallbacks = {}; // Callbacks to execute when zoom changes
+    }
+
+    /**
+     * Initialize zoom state for all sections
+     */
+    initializeZoomState() {
+        const state = {};
+        this.sections.forEach(section => {
+            state[section] = {
+                x: 1.0,  // 100%
+                y: 1.0,  // 100%
+                basePositionsStored: false,
+                svgElement: null,
+                container: null
+            };
+        });
+        return state;
+    }
+
+    /**
+     * Initialize zoom system - call this once on DOM ready
+     */
+    initialize() {
+        if (this.initialized) {
+            console.warn('ZoomController already initialized');
+            return;
+        }
+
+        console.log('🔧 Initializing ZoomController...');
+
+        // Find and validate all SVG elements
+        this.sections.forEach(section => {
+            const svgId = this.getSvgId(section);
+            const svg = document.getElementById(svgId);
+
+            if (!svg) {
+                console.warn(`SVG not found for section: ${section} (${svgId})`);
+                return;
+            }
+
+            // Different container class for annotated section
+            const containerSelector = section === 'annotated' ? '.tablature-scroll-container' : '.tablature-reference';
+            const container = svg.closest(containerSelector);
+            if (!container) {
+                console.warn(`Container not found for section: ${section}`);
+                return;
+            }
+
+            // Store references
+            this.zoomState[section].svgElement = svg;
+            this.zoomState[section].container = container;
+
+            // Store base dimensions
+            if (!svg.hasAttribute('data-base-width')) {
+                svg.setAttribute('data-base-width', svg.getAttribute('width'));
+                svg.setAttribute('data-base-height', svg.getAttribute('height'));
+            }
+
+            // Ensure container has proper scroll setup
+            this.setupContainer(container);
+
+            console.log(`✓ Section ${section} initialized`);
+        });
+
+        // Setup scroll sync between optimal and annotated sections
+        this.setupScrollSync();
+
+        this.initialized = true;
+        console.log('✅ ZoomController ready');
+    }
+
+    /**
+     * Setup bidirectional scroll synchronization between optimal and annotated sections
+     */
+    setupScrollSync() {
+        // Use direct ID selectors for reliability
+        const optimalContainer = document.getElementById('optimalScrollContainer');
+        const annotatedContainer = document.getElementById('annotatedScrollContainer');
+
+        if (!optimalContainer || !annotatedContainer) {
+            console.log('Scroll sync skipped - containers not found:', {
+                optimal: !!optimalContainer,
+                annotated: !!annotatedContainer
+            });
+            return;
+        }
+
+        // Optimal → Annotated sync
+        optimalContainer.addEventListener('scroll', () => {
+            if (optimalContainer.dataset.scrolling) return;
+            annotatedContainer.dataset.scrolling = 'true';
+            annotatedContainer.scrollLeft = optimalContainer.scrollLeft;
+            setTimeout(() => delete annotatedContainer.dataset.scrolling, 10);
+        });
+
+        // Annotated → Optimal sync
+        annotatedContainer.addEventListener('scroll', () => {
+            if (annotatedContainer.dataset.scrolling) return;
+            optimalContainer.dataset.scrolling = 'true';
+            optimalContainer.scrollLeft = annotatedContainer.scrollLeft;
+            setTimeout(() => delete optimalContainer.dataset.scrolling, 10);
+        });
+
+        console.log('✅ Scroll sync enabled: optimalScrollContainer ↔ annotatedScrollContainer');
+    }
+
+    /**
+     * Refresh element references after DOM update (e.g., loading new song)
+     * V4.1.4: Added to handle dynamic content loading
+     */
+    refresh() {
+        console.log('🔄 Refreshing ZoomController element references...');
+
+        this.sections.forEach(section => {
+            const svgId = this.getSvgId(section);
+            const svg = document.getElementById(svgId);
+
+            if (!svg) {
+                console.warn(`SVG not found for section: ${section} (${svgId})`);
+                return;
+            }
+
+            // Update SVG element reference
+            this.zoomState[section].svgElement = svg;
+
+            // Update base dimensions for new SVG
+            svg.setAttribute('data-base-width', svg.getAttribute('width'));
+            svg.setAttribute('data-base-height', svg.getAttribute('height'));
+
+            // Force update base positions for new song content
+            this.storeBasePositions(svg, true);
+
+            console.log(`✓ Section ${section} refreshed`);
+        });
+
+        console.log('✅ ZoomController element references updated');
+    }
+
+    /**
+     * Store base positions for all transformable elements
+     * V4.1.4: Extracted helper for refresh functionality
+     * @param {boolean} forceUpdate - If true, update even if base positions already exist
+     */
+    storeBasePositions(svg, forceUpdate = false) {
+        const elements = svg.querySelectorAll('circle, polygon, line, text, rect');
+
+        elements.forEach(el => {
+            const tagName = el.tagName.toLowerCase();
+
+            // Store base positions based on element type
+            // V4.1.4: Force update during refresh to handle new song content
+            if (tagName === 'circle') {
+                if (forceUpdate || !el.dataset.baseCx) el.dataset.baseCx = el.getAttribute('cx');
+                if (forceUpdate || !el.dataset.baseCy) el.dataset.baseCy = el.getAttribute('cy');
+            } else if (tagName === 'line') {
+                if (forceUpdate || !el.dataset.baseX1) el.dataset.baseX1 = el.getAttribute('x1');
+                if (forceUpdate || !el.dataset.baseY1) el.dataset.baseY1 = el.getAttribute('y1');
+                if (forceUpdate || !el.dataset.baseX2) el.dataset.baseX2 = el.getAttribute('x2');
+                if (forceUpdate || !el.dataset.baseY2) el.dataset.baseY2 = el.getAttribute('y2');
+            } else if (tagName === 'polygon') {
+                if (forceUpdate || !el.dataset.basePoints) el.dataset.basePoints = el.getAttribute('points');
+            } else if (tagName === 'text' || tagName === 'rect') {
+                if (forceUpdate || !el.dataset.baseX) el.dataset.baseX = el.getAttribute('x');
+                if (forceUpdate || !el.dataset.baseY) el.dataset.baseY = el.getAttribute('y');
+            }
+        });
+    }
+
+    /**
+     * Setup container for proper scrolling
+     */
+    setupContainer(container) {
+        container.style.overflowX = 'auto';
+        container.style.overflowY = 'auto';
+        container.style.maxHeight = '600px';
+        container.style.position = 'relative';
+        container.style.boxSizing = 'border-box';
+    }
+
+    /**
+     * Get SVG ID for a section
+     */
+    getSvgId(section) {
+        const idMap = {
+            'optimal': 'optimalSvg',
+            'alt1': 'alt1Svg',
+            'alt2': 'alt2Svg',
+            'alt3': 'alt3Svg',
+            'annotated': 'annotatedSvg'
+        };
+        return idMap[section] || null;
+    }
+
+    /**
+     * Update zoom for a section and axis
+     * @param {string} section - Section name (optimal, alt1, alt2, alt3)
+     * @param {string} axis - 'x' or 'y'
+     * @param {number} percent - Zoom percentage (1-400)
+     * @param {boolean} skipSync - Skip syncing to other sections (internal use)
+     */
+    updateZoom(section, axis, percent, skipSync = false) {
+        console.log(`[Zoom] updateZoom called: section=${section}, axis=${axis}, percent=${percent}`);
+
+        // Validate section
+        if (!this.zoomState[section]) {
+            console.error(`[Zoom] Invalid section: ${section}`);
+            return;
+        }
+
+        // Validate zoom range
+        const zoom = Math.max(0.01, Math.min(4.0, percent / 100));
+        console.log(`[Zoom] Calculated zoom value: ${zoom}`);
+
+        // Update state
+        this.zoomState[section][axis] = zoom;
+
+        // Update UI display
+        this.updateZoomDisplay(section, axis, percent);
+
+        // Apply zoom to current section
+        console.log(`[Zoom] About to apply zoom to ${section}...`);
+        this.applyZoom(section);
+
+        // Trigger callbacks for this section
+        this.triggerZoomChange(section);
+
+        // If zoom is linked and not skipping sync, update other sections
+        if (this.zoomLinked && !skipSync) {
+            this.sections.forEach(otherSection => {
+                if (otherSection !== section) {
+                    // Update state directly
+                    this.zoomState[otherSection][axis] = zoom;
+                    this.updateZoomDisplay(otherSection, axis, percent);
+
+                    // Update slider value
+                    const slider = document.getElementById(`${otherSection}${axis.toUpperCase()}Zoom`);
+                    if (slider) {
+                        slider.value = percent;
+                    }
+
+                    // Apply zoom
+                    this.applyZoom(otherSection);
+
+                    // Trigger callbacks for other section
+                    this.triggerZoomChange(otherSection);
+                }
+            });
+        }
+    }
+
+    /**
+     * Toggle zoom linking between sections
+     * @param {boolean} linked - Whether sections should be linked
+     */
+    setZoomLinked(linked) {
+        this.zoomLinked = linked;
+
+        // If enabling link, sync all sections to optimal zoom
+        if (linked) {
+            const optimalX = this.zoomState.optimal.x * 100;
+            const optimalY = this.zoomState.optimal.y * 100;
+
+            this.sections.forEach(section => {
+                if (section !== 'optimal') {
+                    this.updateZoom(section, 'x', optimalX);
+                    this.updateZoom(section, 'y', optimalY);
+                }
+            });
+        }
+
+        console.log(`Zoom linking ${linked ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Apply zoom transformation to a section
+     */
+    applyZoom(section) {
+        const state = this.zoomState[section];
+
+        if (!state) {
+            console.error(`Cannot apply zoom - No state for section: ${section}`);
+            return;
+        }
+
+        if (!state.svgElement) {
+            console.warn(`Cannot apply zoom - SVG not found for section: ${section}. Trying to find it now...`);
+            // Try to find SVG now (in case it was loaded after initialization)
+            const svgId = this.getSvgId(section);
+            const svg = document.getElementById(svgId);
+            if (svg) {
+                console.log(`Found SVG for ${section}, updating reference...`);
+                state.svgElement = svg;
+                // Store base dimensions
+                if (!svg.hasAttribute('data-base-width')) {
+                    svg.setAttribute('data-base-width', svg.getAttribute('width'));
+                    svg.setAttribute('data-base-height', svg.getAttribute('height'));
+                }
+            } else {
+                console.error(`Still cannot find SVG ${svgId} for section: ${section}`);
+                return;
+            }
+        }
+
+        const svg = state.svgElement;
+        const { x: xZoom, y: yZoom } = state;
+        console.log(`[Zoom] applyZoom: section=${section}, xZoom=${xZoom}, yZoom=${yZoom}, svg=${svg ? 'found' : 'NULL'}`);
+
+        // Get base dimensions with fallback to current dimensions if not set
+        let baseWidth = parseFloat(svg.getAttribute('data-base-width'));
+        let baseHeight = parseFloat(svg.getAttribute('data-base-height'));
+        console.log(`[Zoom] Base dimensions: width=${baseWidth}, height=${baseHeight}`);
+
+        // If base dimensions not set or invalid, use current dimensions
+        if (!baseWidth || isNaN(baseWidth)) {
+            const currentWidth = parseFloat(svg.getAttribute('width'));
+            if (!currentWidth || isNaN(currentWidth) || currentWidth < 200) {
+                console.error(`Invalid SVG width for ${section}: ${currentWidth}. Cannot apply zoom.`);
+                return; // Abort zoom to prevent shrinking
+            }
+            baseWidth = currentWidth;
+            svg.setAttribute('data-base-width', baseWidth);
+            console.warn(`Base width not set for ${section}, using current: ${baseWidth}`);
+        }
+        if (!baseHeight || isNaN(baseHeight)) {
+            const currentHeight = parseFloat(svg.getAttribute('height'));
+            if (!currentHeight || isNaN(currentHeight) || currentHeight < 100) {
+                console.error(`Invalid SVG height for ${section}: ${currentHeight}. Cannot apply zoom.`);
+                return; // Abort zoom to prevent shrinking
+            }
+            baseHeight = currentHeight;
+            svg.setAttribute('data-base-height', baseHeight);
+            console.warn(`Base height not set for ${section}, using current: ${baseHeight}`);
+        }
+
+        // Calculate new dimensions
+        const newWidth = baseWidth * xZoom;
+        const newHeight = baseHeight * yZoom;
+
+        // Update SVG dimensions
+        svg.setAttribute('width', newWidth);
+        svg.setAttribute('height', newHeight);
+
+        // Transform all elements
+        this.transformElements(svg, xZoom, yZoom);
+
+        // Reset scroll position
+        if (state.container) {
+            state.container.scrollLeft = 0;
+            state.container.scrollTop = 0;
+        }
+
+        console.log(`Zoom applied to ${section}: X=${(xZoom*100).toFixed(0)}%, Y=${(yZoom*100).toFixed(0)}%`);
+    }
+
+    /**
+     * Store base positions for all transformable elements
+     */
+    storeBasePositions(svg) {
+        // Store circle positions (notes)
+        svg.querySelectorAll('circle').forEach(circle => {
+            if (!circle.dataset.baseCx) {
+                circle.dataset.baseCx = circle.getAttribute('cx');
+                circle.dataset.baseCy = circle.getAttribute('cy');
+                circle.dataset.baseR = circle.getAttribute('r');
+            }
+        });
+
+        // Store text positions and associate with parent circles
+        svg.querySelectorAll('text.note-text').forEach(text => {
+            if (!text.dataset.baseX) {
+                const textX = parseFloat(text.getAttribute('x'));
+                const textY = parseFloat(text.getAttribute('y'));
+
+                text.dataset.baseX = textX;
+                text.dataset.baseY = textY;
+
+                // Find associated circle (same x, y within 10px)
+                const associatedCircle = Array.from(svg.querySelectorAll('circle')).find(circle => {
+                    const cx = parseFloat(circle.getAttribute('cx'));
+                    const cy = parseFloat(circle.getAttribute('cy'));
+                    return Math.abs(cx - textX) < 1 && Math.abs(cy - textY) < 10;
+                });
+
+                if (associatedCircle) {
+                    const baseCy = parseFloat(associatedCircle.getAttribute('cy'));
+                    text.dataset.offsetY = textY - baseCy;  // Store fixed offset (usually +6)
+                    text.dataset.associatedCircle = associatedCircle.dataset.baseCx + ',' + associatedCircle.dataset.baseCy;
+                }
+            }
+        });
+
+        // Store other text positions (lyrics, etc)
+        svg.querySelectorAll('text:not(.note-text)').forEach(text => {
+            if (!text.dataset.baseX) {
+                text.dataset.baseX = text.getAttribute('x');
+                text.dataset.baseY = text.getAttribute('y');
+            }
+        });
+
+        // Store line positions
+        svg.querySelectorAll('line').forEach(line => {
+            if (!line.dataset.baseX1) {
+                line.dataset.baseX1 = line.getAttribute('x1');
+                line.dataset.baseY1 = line.getAttribute('y1');
+                line.dataset.baseX2 = line.getAttribute('x2');
+                line.dataset.baseY2 = line.getAttribute('y2');
+            }
+        });
+
+        // Store polygon positions (resonance bands)
+        svg.querySelectorAll('polygon').forEach(polygon => {
+            if (!polygon.dataset.basePoints) {
+                polygon.dataset.basePoints = polygon.getAttribute('points');
+                // V4.0.9: Store note radius for fixed offset
+                const noteRadius = polygon.getAttribute('data-note-radius');
+                if (noteRadius) {
+                    polygon.dataset.noteRadius = noteRadius;
+                }
+            }
+        });
+
+        // Store rect positions (phrase boxes in annotated section)
+        svg.querySelectorAll('rect').forEach(rect => {
+            if (!rect.dataset.baseX && rect.getAttribute('data-base-x')) {
+                // Already has base position from generator
+                return;
+            }
+            if (!rect.dataset.baseX) {
+                rect.dataset.baseX = rect.getAttribute('x');
+                rect.dataset.baseY = rect.getAttribute('y');
+                rect.dataset.baseWidth = rect.getAttribute('width');
+                rect.dataset.baseHeight = rect.getAttribute('height');
+            }
+        });
+
+        // Store g transform positions (semantic icon groups)
+        svg.querySelectorAll('g[data-base-x]').forEach(group => {
+            // These are pre-marked by generator, just ensure transform is stored
+            if (!group.dataset.baseTransform && group.getAttribute('transform')) {
+                group.dataset.baseTransform = group.getAttribute('transform');
+            }
+        });
+    }
+
+    /**
+     * Transform all elements (V3 approach - positions change, sizes don't)
+     */
+    transformElements(svg, xZoom, yZoom) {
+        // First ensure base positions are stored
+        this.storeBasePositions(svg);
+
+        // Transform circles (notes) - PIVOT at 120
+        svg.querySelectorAll('circle').forEach(circle => {
+            const baseCx = parseFloat(circle.dataset.baseCx);
+            const baseCy = parseFloat(circle.dataset.baseCy);
+            const baseR = parseFloat(circle.dataset.baseR);
+
+            // X: pivot at 120 (string labels stay fixed, content zooms)
+            const scaledCx = 60 + (baseCx - 60) * xZoom;
+            circle.setAttribute('cx', scaledCx);
+            circle.setAttribute('cy', baseCy * yZoom);
+            circle.setAttribute('r', baseR);
+        });
+
+        // Transform note text (stays centered on circles) - PIVOT at 120
+        svg.querySelectorAll('text.note-text').forEach(text => {
+            const baseX = parseFloat(text.dataset.baseX);
+            const baseCy = parseFloat(text.dataset.baseY);
+
+            // X: pivot at 120 (same as circles)
+            const scaledX = 60 + (baseX - 60) * xZoom;
+            text.setAttribute('x', scaledX);
+            text.setAttribute('y', baseCy * yZoom);
+        });
+
+        // Transform other text (lyrics, labels, etc) - PIVOT at 120
+        svg.querySelectorAll('text:not(.note-text)').forEach(text => {
+            const baseX = parseFloat(text.dataset.baseX);
+            const baseY = parseFloat(text.dataset.baseY);
+
+            if (isNaN(baseX) || isNaN(baseY)) return;
+
+            // X: pivot at 120
+            const scaledX = 60 + (baseX - 60) * xZoom;
+            text.setAttribute('x', scaledX);
+            text.setAttribute('y', baseY * yZoom);
+        });
+
+        // Transform lines (strings) - PIVOT at 120 for both ends
+        svg.querySelectorAll('line').forEach(line => {
+            const baseX1 = parseFloat(line.dataset.baseX1);
+            const baseY1 = parseFloat(line.dataset.baseY1);
+            const baseX2 = parseFloat(line.dataset.baseX2);
+            const baseY2 = parseFloat(line.dataset.baseY2);
+
+            // Both ends pivot at 120
+            const scaledX1 = 60 + (baseX1 - 60) * xZoom;
+            const scaledX2 = 60 + (baseX2 - 60) * xZoom;
+
+            line.setAttribute('x1', scaledX1);
+            line.setAttribute('y1', baseY1 * yZoom);
+            line.setAttribute('x2', scaledX2);
+            line.setAttribute('y2', baseY2 * yZoom);
+        });
+
+        // Transform polygons (resonance triangles) - PIVOT at 60, stick to note heads
+        svg.querySelectorAll('polygon').forEach(polygon => {
+            const basePoints = polygon.dataset.basePoints;
+            const noteRadius = parseFloat(polygon.dataset.noteRadius || polygon.getAttribute('data-note-radius') || '12');
+
+            const points = basePoints.split(/[\s,]+/).map(parseFloat);
+            const newPoints = [];
+
+            // Triangle has 3 points: (startX, topY), (startX, bottomY), (endX, centerY)
+            for (let i = 0; i < points.length; i += 2) {
+                const baseX = points[i];
+                const baseY = points[i + 1];
+
+                // X: pivot at 60 (same as note heads)
+                const scaledX = 60 + (baseX - 60) * xZoom;
+                // First two points need fixed radius offset
+                const newX = (i === 0 || i === 2) ? scaledX + noteRadius : scaledX;
+
+                newPoints.push(newX, baseY * yZoom);
+            }
+
+            polygon.setAttribute('points', newPoints.join(' '));
+        });
+
+        // Transform rects (phrase boxes and section boxes in annotated section)
+        svg.querySelectorAll('rect').forEach(rect => {
+            // V4.2.14: Prioritize getAttribute (server-generated) over dataset (client-set)
+            const baseX = parseFloat(rect.getAttribute('data-base-x') || rect.dataset.baseX);
+            const baseY = parseFloat(rect.getAttribute('data-base-y') || rect.dataset.baseY);
+            const baseWidth = parseFloat(rect.getAttribute('data-base-width') || rect.dataset.baseWidth);
+            const baseHeight = parseFloat(rect.getAttribute('data-base-height') || rect.dataset.baseHeight);
+
+            if (!isNaN(baseX) && !isNaN(baseWidth)) {
+                // X-axis scaling with pivot at 120 (string label boundary)
+                const scaledX = 60 + (baseX - 60) * xZoom;
+                const scaledWidth = baseWidth * xZoom;
+
+                rect.setAttribute('x', scaledX);
+                rect.setAttribute('width', scaledWidth);
+            }
+
+            if (!isNaN(baseY) && !isNaN(baseHeight)) {
+                rect.setAttribute('y', baseY * yZoom);
+                rect.setAttribute('height', baseHeight * yZoom);
+            }
+        });
+
+        // Transform g elements with translate (semantic icon groups)
+        svg.querySelectorAll('g[data-base-x]').forEach(group => {
+            // V4.2.14: Prioritize getAttribute (server-generated)
+            const baseX = parseFloat(group.getAttribute('data-base-x') || group.dataset.baseX);
+            const transform = group.getAttribute('transform');
+
+            if (!isNaN(baseX) && transform) {
+                // Extract Y from transform: "translate(x, y)"
+                const yMatch = transform.match(/translate\([^,]+,\s*(\d+)\)/);
+                const y = yMatch ? yMatch[1] : 120;
+
+                // Scale X position with pivot
+                const scaledX = 60 + (baseX - 60) * xZoom;
+
+                group.setAttribute('transform', `translate(${scaledX}, ${y})`);
+            }
+        });
+
+        // V4.2.14: Transform text elements with data-base-x (section labels, phrase labels)
+        svg.querySelectorAll('text[data-base-x]').forEach(text => {
+            // Prioritize getAttribute (server-generated)
+            const baseX = parseFloat(text.getAttribute('data-base-x') || text.dataset.baseX);
+            const baseY = parseFloat(text.getAttribute('data-base-y') || text.dataset.baseY);
+
+            if (!isNaN(baseX)) {
+                // Scale X position with pivot at 120
+                const scaledX = 60 + (baseX - 60) * xZoom;
+                text.setAttribute('x', scaledX);
+            }
+
+            if (!isNaN(baseY)) {
+                // Y-axis scaling from top (no pivot)
+                const scaledY = baseY * yZoom;
+                text.setAttribute('y', scaledY);
+            }
+        });
+
+        // V4.2.28: Transform glissando chevrons with dynamic count (add more chevrons when zoomed)
+        const allChevrons = Array.from(svg.querySelectorAll('polyline.glissando-chevron'));
+        if (allChevrons.length > 0) {
+            // Use the centralized transformation logic that regenerates chevrons as needed
+            this.transformGlissandoChevrons(svg, allChevrons, xZoom, yZoom);
+        }
+    }
+
+    /**
+     * Transform glissando chevrons with dynamic chevron count
+     * Regenerates chevrons if path length changes significantly
+     * @param {SVGElement} svg - The SVG element
+     * @param {Array} chevrons - Array of glissando chevron polyline elements
+     * @param {number} xZoom - X-axis zoom level
+     * @param {number} yZoom - Y-axis zoom level
+     */
+    transformGlissandoChevrons(svg, chevrons, xZoom, yZoom) {
+        // Group chevrons by their glissando path (same start/end points)
+        const pathGroups = new Map();
+        chevrons.forEach(polyline => {
+            const baseStartX = parseFloat(polyline.getAttribute('data-base-start-x'));
+            const baseStartY = parseFloat(polyline.getAttribute('data-base-start-y'));
+            const baseEndX = parseFloat(polyline.getAttribute('data-base-end-x'));
+            const baseEndY = parseFloat(polyline.getAttribute('data-base-end-y'));
+
+            if (isNaN(baseStartX) || isNaN(baseStartY) || isNaN(baseEndX) || isNaN(baseEndY)) {
+                return; // Skip if missing data
+            }
+
+            const pathKey = `${baseStartX},${baseStartY},${baseEndX},${baseEndY}`;
+            if (!pathGroups.has(pathKey)) {
+                pathGroups.set(pathKey, {
+                    baseStartX, baseStartY, baseEndX, baseEndY,
+                    chevrons: [],
+                    color: polyline.getAttribute('stroke'),
+                    opacity: polyline.getAttribute('stroke-opacity')
+                });
+            }
+            pathGroups.get(pathKey).chevrons.push(polyline);
+        });
+
+        // Regenerate each glissando path with correct chevron count
+        pathGroups.forEach(pathGroup => {
+            const { baseStartX, baseStartY, baseEndX, baseEndY, chevrons: oldChevrons, color, opacity } = pathGroup;
+
+            // Transform path endpoints with zoom (pivot at 60 for X, no pivot for Y)
+            const scaledStartX = 60 + (baseStartX - 60) * xZoom;
+            const scaledStartY = baseStartY * yZoom;
+            const scaledEndX = 60 + (baseEndX - 60) * xZoom;
+            const scaledEndY = baseEndY * yZoom;
+
+            // Calculate zoomed path length
+            const dx = scaledEndX - scaledStartX;
+            const dy = scaledEndY - scaledStartY;
+            const pathLength = Math.sqrt(dx * dx + dy * dy);
+
+            // Chevron geometry - CONSTANT SIZE
+            const chevronWidth = 14;
+            const chevronDepth = 9;
+
+            // Calculate correct number of chevrons for zoomed path
+            const numChevrons = Math.floor(pathLength / chevronDepth);
+
+            // If chevron count changed, regenerate all chevrons for this path
+            if (numChevrons !== oldChevrons.length) {
+                console.log(`[Glissando Zoom] Regenerating: ${oldChevrons.length} → ${numChevrons} chevrons`);
+
+                // Remove old chevrons
+                oldChevrons.forEach(c => c.remove());
+
+                // Generate new chevrons
+                const firstNote = svg.querySelector('circle');
+
+                // Unit vectors
+                const unitX = dx / pathLength;
+                const unitY = dy / pathLength;
+                const perpX = -unitY;
+                const perpY = unitX;
+
+                const halfWidth = chevronWidth / 2;
+                const spacingX = unitX * chevronDepth;
+                const spacingY = unitY * chevronDepth;
+                const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
+                const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
+                const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
+                const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+
+                for (let i = 0; i < numChevrons; i++) {
+                    const pointX = scaledStartX + spacingX * i;
+                    const pointY = scaledStartY + spacingY * i;
+                    const leftX = pointX + leftArmX;
+                    const leftY = pointY + leftArmY;
+                    const rightX = pointX + rightArmX;
+                    const rightY = pointY + rightArmY;
+
+                    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                    polyline.setAttribute('data-base-start-x', baseStartX);
+                    polyline.setAttribute('data-base-start-y', baseStartY);
+                    polyline.setAttribute('data-base-end-x', baseEndX);
+                    polyline.setAttribute('data-base-end-y', baseEndY);
+                    polyline.setAttribute('data-chevron-index', i);
+                    polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+                    polyline.setAttribute('stroke', color);
+                    polyline.setAttribute('stroke-width', 2);
+                    polyline.setAttribute('stroke-opacity', opacity);
+                    polyline.setAttribute('fill', 'none');
+                    polyline.setAttribute('stroke-linecap', 'round');
+                    polyline.setAttribute('stroke-linejoin', 'miter');
+                    polyline.classList.add('glissando-chevron');
+
+                    svg.insertBefore(polyline, firstNote);
+                }
+            } else {
+                // Same count, just update positions
+                oldChevrons.forEach(polyline => {
+                    const chevronIndex = parseInt(polyline.getAttribute('data-chevron-index'));
+
+                    const unitX = dx / pathLength;
+                    const unitY = dy / pathLength;
+                    const perpX = -unitY;
+                    const perpY = unitX;
+
+                    const halfWidth = chevronWidth / 2;
+                    const spacingX = unitX * chevronDepth;
+                    const spacingY = unitY * chevronDepth;
+                    const leftArmX = -unitX * chevronDepth + perpX * halfWidth;
+                    const leftArmY = -unitY * chevronDepth + perpY * halfWidth;
+                    const rightArmX = -unitX * chevronDepth - perpX * halfWidth;
+                    const rightArmY = -unitY * chevronDepth - perpY * halfWidth;
+
+                    const pointX = scaledStartX + spacingX * chevronIndex;
+                    const pointY = scaledStartY + spacingY * chevronIndex;
+                    const leftX = pointX + leftArmX;
+                    const leftY = pointY + leftArmY;
+                    const rightX = pointX + rightArmX;
+                    const rightY = pointY + rightArmY;
+
+                    polyline.setAttribute('points', `${leftX.toFixed(2)},${leftY.toFixed(2)} ${pointX.toFixed(2)},${pointY.toFixed(2)} ${rightX.toFixed(2)},${rightY.toFixed(2)}`);
+                });
+            }
+        });
+    }
+
+    /**
+     * Apply current zoom to specific glissando chevrons (for newly drawn glissandos)
+     * @param {string} section - Section identifier
+     * @param {Array} chevrons - Array of glissando chevron polyline elements
+     */
+    applyZoomToGlissandos(section, chevrons) {
+        const state = this.zoomState[section];
+        if (!state) return;
+
+        const xZoom = state.x;
+        const yZoom = state.y;
+
+        // Only transform if zoom is not at 100%
+        if (xZoom === 1.0 && yZoom === 1.0) return;
+
+        // Get SVG element from first chevron
+        if (chevrons.length === 0) return;
+        const svg = chevrons[0].parentNode;
+
+        // Use centralized transformation logic
+        this.transformGlissandoChevrons(svg, chevrons, xZoom, yZoom);
+    }
+
+    /**
+     * Update zoom display value
+     */
+    updateZoomDisplay(section, axis, percent) {
+        const displayId = `${section}${axis.toUpperCase()}Value`;
+        const display = document.getElementById(displayId);
+
+        if (display) {
+            display.textContent = percent + '%';
+        }
+    }
+
+    /**
+     * Fit section to container width
+     */
+    fitToWidth(section) {
+        const state = this.zoomState[section];
+
+        if (!state.svgElement || !state.container) {
+            console.warn(`Cannot fit to width - elements missing for section: ${section}`);
+            return;
+        }
+
+        const svgWidth = parseFloat(state.svgElement.getAttribute('width'));
+        const containerWidth = state.container.clientWidth - 30; // Account for padding
+
+        // Calculate zoom needed
+        const zoomNeeded = Math.max(0.01, Math.min(4.0, containerWidth / svgWidth));
+        const zoomPercent = Math.round(zoomNeeded * 100);
+
+        // Apply zoom
+        this.updateZoom(section, 'x', zoomPercent);
+
+        // Update slider
+        const slider = document.getElementById(`${section}XZoom`);
+        if (slider) {
+            slider.value = zoomPercent;
+        }
+    }
+
+    /**
+     * Reset zoom for a section
+     */
+    resetZoom(section) {
+        this.updateZoom(section, 'x', 100);
+        this.updateZoom(section, 'y', 100);
+    }
+
+    /**
+     * Reset all sections to 100%
+     */
+    resetAll() {
+        this.sections.forEach(section => this.resetZoom(section));
+    }
+
+    /**
+     * Get current X zoom level for a section
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @returns {number} - Current X zoom multiplier (1.0 = 100%)
+     */
+    getZoomX(section) {
+        return this.zoomState[section]?.x || 1.0;
+    }
+
+    /**
+     * Get current Y zoom level for a section
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @returns {number} - Current Y zoom multiplier (1.0 = 100%)
+     */
+    getZoomY(section) {
+        return this.zoomState[section]?.y || 1.0;
+    }
+
+    /**
+     * Register a callback to execute when zoom changes
+     * @param {string} section - Section name ('optimal', 'alt1', etc.)
+     * @param {Function} callback - Function to call when zoom changes
+     */
+    onZoomChange(section, callback) {
+        if (!this.onZoomChangeCallbacks[section]) {
+            this.onZoomChangeCallbacks[section] = [];
+        }
+        this.onZoomChangeCallbacks[section].push(callback);
+        console.log(`[ZoomController] Registered callback for ${section}, total callbacks: ${this.onZoomChangeCallbacks[section].length}`);
+    }
+
+    /**
+     * Trigger all callbacks for a section
+     * @param {string} section - Section name
+     */
+    triggerZoomChange(section) {
+        const callbacks = this.onZoomChangeCallbacks[section];
+        console.log(`[ZoomController] Triggering callbacks for ${section}, count: ${callbacks ? callbacks.length : 0}`);
+        if (callbacks && callbacks.length > 0) {
+            callbacks.forEach((callback, index) => {
+                try {
+                    console.log(`[ZoomController] Executing callback ${index} for ${section}`);
+                    callback();
+                } catch (error) {
+                    console.error(`Zoom callback error for ${section}:`, error);
+                }
+            });
+        } else {
+            console.log(`[ZoomController] No callbacks registered for ${section}`);
+        }
+    }
+}
+
+// Export for use in templates
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ZoomController;
+}

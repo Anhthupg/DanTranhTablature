@@ -1,0 +1,22 @@
+name: Keep Render Service Awake
+
+on:
+  schedule:
+    # Run every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render service
+        run: |
+          echo "Pinging Render service..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://dantranh.onrender.com)
+          echo "Response code: $response"
+          if [ "$response" = "200" ]; then
+            echo "✓ Service is awake and responding"
+          else
+            echo "⚠ Service returned code $response (may still be waking up)"
+          fi

@@ -217,17 +217,14 @@ class ZoomController {
      * @param {boolean} skipSync - Skip syncing to other sections (internal use)
      */
     updateZoom(section, axis, percent, skipSync = false) {
-        console.log(`[Zoom] updateZoom called: section=${section}, axis=${axis}, percent=${percent}`);
-
         // Validate section
         if (!this.zoomState[section]) {
-            console.error(`[Zoom] Invalid section: ${section}`);
+            console.error(`Invalid section: ${section}`);
             return;
         }
 
         // Validate zoom range
         const zoom = Math.max(0.01, Math.min(4.0, percent / 100));
-        console.log(`[Zoom] Calculated zoom value: ${zoom}`);
 
         // Update state
         this.zoomState[section][axis] = zoom;
@@ -236,7 +233,6 @@ class ZoomController {
         this.updateZoomDisplay(section, axis, percent);
 
         // Apply zoom to current section
-        console.log(`[Zoom] About to apply zoom to ${section}...`);
         this.applyZoom(section);
 
         // Trigger callbacks for this section
@@ -321,12 +317,10 @@ class ZoomController {
 
         const svg = state.svgElement;
         const { x: xZoom, y: yZoom } = state;
-        console.log(`[Zoom] applyZoom: section=${section}, xZoom=${xZoom}, yZoom=${yZoom}, svg=${svg ? 'found' : 'NULL'}`);
 
         // Get base dimensions with fallback to current dimensions if not set
         let baseWidth = parseFloat(svg.getAttribute('data-base-width'));
         let baseHeight = parseFloat(svg.getAttribute('data-base-height'));
-        console.log(`[Zoom] Base dimensions: width=${baseWidth}, height=${baseHeight}`);
 
         // If base dimensions not set or invalid, use current dimensions
         if (!baseWidth || isNaN(baseWidth)) {

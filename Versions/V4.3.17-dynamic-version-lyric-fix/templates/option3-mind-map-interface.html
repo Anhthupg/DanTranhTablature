@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 3: Mind Map Interface</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #2c3e50;
+            height: 100vh;
+            overflow: hidden;
+            color: white;
+        }
+
+        /* Mind Map Container */
+        .mindmap-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top: Tablature Strip (20% height) */
+        .tablature-strip {
+            height: 20vh;
+            background: white;
+            border-bottom: 3px solid #3498db;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-x: auto;
+        }
+
+        .tablature-strip h2 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        .mini-tablature {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            height: calc(100% - 30px);
+            overflow-x: auto;
+        }
+
+        /* Mind Map Canvas (80% height) */
+        .mindmap-canvas {
+            flex: 1;
+            position: relative;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            overflow: hidden;
+        }
+
+        /* Central Node */
+        .central-node {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: 3px solid #1abc9c;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .central-node:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        /* Primary Branch Nodes */
+        .primary-node {
+            position: absolute;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border: 2px solid #e67e22;
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+            transition: all 0.3s ease;
+            z-index: 90;
+        }
+
+        .primary-node:hover {
+            transform: scale(1.15);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.35);
+        }
+
+        .primary-node.expanded {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            border-color: #1abc9c;
+        }
+
+        /* Secondary Branch Nodes */
+        .secondary-node {
+            position: absolute;
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            border: 2px solid #af7ac5;
+            border-radius: 15px;
+            width: 80px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+            font-size: 10px;
+            text-align: center;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 80;
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        .secondary-node.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .secondary-node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Connection Lines */
+        .connection-line {
+            position: absolute;
+            background: linear-gradient(45deg, #1abc9c, #16a085);
+            height: 3px;
+            border-radius: 2px;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            z-index: 70;
+        }
+
+        .connection-line.active {
+            opacity: 1;
+            height: 4px;
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+        }
+
+        /* Metric Detail Popup */
+        .metric-popup {
+            position: absolute;
+            background: white;
+            color: #2c3e50;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 200;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+            max-width: 300px;
+        }
+
+        .metric-popup.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .popup-title {
+            margin: 0 0 10px 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .popup-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 10px 0;
+        }
+
+        .popup-cross-refs {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #bdc3c7;
+        }
+
+        .popup-cross-ref {
+            display: inline-block;
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 3px 6px;
+            margin: 2px;
+            border-radius: 3px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .popup-cross-ref:hover {
+            background: #d5dbdb;
+        }
+
+        /* Navigation Controls */
+        .navigation-controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 300;
+        }
+
+        .nav-button {
+            display: block;
+            width: 100px;
+            padding: 8px;
+            margin: 5px 0;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .nav-button:hover {
+            background: #2980b9;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 8px;
+            padding: 10px;
+            z-index: 300;
+        }
+
+        .zoom-button {
+            display: block;
+            width: 60px;
+            padding: 8px;
+            margin: 3px 0;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .zoom-button:hover {
+            background: #229954;
+        }
+
+        /* Connection Highlight Effects */
+        .connection-active {
+            animation: pulse-connection 2s infinite;
+        }
+
+        @keyframes pulse-connection {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; box-shadow: 0 0 20px rgba(52, 152, 219, 0.6); }
+            100% { opacity: 0.7; }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .central-node { width: 100px; height: 100px; font-size: 12px; }
+            .primary-node { width: 80px; height: 80px; font-size: 10px; }
+            .secondary-node { width: 60px; height: 45px; font-size: 9px; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="mindmap-container">
+
+        <!-- Top: Tablature Strip (20% height) -->
+        <div class="tablature-strip">
+            <h2>Lý Chiều Chiều - Interactive Mind Map Analysis</h2>
+            <div class="mini-tablature">
+                <svg width="400" height="80" style="background: white;">
+                    <!-- Compact tablature -->
+                    <line x1="20" y1="20" x2="380" y2="20" stroke="#ddd" stroke-width="1"/>
+                    <line x1="20" y1="35" x2="380" y2="35" stroke="#ddd" stroke-width="1"/>
+                    <line x1="20" y1="50" x2="380" y2="50" stroke="#ddd" stroke-width="1"/>
+                    <line x1="20" y1="65" x2="380" y2="65" stroke="#ddd" stroke-width="1"/>
+
+                    <!-- Notes with highlighting capabilities -->
+                    <circle cx="60" cy="35" r="8" fill="#008080" class="mindmap-note" data-connections="pitch,tones,melisma"/>
+                    <circle cx="100" cy="50" r="5" fill="#FFD700" class="mindmap-note grace-note" data-connections="grace,melisma"/>
+                    <circle cx="140" cy="65" r="8" fill="#008080" class="mindmap-note" data-connections="pitch,rhythm"/>
+                    <circle cx="180" cy="50" r="8" fill="#008080" class="mindmap-note" data-connections="pitch,tones"/>
+                </svg>
+                <div style="text-align: center; font-size: 10px; color: #666; margin-top: 2px;">
+                    Click nodes below to see tablature highlights
+                </div>
+            </div>
+        </div>
+
+        <!-- Mind Map Canvas (80% height) -->
+        <div class="mindmap-canvas" id="mindmapCanvas">
+
+            <!-- Central Song Node -->
+            <div class="central-node" onclick="toggleCentralNode()">
+                <div>
+                    <strong>Lý Chiều Chiều</strong><br>
+                    <small>Analysis Hub</small>
+                </div>
+            </div>
+
+            <!-- Primary Analysis Branches -->
+            <!-- Musical Analysis Branch (Top) -->
+            <div class="primary-node" id="musical-node" style="top: 15%; left: 50%; transform: translateX(-50%);" onclick="expandBranch('musical')">
+                <div>🎵<br>Musical<br>Analysis</div>
+            </div>
+
+            <!-- Linguistic Analysis Branch (Right) -->
+            <div class="primary-node" id="linguistic-node" style="top: 50%; right: 15%; transform: translateY(-50%);" onclick="expandBranch('linguistic')">
+                <div>🗣️<br>Linguistic<br>Analysis</div>
+            </div>
+
+            <!-- Correlations Branch (Bottom) -->
+            <div class="primary-node" id="correlations-node" style="bottom: 15%; left: 50%; transform: translateX(-50%);" onclick="expandBranch('correlations')">
+                <div>🔗<br>Cross<br>Correlations</div>
+            </div>
+
+            <!-- Patterns Branch (Left) -->
+            <div class="primary-node" id="patterns-node" style="top: 50%; left: 15%; transform: translateY(-50%);" onclick="expandBranch('patterns')">
+                <div>🔄<br>Patterns &<br>Motifs</div>
+            </div>
+
+            <!-- Secondary Nodes (Musical Branch) -->
+            <div class="secondary-node" id="pitch-node" style="top: 5%; left: 35%;" data-parent="musical" onclick="showNodeDetail('pitch')">
+                <div>Pitch<br>Contour</div>
+            </div>
+            <div class="secondary-node" id="rhythm-node" style="top: 5%; left: 65%;" data-parent="musical" onclick="showNodeDetail('rhythm')">
+                <div>Rhythm<br>Patterns</div>
+            </div>
+            <div class="secondary-node" id="melody-node" style="top: 25%; left: 75%;" data-parent="musical" onclick="showNodeDetail('melody')">
+                <div>Melody<br>Interplay</div>
+            </div>
+
+            <!-- Secondary Nodes (Linguistic Branch) -->
+            <div class="secondary-node" id="tones-node" style="top: 35%; right: 5%;" data-parent="linguistic" onclick="showNodeDetail('tones')">
+                <div>Vietnamese<br>Tones</div>
+            </div>
+            <div class="secondary-node" id="phrases-node" style="top: 65%; right: 5%;" data-parent="linguistic" onclick="showNodeDetail('phrases')">
+                <div>Phrase<br>Positions</div>
+            </div>
+            <div class="secondary-node" id="semantics-node" style="top: 50%; right: 25%;" data-parent="linguistic" onclick="showNodeDetail('semantics')">
+                <div>Semantic<br>Fields</div>
+            </div>
+
+            <!-- Secondary Nodes (Correlations Branch) -->
+            <div class="secondary-node" id="tone-melody-node" style="bottom: 5%; left: 35%;" data-parent="correlations" onclick="showNodeDetail('tone-melody')">
+                <div>Tone-Melody<br>78.4%</div>
+            </div>
+            <div class="secondary-node" id="word-pitch-node" style="bottom: 5%; left: 65%;" data-parent="correlations" onclick="showNodeDetail('word-pitch')">
+                <div>Word-Pitch<br>65.2%</div>
+            </div>
+
+            <!-- Secondary Nodes (Patterns Branch) -->
+            <div class="secondary-node" id="melisma-node" style="top: 35%; left: 5%;" data-parent="patterns" onclick="showNodeDetail('melisma')">
+                <div>Melisma<br>Groups</div>
+            </div>
+            <div class="secondary-node" id="motifs-node" style="top: 65%; left: 5%;" data-parent="patterns" onclick="showNodeDetail('motifs')">
+                <div>Recurring<br>Motifs</div>
+            </div>
+
+            <!-- Connection Lines (hidden initially) -->
+            <div class="connection-line" id="line-central-musical" style="display: none;"></div>
+            <div class="connection-line" id="line-central-linguistic" style="display: none;"></div>
+            <div class="connection-line" id="line-central-correlations" style="display: none;"></div>
+            <div class="connection-line" id="line-central-patterns" style="display: none;"></div>
+
+            <!-- Metric Detail Popup -->
+            <div class="metric-popup" id="metricPopup">
+                <div class="popup-title" id="popupTitle">Metric Details</div>
+                <div class="popup-value" id="popupValue">--</div>
+                <div id="popupDescription">Click nodes to see detailed analysis</div>
+                <div class="popup-cross-refs">
+                    <strong>Connected to:</strong><br>
+                    <div id="popupCrossRefs">
+                        <span class="popup-cross-ref" onclick="navigateToNode('related1')">Related Analysis 1</span>
+                        <span class="popup-cross-ref" onclick="navigateToNode('related2')">Related Analysis 2</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Navigation Controls -->
+    <div class="navigation-controls">
+        <button class="nav-button" onclick="resetView()">Reset View</button>
+        <button class="nav-button" onclick="showAllConnections()">Show All Links</button>
+        <button class="nav-button" onclick="focusMode()">Focus Mode</button>
+        <button class="nav-button" onclick="exportMap()">Export</button>
+    </div>
+
+    <!-- Zoom Controls -->
+    <div class="zoom-controls">
+        <button class="zoom-button" onclick="zoomIn()">+</button>
+        <button class="zoom-button" onclick="zoomOut()">-</button>
+        <button class="zoom-button" onclick="zoomFit()">⌂</button>
+    </div>
+
+    <script>
+        // Mind Map State
+        const mindMapState = {
+            expandedBranches: new Set(),
+            activeConnections: new Set(),
+            selectedNode: null,
+            zoomLevel: 1,
+            panX: 0,
+            panY: 0
+        };
+
+        // Node Data
+        const nodeData = {
+            'pitch': {
+                title: 'Pitch Contour Analysis',
+                value: '5 unique pitches',
+                description: 'Analyzes pure melodic shape without rhythm consideration. Shows ascending (34.2%), descending (41.7%), and static (24.1%) motion patterns.',
+                crossRefs: ['tones', 'melody', 'cultural'],
+                metrics: ['unique-pitches', 'pitch-range', 'ascending-motion', 'pitch-stability']
+            },
+            'tones': {
+                title: 'Vietnamese Tone Analysis',
+                value: '6 tone types',
+                description: 'Ngã tone appears in 80% of melismas, particularly on rank #17 frequency notes. Strong correlation with ornamental passages.',
+                crossRefs: ['melisma', 'correlations', 'pitch'],
+                metrics: ['tone-distribution', 'tone-melody-correlation', 'tone-frequency']
+            },
+            'melisma': {
+                title: 'Melisma & Grace Analysis',
+                value: '8 groups, 12.5% ngã',
+                description: 'Melismatic passages show strong preference for ngã tone syllables. Grace notes function as ornamental subsets of melismas.',
+                crossRefs: ['tones', 'grace-notes', 'ornaments'],
+                metrics: ['melisma-count', 'grace-percentage', 'ornament-complexity']
+            },
+            'tone-melody': {
+                title: 'Tone-Melody Correlation',
+                value: '78.4% match',
+                description: 'Strong correlation between Vietnamese linguistic tones and melodic direction. Rising tones align with ascending intervals 85% of the time.',
+                crossRefs: ['tones', 'pitch', 'cultural'],
+                metrics: ['correlation-strength', 'direction-matches', 'statistical-significance']
+            }
+        };
+
+        // Expand/Collapse Branch
+        function expandBranch(branchId) {
+            const isExpanded = mindMapState.expandedBranches.has(branchId);
+
+            if (isExpanded) {
+                // Collapse branch
+                mindMapState.expandedBranches.delete(branchId);
+                document.getElementById(branchId + '-node').classList.remove('expanded');
+
+                // Hide secondary nodes
+                document.querySelectorAll(`[data-parent="${branchId}"]`).forEach(node => {
+                    node.classList.remove('visible');
+                });
+            } else {
+                // Expand branch
+                mindMapState.expandedBranches.add(branchId);
+                document.getElementById(branchId + '-node').classList.add('expanded');
+
+                // Show secondary nodes
+                setTimeout(() => {
+                    document.querySelectorAll(`[data-parent="${branchId}"]`).forEach(node => {
+                        node.classList.add('visible');
+                    });
+                }, 200);
+            }
+
+            updateConnections();
+        }
+
+        // Show Node Detail
+        function showNodeDetail(nodeId) {
+            const data = nodeData[nodeId];
+            if (!data) return;
+
+            const popup = document.getElementById('metricPopup');
+            document.getElementById('popupTitle').textContent = data.title;
+            document.getElementById('popupValue').textContent = data.value;
+            document.getElementById('popupDescription').textContent = data.description;
+
+            // Update cross-references
+            const crossRefsContainer = document.getElementById('popupCrossRefs');
+            crossRefsContainer.innerHTML = data.crossRefs.map(ref =>
+                `<span class="popup-cross-ref" onclick="navigateToNode('${ref}')">${ref}</span>`
+            ).join('');
+
+            // Position popup near clicked node
+            const node = document.getElementById(nodeId + '-node');
+            const rect = node.getBoundingClientRect();
+            popup.style.left = (rect.left + 50) + 'px';
+            popup.style.top = (rect.top - 100) + 'px';
+
+            // Show popup
+            popup.classList.add('visible');
+
+            // Highlight tablature elements
+            highlightTablatureForNode(nodeId);
+
+            // Show connections to related nodes
+            showNodeConnections(nodeId);
+
+            mindMapState.selectedNode = nodeId;
+        }
+
+        // Update Connection Lines
+        function updateConnections() {
+            // Show/hide connection lines based on expanded branches
+            mindMapState.expandedBranches.forEach(branch => {
+                const line = document.getElementById(`line-central-${branch}`);
+                if (line) {
+                    line.style.display = 'block';
+                    line.classList.add('active');
+                }
+            });
+        }
+
+        // Highlight Tablature for Node
+        function highlightTablatureForNode(nodeId) {
+            // Clear previous highlights
+            document.querySelectorAll('.mindmap-note').forEach(note => {
+                note.style.filter = 'none';
+            });
+
+            // Add highlights based on node type
+            if (nodeId === 'tones') {
+                // Highlight notes with specific tones
+                document.querySelectorAll('.mindmap-note').forEach(note => {
+                    note.style.filter = 'drop-shadow(0 0 8px rgba(156, 89, 182, 0.8))';
+                });
+            }
+
+            if (nodeId === 'melisma') {
+                // Highlight melismatic passages
+                document.querySelectorAll('.grace-note').forEach(note => {
+                    note.style.filter = 'drop-shadow(0 0 10px rgba(241, 196, 15, 0.8))';
+                });
+            }
+        }
+
+        // Show Node Connections
+        function showNodeConnections(nodeId) {
+            const data = nodeData[nodeId];
+            if (!data) return;
+
+            // Highlight connected nodes
+            data.crossRefs.forEach(refId => {
+                const refNode = document.getElementById(refId + '-node');
+                if (refNode) {
+                    refNode.classList.add('connection-active');
+                }
+            });
+
+            // Clear highlights after 3 seconds
+            setTimeout(() => {
+                document.querySelectorAll('.connection-active').forEach(node => {
+                    node.classList.remove('connection-active');
+                });
+            }, 3000);
+        }
+
+        // Navigate to Related Node
+        function navigateToNode(nodeId) {
+            // Hide current popup
+            document.getElementById('metricPopup').classList.remove('visible');
+
+            // Ensure target node is visible
+            const targetNode = document.getElementById(nodeId + '-node');
+            if (targetNode) {
+                const parent = targetNode.getAttribute('data-parent');
+                if (parent && !mindMapState.expandedBranches.has(parent)) {
+                    expandBranch(parent);
+                }
+
+                // Show detail for target node
+                setTimeout(() => {
+                    showNodeDetail(nodeId);
+                }, 500);
+            }
+        }
+
+        // Navigation Functions
+        function resetView() {
+            // Reset all expansions and highlights
+            mindMapState.expandedBranches.clear();
+            document.querySelectorAll('.primary-node').forEach(node => {
+                node.classList.remove('expanded');
+            });
+            document.querySelectorAll('.secondary-node').forEach(node => {
+                node.classList.remove('visible');
+            });
+            document.getElementById('metricPopup').classList.remove('visible');
+        }
+
+        function showAllConnections() {
+            // Expand all branches temporarily
+            ['musical', 'linguistic', 'correlations', 'patterns'].forEach(branch => {
+                if (!mindMapState.expandedBranches.has(branch)) {
+                    expandBranch(branch);
+                }
+            });
+        }
+
+        function focusMode() {
+            // Collapse all except selected node
+            if (mindMapState.selectedNode) {
+                resetView();
+                showNodeDetail(mindMapState.selectedNode);
+            }
+        }
+
+        function exportMap() {
+            alert('Export mind map functionality');
+        }
+
+        // Zoom Functions
+        function zoomIn() {
+            mindMapState.zoomLevel *= 1.2;
+            applyZoom();
+        }
+
+        function zoomOut() {
+            mindMapState.zoomLevel *= 0.8;
+            applyZoom();
+        }
+
+        function zoomFit() {
+            mindMapState.zoomLevel = 1;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            const canvas = document.getElementById('mindmapCanvas');
+            canvas.style.transform = `scale(${mindMapState.zoomLevel})`;
+        }
+
+        // Close popup when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.metric-popup') && !event.target.closest('.secondary-node')) {
+                document.getElementById('metricPopup').classList.remove('visible');
+                mindMapState.selectedNode = null;
+            }
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Option 3: Mind Map Interface Initialized');
+            console.log('Click central node or primary branches to explore analysis');
+        });
+
+    </script>
+
+</body>
+</html>

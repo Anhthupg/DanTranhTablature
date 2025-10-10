@@ -1,0 +1,174 @@
+<!-- Vibrato Sine Wave Component -->
+<!-- Draws smooth sine wave vibratos connecting notes on the same string -->
+<!-- Peaks touch the string line, troughs oscillate downward -->
+
+<style>
+    .vibrato-sinewave {
+        stroke: #FF0000;           /* Red - matches bent notes */
+        stroke-width: 2px;
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        opacity: 0.8;
+        pointer-events: none;      /* Don't interfere with note clicks */
+    }
+
+    .vibrato-sinewave:hover {
+        opacity: 1.0;
+        stroke-width: 2.5px;
+    }
+</style>
+
+<script>
+/**
+ * Vibrato Sine Wave Generator
+ * Creates smooth vibrato indicators between consecutive notes on the same string
+ */
+class VibratoSineWaveGenerator {
+    constructor() {
+        this.defaultAmplitude = 10;      // Default depth in pixels
+        this.defaultFrequency = 3;        // Default number of cycles
+        this.defaultStrokeWidth = 2;      // Default line thickness
+    }
+
+    /**
+     * Generate sine wave path between two points
+     * Peaks touch the string line, wave oscillates downward
+     *
+     * @param {number} startX - Starting X coordinate
+     * @param {number} startY - Starting Y coordinate (string line)
+     * @param {number} endX - Ending X coordinate
+     * @param {number} endY - Ending Y coordinate (string line)
+     * @param {number} amplitude - Wave depth in pixels
+     * @param {number} frequency - Number of wave cycles
+     * @returns {string} SVG path data
+     */
+    generateSineWave(startX, startY, endX, endY, amplitude, frequency) {
+        const distance = endX - startX;
+        const segments = Math.max(50, Math.floor(distance / 2)); // Smooth curve
+        const points = [];
+
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const x = startX + distance * t;
+            const angle = t * frequency * Math.PI * 2;
+
+            // Sine wave oscillates DOWN from string
+            // When sin = -1 (peak), y = startY (touches string)
+            // When sin = +1 (trough), y = startY + amplitude (max depth)
+            const y = startY + (Math.sin(angle) + 1) * amplitude / 2;
+
+            points.push(`${x},${y}`);
+        }
+
+        return `M ${points.join(' L ')}`;
+    }
+
+    /**
+     * Create vibrato path element
+     *
+     * @param {number} startX - Starting X coordinate
+     * @param {number} startY - Starting Y coordinate
+     * @param {number} endX - Ending X coordinate
+     * @param {number} endY - Ending Y coordinate
+     * @param {Object} options - Optional settings
+     * @returns {SVGPathElement} Vibrato path element
+     */
+    createVibratoPath(startX, startY, endX, endY, options = {}) {
+        const amplitude = options.amplitude || this.defaultAmplitude;
+        const frequency = options.frequency || this.defaultFrequency;
+        const strokeWidth = options.strokeWidth || this.defaultStrokeWidth;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'vibrato-sinewave');
+        path.setAttribute('d', this.generateSineWave(startX, startY, endX, endY, amplitude, frequency));
+        path.setAttribute('stroke-width', strokeWidth);
+
+        // Store metadata
+        path.dataset.vibratoStart = `${startX},${startY}`;
+        path.dataset.vibratoEnd = `${endX},${endY}`;
+        path.dataset.vibratoAmplitude = amplitude;
+        path.dataset.vibratoFrequency = frequency;
+
+        return path;
+    }
+
+    /**
+     * Generate vibratos for all consecutive notes on same string
+     *
+     * @param {SVGElement} svg - SVG container
+     * @param {Array} notes - Array of note objects with {x, y, string, isGrace}
+     * @param {Object} options - Optional settings
+     */
+    generateVibratos(svg, notes, options = {}) {
+        // Group notes by string
+        const notesByString = {};
+        notes.forEach(note => {
+            if (!notesByString[note.string]) {
+                notesByString[note.string] = [];
+            }
+            notesByString[note.string].push(note);
+        });
+
+        // Draw vibratos for each string
+        Object.entries(notesByString).forEach(([stringNum, stringNotes]) => {
+            // Sort by x position
+            stringNotes.sort((a, b) => a.x - b.x);
+
+            // Connect consecutive notes with sine waves
+            for (let i = 0; i < stringNotes.length - 1; i++) {
+                const startNote = stringNotes[i];
+                const endNote = stringNotes[i + 1];
+
+                const vibratoPath = this.createVibratoPath(
+                    startNote.x,
+                    startNote.y,
+                    endNote.x,
+                    endNote.y,
+                    options
+                );
+
+                svg.appendChild(vibratoPath);
+            }
+        });
+    }
+
+    /**
+     * Remove all vibrato paths from SVG
+     *
+     * @param {SVGElement} svg - SVG container
+     */
+    clearVibratos(svg) {
+        const vibratos = svg.querySelectorAll('.vibrato-sinewave');
+        vibratos.forEach(v => v.remove());
+    }
+
+    /**
+     * Update vibrato parameters for all existing paths
+     *
+     * @param {SVGElement} svg - SVG container
+     * @param {Object} options - New settings
+     */
+    updateVibratos(svg, options = {}) {
+        const vibratos = svg.querySelectorAll('.vibrato-sinewave');
+
+        vibratos.forEach(path => {
+            const [startX, startY] = path.dataset.vibratoStart.split(',').map(Number);
+            const [endX, endY] = path.dataset.vibratoEnd.split(',').map(Number);
+
+            const amplitude = options.amplitude || parseFloat(path.dataset.vibratoAmplitude);
+            const frequency = options.frequency || parseFloat(path.dataset.vibratoFrequency);
+            const strokeWidth = options.strokeWidth || parseFloat(path.getAttribute('stroke-width'));
+
+            path.setAttribute('d', this.generateSineWave(startX, startY, endX, endY, amplitude, frequency));
+            path.setAttribute('stroke-width', strokeWidth);
+
+            path.dataset.vibratoAmplitude = amplitude;
+            path.dataset.vibratoFrequency = frequency;
+        });
+    }
+}
+
+// Initialize global instance
+window.vibratoGenerator = new VibratoSineWaveGenerator();
+</script>

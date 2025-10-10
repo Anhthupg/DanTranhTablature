@@ -1,0 +1,535 @@
+<!-- Glissando Suggestions Panel -->
+<style>
+    .glissando-panel {
+        background: white;
+        border: 2px solid #FFD700;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 15px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .glissando-panel h4 {
+        margin: 0 0 12px 0;
+        color: #008080;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .glissando-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .gliss-btn {
+        padding: 8px 14px;
+        border: 2px solid #e1e8ed;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .gliss-btn.active {
+        background: #FFD700;
+        border-color: #FFD700;
+        font-weight: 600;
+    }
+
+    .gliss-btn:hover {
+        border-color: #FFD700;
+        transform: translateY(-1px);
+    }
+
+    .glissando-info {
+        background: #F5F5F5;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: #2C3E50;
+        min-height: 50px;
+    }
+
+    .glissando-legend {
+        display: flex;
+        gap: 20px;
+        margin: 10px 0;
+        font-size: 0.85rem;
+        flex-wrap: wrap;
+    }
+
+    .glissando-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* SVG Marker styles */
+    .glissando-marker {
+        transition: all 0.2s;
+    }
+
+    .glissando-marker:hover {
+        transform: scale(1.3);
+    }
+</style>
+
+<div class="glissando-panel" style="border: none; background: transparent; padding: 0; margin: 8px 0;">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.9rem;">
+        <span style="font-weight: 600; color: #008080;">Glissando Á</span>
+        <button id="toggleAllGlissandosBtn" onclick="toggleAllGlissandos()" style="padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Draw All</button>
+        <div id="durationRadioButtons" style="display: flex; gap: 8px; align-items: center;">
+            <!-- Checkboxes will be inserted here -->
+        </div>
+        <span id="glissandoInfo" style="color: #666; font-size: 0.85rem; margin-left: auto;">
+            Select durations
+        </span>
+
+        <!-- Vibrato controls inline -->
+        <div id="optimalVibratoControls" style="display: contents;">
+            <!-- Vibrato checkboxes will be generated here by VibratoController -->
+        </div>
+    </div>
+</div>
+
+<script>
+// Glissando drawing state
+let glissandosVisible = true;
+let glissandosDrawn = false;
+
+// Auto-load glissando analysis when page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait a bit for page to fully load
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Try to get song name from page title or default
+    const titleElement = document.querySelector('h1, .song-title');
+    let songName = 'Bà rằng bà rí'; // default
+
+    // Try various methods to get current song name
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('song')) {
+        songName = urlParams.get('song');
+    } else if (titleElement) {
+        songName = titleElement.textContent.trim();
+    }
+
+    console.log(`Loading glissando analysis for song: "${songName}"`);
+
+    try {
+        // Initialize controller with optimal SVG
+        const initialized = window.glissandoController.initialize('optimalSvg');
+
+        if (!initialized) {
+            throw new Error('Could not initialize glissando controller');
+        }
+
+        // Analyze SVG notes directly (no server call needed)
+        window.glissandoController.analyzeSVGNotes();
+
+        const candidates = window.glissandoController.glissandoCandidates;
+
+        if (candidates && candidates.length > 0) {
+            console.log(`Found ${candidates.length} glissando candidates from SVG`);
+
+            // Group candidates by duration
+            const durationGroups = {};
+            candidates.forEach(c => {
+                if (!durationGroups[c.duration]) {
+                    durationGroups[c.duration] = [];
+                }
+                durationGroups[c.duration].push(c);
+            });
+
+            // Sort durations (longest first)
+            const sortedDurations = Object.keys(durationGroups).map(parseFloat).sort((a, b) => b - a);
+
+            // Create checkboxes for each duration (allow multiple selection)
+            const radioContainer = document.getElementById('durationRadioButtons');
+
+            // First, add special "First" and "Last" checkboxes
+            let checkboxesHTML = `
+                <label title="Draw glissando on the first note (does not follow duration rules)"
+                       style="display: flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #FFD700; padding: 2px 6px; border-radius: 4px; background: rgba(255, 215, 0, 0.1);">
+                    <input type="checkbox" id="firstNoteGlissando" onchange="toggleFirstNoteGlissando(this.checked)">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #CC9900;">First</span>
+                </label>
+                <label title="Draw glissando on the last note (does not follow duration rules)"
+                       style="display: flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #FFD700; padding: 2px 6px; border-radius: 4px; background: rgba(255, 215, 0, 0.1);">
+                    <input type="checkbox" id="lastNoteGlissando" onchange="toggleLastNoteGlissando(this.checked)">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #CC9900;">Last</span>
+                </label>
+            `;
+
+            // Then add duration-based checkboxes
+            checkboxesHTML += sortedDurations.map((duration, index) => {
+                const count = durationGroups[duration].length;
+                const color = '#000000';  // All black now
+                const stats = window.glissandoController.durationStats[duration];
+                const percentage = stats ? stats.percentage : '0.0';
+
+                // Calculate opacity for display (same as controller logic)
+                const opacity = Math.max(0.2, 1.0 - (index * 0.20));
+                const opacityPercent = Math.round(opacity * 100);
+
+                return `
+                    <label title="${count} glissandos for ${duration}-beat notes (${percentage}% of song, ${opacityPercent}% opacity)"
+                           style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <input type="checkbox" name="glissandoDuration" value="${duration}" onchange="toggleGlissandosByDuration(${duration}, this.checked)">
+                        <span style="width: 10px; height: 10px; border-radius: 50%; background: ${color}; opacity: ${opacity};"></span>
+                        <span style="font-size: 0.85rem;">${duration}b (${count}, ${percentage}%)</span>
+                    </label>
+                `;
+            }).join('');
+
+            radioContainer.innerHTML = checkboxesHTML;
+
+            // Update info
+            updateGlissandoInfo();
+
+            // Enable draw button
+            document.getElementById('drawAllGlissandosBtn').disabled = false;
+
+            // Check if last note is in candidates - grey out Last checkbox if so
+            checkAndGreyOutLastCheckbox();
+        } else {
+            console.warn('No glissando candidates found in SVG');
+            document.getElementById('glissandoInfo').innerHTML = `
+                <span style="color: #E67E22;">No glissando candidates found (no notes >= 1.5 beats).</span>
+            `;
+        }
+    } catch (error) {
+        console.error('Error analyzing glissando:', error);
+        document.getElementById('glissandoInfo').innerHTML = `
+            <span style="color: #E74C3C;">Error: ${error.message}</span>
+        `;
+    }
+});
+
+// Toggle glissandos for a specific duration
+function toggleGlissandosByDuration(duration, isChecked) {
+    try {
+        // Get candidates with this duration
+        const candidates = window.glissandoController.glissandoCandidates.filter(c => c.duration === duration);
+
+        if (candidates.length === 0) {
+            console.warn(`No candidates found for duration ${duration}`);
+            return;
+        }
+
+        if (isChecked) {
+            // Draw glissandos for this duration
+            candidates.forEach(candidate => {
+                window.glissandoController.drawGlissandoForCandidate(candidate.noteIndex);
+            });
+        } else {
+            // Remove glissandos for this duration
+            candidates.forEach(candidate => {
+                window.glissandoController.removeGlissandoForNote(candidate.noteIndex);
+            });
+        }
+
+        // Update info and button state
+        updateGlissandoInfo();
+        updateToggleButtonState();
+
+        // Re-check if Last checkbox should be greyed out
+        checkAndGreyOutLastCheckbox();
+
+    } catch (error) {
+        console.error('Error toggling glissandos:', error);
+    }
+}
+
+// Update info panel based on active glissandos
+function updateGlissandoInfo() {
+    // Always show "Select durations" - don't show count
+    document.getElementById('glissandoInfo').innerHTML = `
+        Select durations
+    `;
+
+    // Update button state
+    updateToggleButtonState();
+}
+
+// Toggle all glissandos on/off
+function toggleAllGlissandos() {
+    const button = document.getElementById('toggleAllGlissandosBtn');
+    const durationCheckboxes = document.querySelectorAll('input[name="glissandoDuration"]');
+    const firstCheckbox = document.getElementById('firstNoteGlissando');
+    const lastCheckbox = document.getElementById('lastNoteGlissando');
+
+    // Check if any are currently checked
+    const anyChecked = Array.from(durationCheckboxes).some(cb => cb.checked) ||
+                       firstCheckbox?.checked ||
+                       lastCheckbox?.checked;
+
+    if (anyChecked) {
+        // Clear all
+        durationCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                checkbox.checked = false;
+                toggleGlissandosByDuration(parseFloat(checkbox.value), false);
+            }
+        });
+
+        // Clear First
+        if (firstCheckbox?.checked) {
+            firstCheckbox.checked = false;
+            toggleFirstNoteGlissando(false);
+        }
+
+        // Clear Last
+        if (lastCheckbox?.checked && !lastCheckbox.disabled) {
+            lastCheckbox.checked = false;
+            toggleLastNoteGlissando(false);
+        }
+
+        button.textContent = 'Draw All';
+    } else {
+        // Draw all
+        durationCheckboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                checkbox.checked = true;
+                toggleGlissandosByDuration(parseFloat(checkbox.value), true);
+            }
+        });
+
+        // Draw First
+        if (firstCheckbox && !firstCheckbox.checked) {
+            firstCheckbox.checked = true;
+            toggleFirstNoteGlissando(true);
+        }
+
+        // Draw Last (only if not disabled)
+        if (lastCheckbox && !lastCheckbox.checked && !lastCheckbox.disabled) {
+            lastCheckbox.checked = true;
+            toggleLastNoteGlissando(true);
+        }
+
+        button.textContent = 'Clear All';
+    }
+
+    updateGlissandoInfo();
+}
+
+// Update button text based on checkbox state
+function updateToggleButtonState() {
+    const button = document.getElementById('toggleAllGlissandosBtn');
+    const durationCheckboxes = document.querySelectorAll('input[name="glissandoDuration"]');
+    const firstCheckbox = document.getElementById('firstNoteGlissando');
+    const lastCheckbox = document.getElementById('lastNoteGlissando');
+
+    const anyChecked = Array.from(durationCheckboxes).some(cb => cb.checked) ||
+                       firstCheckbox?.checked ||
+                       lastCheckbox?.checked;
+
+    button.textContent = anyChecked ? 'Clear All' : 'Draw All';
+}
+
+// Toggle glissando on first note (does not follow duration rules)
+function toggleFirstNoteGlissando(isChecked) {
+    try {
+        // Get all notes from SVG
+        const svg = document.getElementById('optimalSvg');
+        if (!svg) {
+            console.error('SVG not found');
+            return;
+        }
+
+        // Find first main note (not grace note)
+        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+        const firstMainNote = allNotes.find(note => {
+            const isGrace = note.getAttribute('r') === '6'; // Grace notes have radius 6
+            return !isGrace;
+        });
+
+        if (!firstMainNote) {
+            console.error('First note not found');
+            return;
+        }
+
+        const firstNoteIndex = parseInt(firstMainNote.getAttribute('data-note-index'));
+
+        if (isChecked) {
+            // Get first priority X delta
+            const firstPriorityDelta = window.glissandoController.getFirstPriorityXDelta();
+
+            if (firstPriorityDelta) {
+                // Draw glissando TO first note with same X delta as first priority
+                window.glissandoController.drawGlissandoToNote(firstNoteIndex, firstPriorityDelta);
+                console.log(`Drew glissando TO first note (#${firstNoteIndex}) with first priority delta`);
+            } else {
+                console.warn('Could not calculate first priority delta');
+            }
+        } else {
+            // Remove glissando for first note
+            window.glissandoController.removeGlissandoForNote(firstNoteIndex);
+            console.log(`Removed glissando for first note (#${firstNoteIndex})`);
+        }
+
+        updateGlissandoInfo();
+
+    } catch (error) {
+        console.error('Error toggling first note glissando:', error);
+    }
+}
+
+// Check if last note is already in candidates and grey out Last checkbox
+function checkAndGreyOutLastCheckbox() {
+    try {
+        const svg = document.getElementById('optimalSvg');
+        if (!svg) return;
+
+        // Find last main note
+        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+        const mainNotes = allNotes.filter(note => {
+            const isGrace = note.getAttribute('r') === '6';
+            return !isGrace;
+        });
+
+        const lastMainNote = mainNotes[mainNotes.length - 1];
+        if (!lastMainNote) return;
+
+        const lastNoteIndex = parseInt(lastMainNote.getAttribute('data-note-index'));
+
+        // Check if last note is in candidates
+        const isInCandidates = window.glissandoController.glissandoCandidates.some(c => c.noteIndex === lastNoteIndex);
+
+        const lastCheckbox = document.getElementById('lastNoteGlissando');
+        const lastLabel = lastCheckbox?.parentElement;
+
+        if (isInCandidates) {
+            // Grey out and disable
+            if (lastCheckbox) {
+                lastCheckbox.disabled = true;
+                lastCheckbox.checked = false;
+            }
+            if (lastLabel) {
+                lastLabel.style.opacity = '0.4';
+                lastLabel.style.cursor = 'not-allowed';
+                lastLabel.title = 'Last note already included in duration-based candidates';
+            }
+            console.log('Last checkbox greyed out - note already in candidates');
+        } else {
+            // Enable
+            if (lastCheckbox) {
+                lastCheckbox.disabled = false;
+            }
+            if (lastLabel) {
+                lastLabel.style.opacity = '1.0';
+                lastLabel.style.cursor = 'pointer';
+                lastLabel.title = 'Draw glissando on the last note (does not follow duration rules)';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking last note:', error);
+    }
+}
+
+// Toggle glissando on last note (does not follow duration rules)
+function toggleLastNoteGlissando(isChecked) {
+    try {
+        // Get all notes from SVG
+        const svg = document.getElementById('optimalSvg');
+        if (!svg) {
+            console.error('SVG not found');
+            return;
+        }
+
+        // Find last main note (not grace note)
+        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+        const mainNotes = allNotes.filter(note => {
+            const isGrace = note.getAttribute('r') === '6'; // Grace notes have radius 6
+            return !isGrace;
+        });
+
+        const lastMainNote = mainNotes[mainNotes.length - 1];
+
+        if (!lastMainNote) {
+            console.error('Last note not found');
+            return;
+        }
+
+        const lastNoteIndex = parseInt(lastMainNote.getAttribute('data-note-index'));
+
+        if (isChecked) {
+            // Find previous note (could be main or grace)
+            const previousNote = window.glissandoController.findPreviousNote(lastNoteIndex);
+
+            if (!previousNote) {
+                console.warn('No previous note found for last note');
+                return;
+            }
+
+            // Calculate delta X based on previous note's dotted status
+            const deltaX = lastMainNote.getAttribute('cx') - previousNote.x;
+
+            // Calculate X-From based on dotted status
+            let xFrom;
+            if (previousNote.isDotted) {
+                // Dotted: 1/3 from previous, 2/3 to target
+                xFrom = previousNote.x + (deltaX * 1/3);
+            } else {
+                // Normal: midway
+                xFrom = previousNote.x + (deltaX * 0.5);
+            }
+
+            const lastNoteX = parseFloat(lastMainNote.getAttribute('cx'));
+            const lastNoteY = parseFloat(lastMainNote.getAttribute('cy'));
+
+            // Calculate Y-From (edgemost string)
+            const yFrom = window.glissandoController.calculateGlissandoStartY(previousNote.y, lastNoteY);
+
+            // Draw glissando with calculated positions
+            const chevrons = window.glissandoController.generateGlissando({
+                startX: xFrom,
+                startY: yFrom,
+                endX: lastNoteX,
+                endY: lastNoteY,
+                color: '#000000',
+                opacity: 1.0
+            });
+
+            // Insert chevrons
+            const firstNote = svg.querySelector('circle');
+            chevrons.forEach(chevron => {
+                svg.insertBefore(chevron, firstNote);
+            });
+
+            // Store path data
+            window.glissandoController.glissandoPaths.push({
+                candidateIndex: lastNoteIndex,
+                targetIndex: lastNoteIndex,
+                xFrom, yFrom,
+                xTo: lastNoteX,
+                yTo: lastNoteY,
+                chevrons,
+                color: '#000000'
+            });
+
+            window.glissandoController.activeGlissandos.add(lastNoteIndex);
+
+            console.log(`Drew glissando TO last note (#${lastNoteIndex})`);
+            console.log(`  Previous note dotted: ${previousNote.isDotted}, X-From: ${xFrom.toFixed(1)}px`);
+        } else {
+            // Remove glissando for last note
+            window.glissandoController.removeGlissandoForNote(lastNoteIndex);
+            console.log(`Removed glissando for last note (#${lastNoteIndex})`);
+        }
+
+        updateGlissandoInfo();
+
+    } catch (error) {
+        console.error('Error toggling last note glissando:', error);
+    }
+}
+</script>

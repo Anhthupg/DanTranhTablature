@@ -84,7 +84,7 @@ module.exports = function(app, baseDir, templateComposer) {
 
             // 7. Render template
             const html = templateComposer.render('v4-vertical-header-sections-annotated.html', {
-                VERSION: 'v4.3.12',
+                VERSION: 'v4.3.11',
                 SONG_NAME: songData.metadata.title,
                 BACKEND_ID: backendId,  // For client-side pattern controller
                 SVG_WIDTH: tablatures.width,

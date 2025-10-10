@@ -83,8 +83,9 @@ module.exports = function(app, baseDir, templateComposer) {
             const statistics = songDataService.calculateStatistics(songData);
 
             // 7. Render template
+            const packageJson = require('../package.json');
             const html = templateComposer.render('v4-vertical-header-sections-annotated.html', {
-                VERSION: 'v4.3.15',
+                VERSION: `v${packageJson.version}`,
                 SONG_NAME: songData.metadata.title,
                 BACKEND_ID: backendId,  // For client-side pattern controller
                 SVG_WIDTH: tablatures.width,

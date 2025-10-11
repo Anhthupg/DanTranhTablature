@@ -37,12 +37,11 @@ Process next batch and repeat Steps 2-3.
 ## Batches
 
 
-### Batch 1 (3 songs)
+### Batch 1 (2 songs)
 
 Songs:
-1. Hò Bơi Thuyền
-2. Hò Dố Khoan Dố Huầy (hò Chèo Thuyền)
-3. Hò Nện
+1. Dạ Cổ Hoài Lang
+2. Let It Be
 
 Prompt: `data/segmentation-prompts/batch-1.txt`
 

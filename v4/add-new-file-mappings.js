@@ -8,47 +8,37 @@ const path = require('path');
 const mappingsFile = path.join(__dirname, 'data/song-name-mappings.json');
 const mappings = JSON.parse(fs.readFileSync(mappingsFile, 'utf8'));
 
-// Add 4 new mappings
+// Add 3 new mappings
 const newMappings = {
-  "sakura-folksong-japanese-melody": {
-    "displayName": "Sakura Folksong Japanese Melody",
-    "fileName": "sakura-folksong-japanese-melody",
-    "originalTitle": "Sakura, Sakura",
-    "musicXMLFile": "Sakura_folksong_Japanese_Melody.musicxml",
-    "category": "nonvietnamese-skeletal",
-    "region": "Japan",
+  "ly-cay-da": {
+    "displayName": "Lý Cây Đa",
+    "fileName": "ly-cay-da",
+    "originalTitle": "Lý Cây Đa",
+    "musicXMLFile": "LÝ_CÂY_ĐA.musicxml",
+    "category": "vietnamese-skeletal",
+    "region": "Unknown",
     "performanceContext": "folk_song",
-    "alternateSpellings": ["Sakura Melody", "Sakura Folksong Japanese Melody"]
+    "alternateSpellings": ["Ly Cay Da", "LÝ_CÂY_ĐA"]
   },
-  "sakura-folksong-japanese-tranh": {
-    "displayName": "Sakura Folksong Japanese Tranh",
-    "fileName": "sakura-folksong-japanese-tranh",
-    "originalTitle": "Sakura, Sakura",
-    "musicXMLFile": "Sakura_folksong_Japanese_Tranh.musicxml",
-    "category": "nonvietnamese-dantranh",
-    "region": "Japan",
-    "performanceContext": "folk_song_interpretation",
-    "alternateSpellings": ["Sakura Tranh", "Sakura Folksong Japanese Tranh"]
+  "da-co-hoai-lang": {
+    "displayName": "Dạ Cổ Hoài Lang",
+    "fileName": "da-co-hoai-lang",
+    "originalTitle": "Dạ Cổ Hoài Lang",
+    "musicXMLFile": "Dạ_Cổ_Hoài_Lang.musicxml",
+    "category": "vietnamese-skeletal",
+    "region": "Southern",
+    "performanceContext": "folk_song",
+    "alternateSpellings": ["Da Co Hoai Lang", "Dạ_Cổ_Hoài_Lang"]
   },
-  "exercise-1-dan-tranh": {
-    "displayName": "Exercise 1 Dan Tranh",
-    "fileName": "exercise-1-dan-tranh",
-    "originalTitle": "Đàn Tranh: Exercise #1",
-    "musicXMLFile": "Exercise-1_dan-tranh.musicxml",
-    "category": "exercises-dantranh",
-    "region": "N/A",
-    "performanceContext": "technical_exercise",
-    "alternateSpellings": ["Exercise 1", "Dan Tranh Exercise 1"]
-  },
-  "exercise-2-dan-tranh": {
-    "displayName": "Exercise 2 Dan Tranh",
-    "fileName": "exercise-2-dan-tranh",
-    "originalTitle": "Đàn Tranh: Exercise #2",
-    "musicXMLFile": "Exercise-2_dan-tranh.musicxml",
-    "category": "exercises-dantranh",
-    "region": "N/A",
-    "performanceContext": "technical_exercise",
-    "alternateSpellings": ["Exercise 2", "Dan Tranh Exercise 2"]
+  "let-it-be": {
+    "displayName": "Let It Be",
+    "fileName": "let-it-be",
+    "originalTitle": "Let It Be",
+    "musicXMLFile": "Let_It_Be.musicxml",
+    "category": "nonvietnamese-skeletal",
+    "region": "International",
+    "performanceContext": "popular_song",
+    "alternateSpellings": ["Let It Be", "Let_It_Be"]
   }
 };
 
@@ -58,13 +48,13 @@ Object.keys(newMappings).forEach(backendId => {
 });
 
 // Update metadata
-mappings.metadata.totalSongs += 4;
+mappings.metadata.totalSongs += 3;
 mappings.metadata.generatedDate = new Date().toISOString();
 
 // Save
 fs.writeFileSync(mappingsFile, JSON.stringify(mappings, null, 2));
 
-console.log('✅ Added 4 new name mappings:');
+console.log('✅ Added 3 new name mappings:');
 Object.keys(newMappings).forEach(id => {
   console.log(`  - ${id} → ${newMappings[id].displayName}`);
 });

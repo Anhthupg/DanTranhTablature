@@ -925,9 +925,9 @@
                             </button>
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label style="font-size: 12px; color: #666;">Tempo:</label>
-                                <input type="range" min="40" max="240" value="120" step="10" id="tempoSlider"
+                                <input type="range" min="10" max="300" value="120" step="10" id="tempoSlider"
                                        style="width: 80px; cursor: pointer;"
-                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value; }">
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value + ' BPM'; }">
                                 <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
                             </div>
                         </div>
@@ -1100,9 +1100,9 @@
                             </button>
                             <div style="display: flex; align-items: center; gap: 5px;">
                                 <label style="font-size: 12px; color: #666;">Tempo:</label>
-                                <input type="range" min="40" max="240" value="120" step="10" id="tempoSlider"
+                                <input type="range" min="10" max="300" value="120" step="10" id="tempoSlider"
                                        style="width: 80px; cursor: pointer;"
-                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value; }">
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value + ' BPM'; }">
                                 <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
                             </div>
                         </div>
@@ -2847,6 +2847,73 @@
             console.log('Bent note counts are server-calculated via tuning optimizer');
         }
 
+        // V4.3.23: Initialize settings from URL parameters
+        function initializeFromURLParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // 1. Apply tempo parameter (default: 120 BPM)
+            const tempo = urlParams.get('tempo');
+            if (tempo && window.audioController) {
+                const bpm = parseInt(tempo);
+                if (bpm >= 10 && bpm <= 300) {
+                    window.audioController.setTempo(bpm);
+
+                    // Update slider UI
+                    const tempoSlider = document.getElementById('tempoSlider');
+                    const tempoValue = document.getElementById('tempoValue');
+                    if (tempoSlider) tempoSlider.value = bpm;
+                    if (tempoValue) tempoValue.textContent = bpm + ' BPM';
+
+                    console.log(`[URL Params] Set tempo to ${bpm} BPM`);
+                }
+            }
+
+            // 2. Apply label mode parameter (default: 'abc')
+            // Supports: abc, doremi, string
+            const labelMode = urlParams.get('labelMode');
+            if (labelMode && ['abc', 'doremi', 'string'].includes(labelMode)) {
+                // Apply to optimal section
+                updateLabelMode('optimal', labelMode);
+
+                // Update radio button UI
+                const radio = document.querySelector(`input[name="optimalLabelMode"][value="${labelMode}"]`);
+                if (radio) radio.checked = true;
+
+                // Also apply to alt1 section
+                updateLabelMode('alt1', labelMode);
+                const alt1Radio = document.querySelector(`input[name="alt1LabelMode"][value="${labelMode}"]`);
+                if (alt1Radio) alt1Radio.checked = true;
+
+                console.log(`[URL Params] Set label mode to ${labelMode}`);
+            }
+
+            // 3. Apply string offset parameter (default: 0)
+            // Only relevant when labelMode=string
+            const stringOffset = urlParams.get('stringOffset');
+            if (stringOffset && labelMode === 'string') {
+                const offset = parseInt(stringOffset);
+                if (offset >= -12 && offset <= 12) {
+                    window.labelModeState.optimal.offset = offset;
+                    window.labelModeState.alt1.offset = offset;
+
+                    // Update display
+                    const offsetDisplay = document.getElementById('optimalOffsetValue');
+                    if (offsetDisplay) offsetDisplay.textContent = offset;
+
+                    const alt1OffsetDisplay = document.getElementById('alt1OffsetValue');
+                    if (alt1OffsetDisplay) alt1OffsetDisplay.textContent = offset;
+
+                    // Refresh labels
+                    updateNoteLabels('optimal');
+                    updateNoteLabels('alt1');
+
+                    console.log(`[URL Params] Set string offset to ${offset}`);
+                }
+            }
+
+            console.log('[URL Params] Initialization complete');
+        }
+
         // Initialize tablatures on page load
         document.addEventListener('DOMContentLoaded', function() {
             // OLD DEMO TABLATURE REMOVED - Library controller loads real songs now
@@ -2922,6 +2989,9 @@
                 window.audioController = new AudioPlaybackController();
                 window.audioController.initialize();
                 console.log('AudioPlaybackController loaded successfully');
+
+                // V4.3.23: Apply URL parameters AFTER audioController is initialized
+                initializeFromURLParams();
 
                 // Initialize with server-rendered SVG on page load
                 setTimeout(() => {

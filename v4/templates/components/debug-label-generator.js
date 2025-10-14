@@ -83,7 +83,7 @@ function generateStringDebugLabels(params) {
     const {
         showYValues = true,
         showBoundaries = true,
-        labelX = 50,
+        labelX = 5,
         yValueX = 85,
         boundaryX = 5
     } = config;

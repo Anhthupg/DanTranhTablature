@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibrato System Test - Dan Tranh V4</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #008080;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .vibrato-controls {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 2px solid #008080;
+        }
+
+        .tablature-container {
+            overflow-x: auto;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            padding: 10px;
+            max-height: 600px;
+        }
+
+        .test-info {
+            background: #e8f5e9;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4caf50;
+        }
+
+        .test-info h3 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+
+        .test-info ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+
+        .test-info li {
+            margin: 4px 0;
+        }
+
+        /* Vibrato sine wave styling */
+        .vibrato-sinewave {
+            stroke: #FF0000;
+            stroke-width: 2px;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .vibrato-sinewave:hover {
+            opacity: 1.0;
+            stroke-width: 2.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Vibrato System Test - Vietnamese Dan Tranh</h1>
+
+        <div class="description">
+            <p><strong>Vietnamese Music Rule:</strong> Vibrato applies to entire pitch classes across all octaves.</p>
+            <p>Example: Enabling <strong>F</strong> vibrato affects F4, F5, F6, etc.</p>
+        </div>
+
+        <div class="test-info">
+            <h3>How to Test:</h3>
+            <ul>
+                <li>Check the pitch class checkboxes below to enable vibrato</li>
+                <li>Vibrato starts at note center and ends when next note on same string is plucked</li>
+                <li>If no next note, vibrato continues for half note duration (42.5px)</li>
+                <li>Only used strings and used notes show vibrato</li>
+            </ul>
+        </div>
+
+        <div class="vibrato-controls" id="vibratoControlsContainer">
+            <!-- Vibrato checkboxes will be dynamically generated here -->
+        </div>
+
+        <div class="tablature-container" id="tablatureContainer">
+            <!-- Tablature SVG will be loaded here -->
+            <p style="text-align: center; color: #999; padding: 40px;">Loading tablature...</p>
+        </div>
+    </div>
+
+    <!-- Load vibrato components -->
+    <script src="/vibrato-controller.js"></script>
+    <script>
+        // Include VibratoSineWaveGenerator inline (from vibrato-sinewave.html)
+        class VibratoSineWaveGenerator {
+            constructor() {
+                this.defaultAmplitude = 10;
+                this.defaultFrequency = 3;
+                this.defaultStrokeWidth = 2;
+            }
+
+            generateSineWave(startX, startY, endX, endY, amplitude, frequency) {
+                const distance = endX - startX;
+                const segments = Math.max(50, Math.floor(distance / 2));
+                const points = [];
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const x = startX + distance * t;
+                    const angle = t * frequency * Math.PI * 2;
+                    const y = startY + (Math.sin(angle) + 1) * amplitude / 2;
+                    points.push(`${x},${y}`);
+                }
+
+                return `M ${points.join(' L ')}`;
+            }
+
+            createVibratoPath(startX, startY, endX, endY, options = {}) {
+                const amplitude = options.amplitude || this.defaultAmplitude;
+                const frequency = options.frequency || this.defaultFrequency;
+                const strokeWidth = options.strokeWidth || this.defaultStrokeWidth;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('class', 'vibrato-sinewave');
+                path.setAttribute('d', this.generateSineWave(startX, startY, endX, endY, amplitude, frequency));
+                path.setAttribute('stroke-width', strokeWidth);
+
+                path.dataset.vibratoStart = `${startX},${startY}`;
+                path.dataset.vibratoEnd = `${endX},${endY}`;
+                path.dataset.vibratoAmplitude = amplitude;
+                path.dataset.vibratoFrequency = frequency;
+
+                return path;
+            }
+
+            clearVibratos(svg) {
+                const vibratos = svg.querySelectorAll('.vibrato-sinewave');
+                vibratos.forEach(v => v.remove());
+            }
+        }
+
+        // Make generator globally available
+        window.vibratoGenerator = new VibratoSineWaveGenerator();
+
+        // Load tablature and initialize vibrato
+        async function loadTablature() {
+            try {
+                // Load "Lý Chiều Chiều" tablature
+                const response = await fetch('/api/tablature/l_chiu_chiu.json/optimal');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const svgText = await response.text();
+
+                // Extract SVG dimensions before setting innerHTML
+                const widthMatch = svgText.match(/width="(\d+)"/);
+                const heightMatch = svgText.match(/height="(\d+)"/);
+
+                const container = document.getElementById('tablatureContainer');
+                container.innerHTML = svgText;
+
+                // Reapply SVG dimensions
+                const svg = container.querySelector('svg');
+                if (svg) {
+                    if (widthMatch) svg.setAttribute('width', widthMatch[1]);
+                    if (heightMatch) svg.setAttribute('height', heightMatch[1]);
+                    svg.id = 'testSvg'; // Give it an ID for vibrato controller
+                }
+
+                // Initialize vibrato controller
+                const vibratoController = new VibratoController();
+                vibratoController.initialize('testSvg', 'vibratoControlsContainer');
+
+                // Store globally for testing
+                window.vibratoController = vibratoController;
+
+                console.log('Tablature loaded and vibrato initialized successfully');
+
+            } catch (error) {
+                console.error('Error loading tablature:', error);
+                document.getElementById('tablatureContainer').innerHTML =
+                    `<p style="color: red; text-align: center; padding: 40px;">
+                        Error loading tablature: ${error.message}
+                    </p>`;
+            }
+        }
+
+        // Load on page ready
+        document.addEventListener('DOMContentLoaded', loadTablature);
+    </script>
+</body>
+</html>

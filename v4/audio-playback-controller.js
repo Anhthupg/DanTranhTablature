@@ -503,6 +503,16 @@ class AudioPlaybackController {
         console.log(`AudioPlaybackController: Tempo set to ${bpm} BPM`);
     }
 
+    /**
+     * Set volume (0.3-10.0)
+     */
+    setVolume(volume) {
+        if (this.masterGain) {
+            this.masterGain.gain.value = volume; // Direct value 0.3-10.0
+            console.log(`AudioPlaybackController: Volume set to ${volume}`);
+        }
+    }
+
     // ========================================
     // FUTURE PLAYBACK MODES (Extensibility)
     // ========================================

@@ -209,13 +209,26 @@ class GlissandoController {
         // Sort by duration (longest first)
         this.glissandoCandidates.sort((a, b) => b.duration - a.duration);
 
-        // Create duration-to-color map (all black, opacity handled separately)
+        // Create duration-to-color map with different colors for each priority
         const uniqueDurations = [...new Set(this.glissandoCandidates.map(c => c.duration))];
         uniqueDurations.sort((a, b) => b - a); // Longest first
 
-        // All glissandos use black color, differentiation via opacity
-        uniqueDurations.forEach((duration) => {
-            this.durationColorMap[duration] = '#000000';  // All black
+        // Priority colors (deep, saturated colors for each duration group)
+        const priorityColors = [
+            '#FF0000',  // Priority 1: Red (longest duration)
+            '#FF8800',  // Priority 2: Orange
+            '#FFDD00',  // Priority 3: Yellow
+            '#00FF00',  // Priority 4: Green
+            '#00DDFF',  // Priority 5: Cyan
+            '#0088FF',  // Priority 6: Blue
+            '#8800FF',  // Priority 7: Purple
+            '#FF00FF'   // Priority 8+: Magenta
+        ];
+
+        uniqueDurations.forEach((duration, index) => {
+            // Assign color based on priority (index in sorted list)
+            const colorIndex = Math.min(index, priorityColors.length - 1);
+            this.durationColorMap[duration] = priorityColors[colorIndex];
         });
 
         console.log(`Analyzed SVG: Found ${this.glissandoCandidates.length} candidates across ${uniqueDurations.length} durations`);

@@ -248,7 +248,8 @@ class PhraseBarsController {
             margin-bottom: 8px;
             width: 100%;
             overflow: visible;
-            min-height: 50px;
+            min-height: 90px;
+            padding-top: 60px;
         `;
         container.dataset.phraseId = phrase.id;
 
@@ -302,7 +303,9 @@ class PhraseBarsController {
 
         // Phrase text - Show Vietnamese phrase text (centered in bar)
         const text = document.createElementNS(svgNS, 'text');
-        text.setAttribute('x', (x1 + x2) / 2);
+        // Calculate true center accounting for +24 width bonus
+        const centerX = x1 + barWidth / 2;
+        text.setAttribute('x', centerX);
         text.setAttribute('y', barHeight / 2 + 8);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('dominant-baseline', 'middle');
@@ -310,11 +313,53 @@ class PhraseBarsController {
         text.setAttribute('font-size', '11');
         text.setAttribute('font-weight', '600');
         text.textContent = phrase.text;
-        text.dataset.baseX = (x1 + x2) / 2;
+        text.dataset.baseX = centerX;
+        text.dataset.baseCenterX = centerX;  // Store for recalculating from rect
         group.appendChild(text);
 
         svg.appendChild(group);
         container.appendChild(svg);
+
+        // Add phrase info above the bar (phrase number + semantic icons)
+        const phraseInfo = document.createElement('div');
+        phraseInfo.className = 'phrase-info-label';
+        phraseInfo.style.cssText = `
+            position: absolute;
+            left: ${centerX}px;
+            top: 0px;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 11px;
+            line-height: 1.4;
+            pointer-events: none;
+            white-space: nowrap;
+        `;
+        phraseInfo.dataset.baseCenterX = centerX;
+        phraseInfo.dataset.baseX1 = x1;
+        phraseInfo.dataset.baseX2 = x2;
+
+        // Phrase number
+        const phraseNum = document.createElement('div');
+        phraseNum.style.cssText = 'font-weight: 700; color: #2c3e50; margin-bottom: 2px;';
+        phraseNum.textContent = `Phrase ${phrase.id}`;
+        phraseInfo.appendChild(phraseNum);
+
+        // Vietnamese text (truncated if too long)
+        const phraseTextDiv = document.createElement('div');
+        phraseTextDiv.style.cssText = 'color: #555; font-size: 10px; margin-bottom: 2px; max-width: 200px; overflow: hidden; text-overflow: ellipsis;';
+        phraseTextDiv.textContent = phrase.text.substring(0, 30) + (phrase.text.length > 30 ? '...' : '');
+        phraseInfo.appendChild(phraseTextDiv);
+
+        // Extract semantic icons from phrase words (from relationships data)
+        const semanticIcons = this.extractSemanticIcons(phrase.id);
+        if (semanticIcons.length > 0) {
+            const iconsDiv = document.createElement('div');
+            iconsDiv.style.cssText = 'font-size: 9px; color: #777;';
+            iconsDiv.innerHTML = semanticIcons.join('<br>');
+            phraseInfo.appendChild(iconsDiv);
+        }
+
+        container.appendChild(phraseInfo);
 
         // Create buttons overlaid on top of bar (positioned absolutely, 10px lower)
         const buttonsContainer = this.createPlaybackButtons(phrase.id);
@@ -325,7 +370,56 @@ class PhraseBarsController {
         buttonsContainer.dataset.baseX = x1 + 5;
         container.appendChild(buttonsContainer);
 
-        return { container, rect, text, labelText, buttonsContainer, baseX1: x1, baseX2: x2, baseY: y };
+        return { container, rect, text, labelText, buttonsContainer, phraseInfo, baseX1: x1, baseX2: x2, baseY: y };
+    }
+
+    extractSemanticIcons(phraseId) {
+        if (!this.relationships || !this.relationships.wordToNoteMap) {
+            return [];
+        }
+
+        // Get all words in this phrase
+        const phraseWords = this.relationships.wordToNoteMap.filter(w => w.phraseId === phraseId);
+
+        // Extract unique semantic domains
+        const domains = new Set();
+        phraseWords.forEach(word => {
+            // Check word for semantic indicators
+            const syllable = (word.syllable || '').toLowerCase();
+            const translation = (word.translation || '').toLowerCase();
+
+            // Vocatives (ơi, hỡi, này, etc.)
+            if (['ơi', 'hỡi', 'này', 'kìa', 'ôi'].some(v => syllable.includes(v))) {
+                domains.add('📣 vocative');
+            }
+
+            // Characters (bà, chồng, con, etc.)
+            if (['bà', 'ông', 'con', 'mẹ', 'cha', 'chồng', 'vợ', 'anh', 'em'].some(c => syllable.includes(c))) {
+                domains.add('👤 characters');
+            }
+
+            // Actions (đi, làm, ru, etc.)
+            if (['đi', 'làm', 'ru', 'hát', 'đứng', 'ngồi', 'nằm', 'chạy'].some(a => syllable.includes(a))) {
+                domains.add('🗣️ action');
+            }
+
+            // Nature (chiều, gió, cây, etc.)
+            if (['chiều', 'gió', 'cây', 'hoa', 'núi', 'sông', 'trăng', 'mây'].some(n => syllable.includes(n))) {
+                domains.add('🌳 nature');
+            }
+
+            // Emotions (khổ, thương, nhớ, etc.)
+            if (['khổ', 'thương', 'nhớ', 'buồn', 'vui', 'yêu'].some(e => syllable.includes(e))) {
+                domains.add('😢 emotion');
+            }
+
+            // Abstract (duyên, đời, lòng, etc.)
+            if (['duyên', 'đời', 'lòng', 'tình', 'nghĩa'].some(a => syllable.includes(a))) {
+                domains.add('💭 abstract');
+            }
+        });
+
+        return Array.from(domains);
     }
 
     getLinguisticTypeLabel(linguisticType) {
@@ -473,15 +567,15 @@ class PhraseBarsController {
 
         for (const barData of this.phraseBars) {
             if (barData.rect && barData.text) {
-                // Apply zoom to X positions (same formula as tablature zoom)
-                const scaledX1 = 120 + (barData.baseX1 - 120) * this.currentZoomX;
-                const scaledX2 = 120 + (barData.baseX2 - 120) * this.currentZoomX;
+                // Apply zoom to X positions (same formula as tablature zoom - pivot at 60, not 120)
+                const scaledX1 = 60 + (barData.baseX1 - 60) * this.currentZoomX;
+                const scaledX2 = 60 + (barData.baseX2 - 60) * this.currentZoomX;
                 const scaledWidth = scaledX2 - scaledX1 + 24;
 
                 barData.rect.setAttribute('x', scaledX1);
                 barData.rect.setAttribute('width', scaledWidth);
 
-                // Center text
+                // Center text in the scaled bar
                 const centerX = (scaledX1 + scaledX2) / 2;
                 barData.text.setAttribute('x', centerX);
 
@@ -495,7 +589,25 @@ class PhraseBarsController {
                     barData.buttonsContainer.style.left = `${scaledX1 + 5}px`;
                 }
 
-                console.log(`[PhraseBars]   Bar ${barData.container.dataset.phraseId}: x ${barData.baseX1} → ${scaledX1}`);
+                // Update phraseInfo position (recalculate center from scaled X1 and X2)
+                if (barData.phraseInfo) {
+                    const infoBaseX1 = parseFloat(barData.phraseInfo.dataset.baseX1);
+                    const infoBaseX2 = parseFloat(barData.phraseInfo.dataset.baseX2);
+                    console.log(`[PhraseBars] Phrase ${barData.container.dataset.phraseId}: baseX1=${infoBaseX1}, baseX2=${infoBaseX2}, zoom=${this.currentZoomX}`);
+                    if (!isNaN(infoBaseX1) && !isNaN(infoBaseX2)) {
+                        const infoScaledX1 = 60 + (infoBaseX1 - 60) * this.currentZoomX;
+                        const infoScaledX2 = 60 + (infoBaseX2 - 60) * this.currentZoomX;
+                        const infoCenterX = (infoScaledX1 + infoScaledX2) / 2;
+                        console.log(`[PhraseBars]   → infoCenterX=${infoCenterX}, setting left to ${infoCenterX}px`);
+                        barData.phraseInfo.style.left = `${infoCenterX}px`;
+                    } else {
+                        console.warn(`[PhraseBars]   → baseX1 or baseX2 is NaN!`);
+                    }
+                } else {
+                    console.warn(`[PhraseBars] Phrase ${barData.container.dataset.phraseId}: NO phraseInfo found!`);
+                }
+
+                console.log(`[PhraseBars]   Bar ${barData.container.dataset.phraseId}: x ${barData.baseX1} → ${scaledX1}, center ${centerX}`);
             }
         }
     }

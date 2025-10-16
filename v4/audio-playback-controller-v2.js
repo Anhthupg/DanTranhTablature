@@ -38,8 +38,14 @@ class AudioPlaybackController {
         this.stopButton = null;
 
         // Default tempo (can be overridden)
-        this.tempo = 120; // BPM
+        // V4.4.1: Changed to 60 BPM (slower, easier to follow)
+        this.tempo = 60; // BPM
         this.quarterNoteDuration = 60000 / this.tempo; // ms per quarter note
+
+        // V4.4.1: Continuous scrolling state
+        this.scrollAnimationId = null;
+        this.scrollStartTime = null;
+        this.scrollStartIndex = 0;
     }
 
     /**
@@ -66,9 +72,10 @@ class AudioPlaybackController {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.audioContext.createGain();
             this.masterGain.connect(this.audioContext.destination);
-            this.masterGain.gain.value = 0.3; // Master volume
+            // V4.4.1: Changed to 1.0 (full volume for better audibility)
+            this.masterGain.gain.value = 1.0; // Master volume
 
-            console.log('AudioPlaybackController: Audio context created');
+            console.log('AudioPlaybackController: Audio context created (tempo: 60 BPM, volume: 1.0)');
         } catch (error) {
             console.error('AudioPlaybackController: Failed to create audio context', error);
         }
@@ -201,6 +208,9 @@ class AudioPlaybackController {
 
         // V4.0.13: No button state management (onclick handlers don't need enable/disable)
 
+        // V4.4.1: Start continuous scrolling
+        this.startContinuousScroll(startIndex);
+
         // Schedule playback
         this.schedulePlayback(startIndex);
     }
@@ -273,6 +283,13 @@ class AudioPlaybackController {
         console.log('AudioPlaybackController: Stopping playback');
 
         this.isPlaying = false;
+
+        // V4.4.1: Stop continuous scrolling
+        if (this.scrollAnimationId) {
+            cancelAnimationFrame(this.scrollAnimationId);
+            this.scrollAnimationId = null;
+            console.log('[ContinuousScroll] Animation stopped');
+        }
 
         // V4.2.6: Also stop any phrase looping in lyrics controller
         if (window.lyricsController && window.lyricsController.currentlyPlaying) {
@@ -352,6 +369,7 @@ class AudioPlaybackController {
     /**
      * Play a note with visual feedback
      * V4.0.13: Remove previous glow immediately instead of using timeout
+     * V4.4.1: Auto-scroll to keep playing note visible
      */
     playNoteWithVisuals(note, duration) {
         // Remove glow from previous note BEFORE adding to current note
@@ -366,8 +384,91 @@ class AudioPlaybackController {
         // Add visual glow to all instances (both tablatures)
         this.addNoteGlow(note);
 
+        // Auto-scroll to keep note visible
+        this.scrollToNote(note);
+
         // No timeout needed - next note will remove this glow
         // Last note's glow removed by stop()
+    }
+
+    /**
+     * Start continuous constant-speed scrolling (V4.4.1)
+     * Like a video timeline - smooth, never stops, note stays at X=200px
+     */
+    startContinuousScroll(startIndex) {
+        if (this.notes.length === 0 || startIndex >= this.notes.length) return;
+
+        const firstNote = this.notes[startIndex];
+        if (!firstNote || !firstNote.element) return;
+
+        const container = firstNote.element.closest('.tablature-reference, .tablature-scroll-container');
+        if (!container) return;
+
+        // Calculate total duration from startIndex to end
+        const totalDuration = this.calculateTotalDuration(startIndex);
+
+        // Get start and end note X positions
+        const startNoteX = parseFloat(firstNote.element.getAttribute('cx'));
+        const lastNote = this.notes[this.notes.length - 1];
+        const endNoteX = parseFloat(lastNote.element.getAttribute('cx'));
+
+        // Calculate scroll distance (end when last note reaches X=350)
+        const noteTargetPosition = 350;  // Keep note at 350px from left (more centered view)
+        const startScrollLeft = startNoteX - noteTargetPosition;
+        const endScrollLeft = endNoteX - noteTargetPosition;
+        const scrollDistance = endScrollLeft - startScrollLeft;
+
+        // Calculate scroll speed (pixels per millisecond)
+        const scrollSpeed = scrollDistance / totalDuration;
+
+        console.log(`[ContinuousScroll] Starting: ${scrollDistance.toFixed(0)}px over ${totalDuration.toFixed(0)}ms = ${scrollSpeed.toFixed(3)}px/ms`);
+
+        // Set initial scroll position
+        container.scrollLeft = Math.max(0, startScrollLeft);
+
+        // Start animation
+        this.scrollStartTime = Date.now();
+        this.scrollStartIndex = startIndex;
+
+        const animate = () => {
+            if (!this.isPlaying) return;
+
+            const elapsed = Date.now() - this.scrollStartTime;
+            const scrollOffset = scrollSpeed * elapsed;
+            const newScrollLeft = startScrollLeft + scrollOffset;
+
+            container.scrollLeft = Math.max(0, Math.min(endScrollLeft, newScrollLeft));
+
+            // Continue animation
+            if (elapsed < totalDuration && this.isPlaying) {
+                this.scrollAnimationId = requestAnimationFrame(animate);
+            }
+        };
+
+        this.scrollAnimationId = requestAnimationFrame(animate);
+    }
+
+    /**
+     * Calculate total playback duration from startIndex to end (in milliseconds)
+     */
+    calculateTotalDuration(startIndex = 0) {
+        let totalDuration = 0;
+
+        for (let i = startIndex; i < this.notes.length; i++) {
+            const note = this.notes[i];
+            totalDuration += this.calculateNoteDuration(note.duration, note.isGrace);
+        }
+
+        return totalDuration;
+    }
+
+    /**
+     * Dummy scroll method (continuous scroll handles everything now)
+     * V4.4.1: No longer needed, but kept for compatibility
+     */
+    scrollToNote(note) {
+        // Continuous scrolling handles this automatically
+        // This method is now a no-op
     }
 
     /**

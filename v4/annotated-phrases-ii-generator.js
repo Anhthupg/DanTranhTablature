@@ -28,13 +28,13 @@ class AnnotatedPhrasesIIGenerator {
             'descriptive': '#8AC4D0'       // Blue-grey
         };
 
-        // Section type colors (for macro-structure)
+        // Section type colors (for macro-structure) - Neutral tones to avoid conflict with phrase colors
         this.sectionColors = {
-            'intro': 'rgba(52, 152, 219, 0.1)',     // Blue
-            'verse': 'rgba(46, 204, 113, 0.1)',     // Green
-            'refrain': 'rgba(241, 196, 15, 0.1)',   // Yellow
-            'dialogue': 'rgba(155, 89, 182, 0.1)',  // Purple
-            'coda': 'rgba(231, 76, 60, 0.1)'        // Red
+            'intro': 'rgba(189, 195, 199, 0.15)',     // Light gray - neutral opening
+            'verse': 'rgba(149, 165, 166, 0.12)',     // Medium gray - storytelling
+            'refrain': 'rgba(127, 140, 141, 0.15)',   // Dark gray - repeated hooks
+            'dialogue': 'rgba(108, 122, 137, 0.12)',  // Blue-gray - conversation
+            'coda': 'rgba(93, 109, 126, 0.15)'        // Darker gray - conclusion
         };
     }
 

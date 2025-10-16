@@ -1,0 +1,3350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V4 Vertical Header Sections - Annotated Template</title>
+
+    <!-- V4.0.5: External Zoom Controller -->
+    <script src="/zoom-controller.js"></script>
+    <script src="/glissando-controller.js"></script>
+
+    <!-- V4.0.9: External Library Controller -->
+    <script src="/library-controller.js"></script>
+
+    <!-- V4.0.11: External Visual State Controller -->
+    <script src="/visual-state-controller.js"></script>
+
+    <!-- V4.0.13: External Visual State Manager (Systematic State Layering) -->
+    <script src="/visual-state-manager.js"></script>
+
+    <!-- V4.0.12: External Audio Playback Controller -->
+    <script src="/audio-playback-controller-v2.js"></script>
+
+    <!-- V4.2.0: External Lyrics Controller (Ultra-Compact Single-Row Design) -->
+    <script src="/lyrics-controller.js"></script>
+
+    <!-- V4.2.5: External Phrase Bars Controller (Phrase-to-Note Visualization) -->
+    <script src="/phrase-bars-controller.js"></script>
+
+    <!-- V4.3.5: External Pattern Visualization Controller (Tier 3: KSIC, KTIC, KRIC) -->
+    <script src="/pattern-visualization-controller.js"></script>
+
+    <!-- V4.2.28: External Vibrato Controller (Pitch Class Vibrato System) -->
+    <script src="/vibrato-controller.js"></script>
+
+    <!-- SortableJS for Drag-and-Drop Section Reordering -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        /* V4 Focused Sections with Vertical Headers - Annotated with UI Terminology */
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            background: #f8f9fa;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* CSS Variables for V3 Compatibility */
+        :root {
+            --note-fill: #008080;
+            --note-text: #FFFFFF;
+            --triangle-fill: #008080;
+            --bent-note-color: #E67E22;
+        }
+
+        /* V4.0.12: Audio Playback - Note Playing Animation (Vertical) - Green */
+        @keyframes note-vertical-pulse {
+            0% {
+                transform: translateY(0);
+                filter: drop-shadow(0 0 10px rgba(39, 174, 96, 0.4));
+            }
+            50% {
+                transform: translateY(8px);
+                filter: drop-shadow(0 0 20px rgba(39, 174, 96, 0.8));
+            }
+            100% {
+                transform: translateY(0);
+                filter: drop-shadow(0 0 10px rgba(39, 174, 96, 0.4));
+            }
+        }
+
+        .note-playing {
+            animation: note-vertical-pulse 0.6s ease-in-out;
+            fill: #27ae60 !important;  /* Green - avoids conflict with red bent notes */
+        }
+
+        /* V4.0.12: Make notes clickable - ignore text overlay clicks */
+        .note-text {
+            pointer-events: none;  /* Let clicks pass through to circle below */
+        }
+
+        .note, .grace-note, .bent-note, .note-circle {
+            cursor: pointer;  /* Show clickable cursor */
+        }
+
+        /* V4.2.28: Vibrato Sine Wave Styles */
+        /* UNIFIED LEFT-HAND TECHNIQUE WEIGHT: stroke-width: 4 for bent, vibrato, glissando, slurs, taps */
+        .vibrato-sinewave {
+            stroke: #FF0000;
+            stroke-width: 4px;  /* Unified left-hand technique weight */
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        /* V4.3.24: Frozen String Labels */
+        .tablature-wrapper {
+            position: relative;
+            display: flex;
+        }
+
+        .string-labels-fixed {
+            position: absolute;
+            left: 0;
+            width: 60px;
+            background: white;
+            z-index: 10;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .string-labels-fixed svg {
+            display: block;
+        }
+
+        .tablature-reference {
+            flex: 1;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        /* Hide original labels in the scrollable SVG */
+        .tablature-reference .string-label {
+            visibility: hidden;
+        }
+
+        /* Show labels only in the fixed overlay */
+        .string-labels-fixed .string-label {
+            visibility: visible;
+        }
+
+        .vibrato-sinewave:hover {
+            opacity: 1.0;
+            stroke-width: 5px;  /* Slightly thicker on hover */
+        }
+
+        /* Tap Chevron Styles - Dotted Rhythm Positions */
+        .tap-chevron {
+            stroke: #FF0000;
+            stroke-width: 4px;  /* Unified left-hand technique weight */
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        .tap-chevron:hover {
+            opacity: 1.0;
+            stroke-width: 5px;  /* Slightly thicker on hover */
+        }
+
+        .v4-container {
+            width: 100%;
+            max-width: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* INTERACTIVE TABLATURE AREA - Full-width top section */
+        .tablature-overlay-container {
+            width: 100%;
+            position: relative;
+            background: white;
+            border-bottom: 3px solid #3498db;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* SECTION CONTAINER - Main content area holding all analysis sections */
+        .sections-container {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            gap: 15px; /* SECTION GAP - Space between analysis sections */
+        }
+
+        /* ANALYSIS SECTION - Individual collapsible analysis container */
+        .analysis-section {
+            width: 100%;
+            background: white;
+            border: 2px solid #e0e0e0; /* SECTION BORDER */
+            border-radius: 12px; /* SECTION BORDER RADIUS */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); /* SECTION SHADOW */
+            overflow: hidden;
+            order: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            display: flex; /* LAYOUT: Horizontal flex for vertical header */
+        }
+
+        .analysis-section.highlighted {
+            border-color: #3498db; /* HIGHLIGHT BORDER COLOR */
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3); /* HIGHLIGHT SHADOW */
+            transform: translateY(-2px); /* HIGHLIGHT LIFT EFFECT */
+        }
+
+        /* VERTICAL HEADER - Left side vertical panel (replaces horizontal header) */
+        .vertical-header {
+            /* POSITION: x=0, y=0 (left edge of section) */
+            /* DIMENSIONS: width=80px, height=100% of section */
+            width: 80px;
+            background: linear-gradient(180deg, #3498db, #2980b9); /* VERTICAL GRADIENT */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 5px; /* VERTICAL HEADER PADDING */
+            cursor: grab; /* Drag cursor for reordering */
+            user-select: none;
+            transition: background 0.3s ease;
+            position: relative; /* POSITIONING CONTEXT */
+            flex-shrink: 0; /* PREVENT SHRINKING */
+        }
+
+        .vertical-header:hover {
+            background: linear-gradient(180deg, #2980b9, #1f639a); /* HOVER GRADIENT */
+        }
+
+        .vertical-header:active {
+            cursor: grabbing; /* Show grabbing cursor while dragging */
+        }
+
+        .vertical-header.active-focus {
+            background: linear-gradient(180deg, #27ae60, #229954); /* ACTIVE GRADIENT */
+        }
+
+        /* Visual feedback while dragging */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #e3f2fd; /* Light blue background for ghost element */
+        }
+
+        .sortable-drag {
+            opacity: 0.8;
+            transform: rotate(2deg); /* Slight rotation for visual feedback */
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3); /* Strong shadow while dragging */
+        }
+
+        /* SECTION ICON - Top element in vertical header */
+        .section-icon {
+            /* POSITION: x=40px (center), y=20px (top area) */
+            font-size: 24px; /* ICON SIZE */
+            margin-bottom: 8px; /* ICON BOTTOM MARGIN */
+            display: block;
+        }
+
+        /* SECTION TITLE - Center element in vertical header */
+        .section-title {
+            /* POSITION: x=40px (center), y=middle (varies by content) */
+            font-size: 11px; /* TITLE FONT SIZE */
+            font-weight: 600; /* TITLE FONT WEIGHT */
+            text-align: center;
+            line-height: 1.2; /* TITLE LINE HEIGHT */
+            margin: 0;
+            writing-mode: horizontal-tb; /* TITLE WRITING MODE */
+            max-width: 70px;
+            word-wrap: break-word;
+        }
+
+        /* VERTICAL CONTROLS - Control elements in vertical header */
+        .vertical-controls {
+            /* POSITION: x=40px (center), y=bottom area */
+            display: flex;
+            flex-direction: column;
+            gap: 3px; /* CONTROL GAP */
+            margin-top: 8px; /* CONTROLS TOP MARGIN */
+            align-items: center;
+        }
+
+        /* MOVE ARROWS - Up/down movement controls */
+        .vertical-move-arrow {
+            /* POSITION: x=40px (center), y=varies in controls area */
+            /* DIMENSIONS: width=20px, height=16px */
+            background: #2c3e50; /* ARROW BACKGROUND */
+            border: 1px solid #34495e; /* ARROW BORDER */
+            border-radius: 3px; /* ARROW BORDER RADIUS */
+            color: white;
+            cursor: pointer;
+            padding: 2px 4px; /* ARROW PADDING */
+            font-size: 10px; /* ARROW FONT SIZE */
+            font-weight: bold;
+            min-width: 20px; /* ARROW MIN WIDTH */
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .vertical-move-arrow:hover {
+            background: #1a252f; /* ARROW HOVER BACKGROUND */
+            transform: scale(1.1); /* ARROW HOVER SCALE */
+        }
+
+        /* COLLAPSE TOGGLE - Expand/collapse indicator */
+        .vertical-collapse-toggle {
+            /* POSITION: x=40px (center), y=bottom of controls */
+            font-size: 14px; /* TOGGLE ICON SIZE */
+            margin-top: 5px; /* TOGGLE TOP MARGIN */
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+
+        .collapsed .vertical-collapse-toggle {
+            transform: rotate(-90deg); /* COLLAPSED ROTATION */
+        }
+
+        /* SECTION CONTENT - Main content area (right side) */
+        .section-content {
+            /* POSITION: x=80px (after vertical header), y=0 */
+            /* DIMENSIONS: width=calc(100% - 80px), height=auto */
+            flex: 1; /* CONTENT FLEX GROW */
+            padding: 20px; /* CONTENT PADDING */
+            display: block;
+            max-height: 1000px; /* CONTENT MAX HEIGHT */
+            overflow-y: auto; /* CONTENT OVERFLOW */
+            transition: max-height 0.4s ease;
+        }
+
+        .section-content.collapsed {
+            max-height: 0; /* COLLAPSED HEIGHT */
+            padding: 0 20px; /* COLLAPSED PADDING */
+        }
+
+        /* METRIC GRID - Container for metric cards */
+        .metric-grid {
+            /* POSITION: x=0 (relative to content), y=0 (top of content) */
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* GRID COLUMNS */
+            gap: 15px; /* METRIC CARD GAP */
+            margin: 15px 0; /* GRID MARGIN */
+        }
+
+        /* METRIC CARD - Individual metric display container */
+        .metric-card {
+            /* POSITION: x=varies (grid), y=varies (grid) */
+            /* DIMENSIONS: min-width=150px, height=auto */
+            background: #f8f9fa; /* CARD BACKGROUND */
+            border: 1px solid #e9ecef; /* CARD BORDER */
+            border-radius: 8px; /* CARD BORDER RADIUS */
+            padding: 15px; /* CARD PADDING */
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* CARD SHADOW */
+        }
+
+        .metric-card:hover {
+            background: #e9ecef; /* CARD HOVER BACKGROUND */
+            transform: translateY(-2px); /* CARD HOVER LIFT */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* CARD HOVER SHADOW */
+        }
+
+        .metric-card.highlighted {
+            background: #d4edda; /* CARD HIGHLIGHT BACKGROUND */
+            border-color: #27ae60; /* CARD HIGHLIGHT BORDER */
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3); /* CARD HIGHLIGHT SHADOW */
+        }
+
+        /* METRIC VALUE - Main numeric/text value display */
+        .metric-value {
+            /* POSITION: x=center of card, y=top area of card */
+            font-size: 24px; /* VALUE FONT SIZE */
+            font-weight: bold; /* VALUE FONT WEIGHT */
+            color: #2c3e50; /* VALUE COLOR */
+            margin-bottom: 5px; /* VALUE BOTTOM MARGIN */
+            line-height: 1; /* VALUE LINE HEIGHT */
+        }
+
+        /* METRIC LABEL - Descriptive text below value */
+        .metric-label {
+            /* POSITION: x=center of card, y=bottom area of card */
+            font-size: 12px; /* LABEL FONT SIZE */
+            color: #7f8c8d; /* LABEL COLOR */
+            font-weight: 500; /* LABEL FONT WEIGHT */
+            line-height: 1.2; /* LABEL LINE HEIGHT */
+            margin: 0; /* LABEL MARGIN */
+        }
+
+        /* CROSS REFERENCE BOX - Shows relationships to other sections */
+        .cross-reference {
+            /* POSITION: x=0 (relative to content), y=below metric grid */
+            /* DIMENSIONS: width=100% of content area, height=auto */
+            background: #fff3cd; /* CROSS REF BACKGROUND */
+            border: 1px solid #ffeaa7; /* CROSS REF BORDER */
+            border-radius: 6px; /* CROSS REF BORDER RADIUS */
+            padding: 10px; /* CROSS REF PADDING */
+            margin: 10px 0; /* CROSS REF MARGIN */
+            font-size: 13px; /* CROSS REF FONT SIZE */
+            color: #856404; /* CROSS REF TEXT COLOR */
+        }
+
+        .cross-reference.active {
+            background: #d1ecf1; /* ACTIVE CROSS REF BACKGROUND */
+            border-color: #bee5eb; /* ACTIVE CROSS REF BORDER */
+            color: #0c5460; /* ACTIVE CROSS REF TEXT */
+        }
+
+        /* TABLATURE REFERENCE - Mini tablature clone in section */
+        .tablature-reference {
+            /* POSITION: x=0 (relative to content), y=bottom of content */
+            /* DIMENSIONS: width=100% of content area, height=auto */
+            margin: 15px 0; /* TABLATURE REF MARGIN */
+            border: 1px solid #ddd; /* TABLATURE REF BORDER */
+            border-radius: 6px; /* TABLATURE REF BORDER RADIUS */
+            background: #fafafa; /* TABLATURE REF BACKGROUND */
+            padding: 10px; /* TABLATURE REF PADDING */
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: auto; /* Enable vertical scrolling */
+            max-height: 600px; /* Maximum height before scrolling */
+            position: relative;
+            box-sizing: border-box; /* Include padding in width calculation */
+            width: 100%; /* Full width of container */
+        }
+
+        /* HIGHLIGHT OVERLAYS - Dynamic highlighting system */
+        .highlight-overlay {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%; /* OVERLAY BORDER RADIUS */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10; /* OVERLAY Z-INDEX */
+            /* DIMENSIONS: width=20px, height=20px (set via JavaScript) */
+            /* POSITION: x,y set dynamically based on tablature note positions */
+        }
+
+        .highlight-overlay.active {
+            opacity: 0.8; /* ACTIVE OVERLAY OPACITY */
+            animation: pulse 1.5s infinite; /* ACTIVE OVERLAY ANIMATION */
+        }
+
+        /* HIGHLIGHT COLOR CLASSES - Different highlight types */
+        .highlight-tone-nga { background: rgba(156, 89, 182, 0.6); } /* PURPLE for ngã tone */
+        .highlight-pitch-e { background: rgba(52, 152, 219, 0.6); } /* BLUE for E notes */
+        .highlight-rank-17 { background: rgba(231, 76, 60, 0.6); } /* RED for rank #17 */
+        .highlight-melisma { background: rgba(241, 196, 15, 0.6); } /* GOLD for melisma */
+        .highlight-string-usage { background: rgba(39, 174, 96, 0.6); } /* GREEN for string usage */
+
+        @keyframes pulse {
+            0% { transform: scale(1); } /* PULSE START SCALE */
+            50% { transform: scale(1.2); } /* PULSE MAX SCALE */
+            100% { transform: scale(1); } /* PULSE END SCALE */
+        }
+
+        /* SVG Zoom Styles */
+        .tablature-reference svg {
+            transition: transform 0.2s ease;
+            will-change: transform;
+            display: block;
+            position: relative;
+            /* min-width removed - allows horizontal scroll when zoomed */
+        }
+
+        /* Preserve crisp rendering during zoom */
+        .tablature-reference svg text,
+        .tablature-reference svg circle {
+            shape-rendering: geometricPrecision;
+            text-rendering: geometricPrecision;
+        }
+
+        /* Annotated Phrases Section Styles */
+        .phrase-box {
+            fill: rgba(0, 128, 128, 0.2);  /* Increased from 0.08 to 0.2 for better visibility */
+            stroke: #008080;
+            stroke-width: 3;  /* Increased from 2 to 3 */
+            stroke-dasharray: 5,5;
+            transition: fill 0.2s, stroke 0.2s;
+            cursor: pointer;
+        }
+        .phrase-box:hover {
+            fill: rgba(0, 128, 128, 0.35);  /* Increased from 0.15 to 0.35 */
+            stroke: #005959;
+            stroke-width: 4;  /* Increased from 3 to 4 */
+        }
+        /* Domain colors (lower specificity - apply first) */
+        .phrase-box.domain-emotion { stroke: #E74C3C; }
+        .phrase-box.domain-abstract { stroke: #9B59B6; }
+        .phrase-box.domain-nature { stroke: #27AE60; }
+        .phrase-box.domain-action { stroke: #3498DB; }
+        .phrase-box.domain-characters { stroke: #F39C12; }
+        .phrase-box.domain-vocatives { stroke: #E67E22; }
+
+        /* Parallelism levels (higher specificity - override domains) */
+        .phrase-box.exact-refrain {
+            fill: rgba(255, 215, 0, 0.3) !important;
+            stroke: #FFD700 !important;  /* Gold always wins */
+            stroke-dasharray: none !important;
+            stroke-width: 4 !important;
+        }
+        .phrase-box.structural-parallel {
+            fill: rgba(52, 152, 219, 0.2) !important;
+            stroke: #3498DB !important;  /* Blue always wins */
+            stroke-dasharray: 8,4 !important;
+            stroke-width: 3 !important;
+        }
+
+        .phrase-label {
+            font-size: 12px;
+            font-weight: bold;
+            fill: #2C3E50;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .phrase-text {
+            font-size: 10px;
+            font-style: italic;
+            fill: #555;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .parallelism-badge {
+            font-size: 11px;
+            font-weight: bold;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .parallelism-badge.exact { fill: #B8860B; }
+        .parallelism-badge.structural { fill: #2874A6; }
+        .semantic-icon {
+            font-size: 11px;
+            text-anchor: middle;
+            fill: #555;
+            pointer-events: none;
+        }
+        .semantic-icon.emotion { fill: #E74C3C; }
+        .semantic-icon.abstract { fill: #9B59B6; }
+        .semantic-icon.nature { fill: #27AE60; }
+        .semantic-icon.action { fill: #3498DB; }
+        .semantic-icon.characters { fill: #F39C12; }
+        .semantic-icon.vocatives { fill: #E67E22; }
+        .function-label {
+            font-size: 10px;
+            font-style: italic;
+            fill: #7F8C8D;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Section Boxes (V4.2.7 - Macro Structure) */
+        .section-box {
+            fill: rgba(100, 100, 255, 0.05);
+            stroke: #95A5A6;
+            stroke-width: 2;
+            stroke-dasharray: 10,5;
+            pointer-events: none;
+        }
+        .section-box.section-intro {
+            fill: rgba(52, 152, 219, 0.08);
+            stroke: #3498DB;
+        }
+        .section-box.section-verse {
+            fill: rgba(155, 89, 182, 0.06);
+            stroke: #9B59B6;
+        }
+        .section-box.section-refrain {
+            fill: rgba(241, 196, 15, 0.08);
+            stroke: #F39C12;
+        }
+        .section-box.section-dialogue {
+            fill: rgba(26, 188, 156, 0.06);
+            stroke: #1ABC9C;
+        }
+        .section-box.section-coda {
+            fill: rgba(231, 76, 60, 0.06);
+            stroke: #E74C3C;
+        }
+
+        .section-label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: #FFFFFF;
+            stroke: #000000;
+            stroke-width: 1.5;
+            paint-order: stroke fill;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .section-label.section-intro { fill: #3498DB; stroke: #2874A6; }
+        .section-label.section-verse { fill: #9B59B6; stroke: #7D3C98; }
+        .section-label.section-refrain { fill: #F39C12; stroke: #D68910; }
+        .section-label.section-dialogue { fill: #1ABC9C; stroke: #148F77; }
+        .section-label.section-coda { fill: #E74C3C; stroke: #C0392B; }
+
+        .section-info {
+            font-size: 11px;
+            font-weight: 600;
+            fill: #7F8C8D;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+
+        /* Song Library Styles */
+        .song-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .song-card:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .song-card.selected {
+            background: #e8f5e9;
+            border: 2px solid #008080;
+            box-shadow: 0 4px 12px rgba(0, 128, 128, 0.2);
+        }
+
+        .song-card.selected:hover {
+            transform: scale(1.02);
+        }
+
+        /* RESPONSIVE ADJUSTMENTS - Enhanced Mobile Experience */
+
+        /* Tablet (768px - 1024px) */
+        @media (max-width: 1024px) {
+            .sections-container {
+                padding: 15px;
+                gap: 12px;
+            }
+
+            .section-content {
+                padding: 15px;
+            }
+
+            button {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+        }
+
+        /* Mobile (max-width: 768px) */
+        @media (max-width: 768px) {
+            body {
+                font-size: 14px;
+            }
+
+            .vertical-header {
+                width: 60px; /* MOBILE HEADER WIDTH */
+            }
+
+            .section-title {
+                font-size: 10px; /* MOBILE TITLE SIZE */
+            }
+
+            .section-icon {
+                font-size: 20px; /* MOBILE ICON SIZE */
+            }
+
+            /* Larger touch targets for buttons */
+            button {
+                min-height: 44px; /* iOS recommended touch target */
+                min-width: 44px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+
+            .bent-toggle-btn,
+            .vertical-move-arrow {
+                min-height: 44px;
+                min-width: 44px;
+                padding: 12px;
+                font-size: 16px;
+            }
+
+            /* Stack controls vertically on mobile */
+            .tuning-controls {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+
+            .label-mode-controls {
+                margin-left: 0 !important;
+                padding-left: 0 !important;
+                border-left: none !important;
+                border-top: 1px solid #ddd;
+                padding-top: 10px;
+            }
+
+            /* Reduce section padding on mobile */
+            .sections-container {
+                padding: 10px;
+                gap: 10px;
+            }
+
+            .section-content {
+                padding: 15px;
+            }
+
+            /* Reduce header padding */
+            .song-header {
+                padding: 15px !important;
+            }
+
+            .song-header h1 {
+                font-size: 20px !important;
+            }
+
+            .song-header p {
+                font-size: 12px !important;
+            }
+
+            /* Metric cards stack better */
+            .metric-grid {
+                grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                gap: 10px;
+            }
+
+            .metric-card {
+                padding: 12px;
+            }
+
+            .metric-value {
+                font-size: 20px;
+            }
+
+            .metric-label {
+                font-size: 11px;
+            }
+
+            /* Song library grid on mobile */
+            .library-grid {
+                grid-template-columns: 1fr !important; /* Single column */
+                gap: 10px;
+            }
+
+            .song-card {
+                padding: 12px;
+            }
+        }
+
+        /* Small Mobile (max-width: 480px) */
+        @media (max-width: 480px) {
+            body {
+                font-size: 13px;
+            }
+
+            .vertical-header {
+                width: 50px; /* Even narrower on small phones */
+            }
+
+            .section-title {
+                font-size: 9px;
+                line-height: 1.1;
+            }
+
+            .section-icon {
+                font-size: 18px;
+                margin-bottom: 5px;
+            }
+
+            /* Even larger touch targets */
+            button {
+                min-height: 48px;
+                padding: 12px 16px;
+            }
+
+            /* Hide less important sections by default on small screens */
+            .analysis-section[data-focus="alternative-tuning"] {
+                order: 999; /* Move to bottom */
+            }
+
+            /* Compact section header */
+            .song-header h1 {
+                font-size: 18px !important;
+                margin: 0 0 5px 0 !important;
+            }
+
+            .song-header h1 span {
+                display: block;
+                margin: 5px 0 0 0 !important;
+                font-size: 12px !important;
+            }
+
+            /* Reduce metric grid to single column on very small screens */
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Compact tablature controls */
+            .zoom-controls {
+                flex-wrap: wrap;
+                gap: 5px !important;
+            }
+
+            .zoom-controls input[type="range"] {
+                width: 100% !important;
+                margin: 5px 0;
+            }
+
+            /* Hide advanced controls on very small screens */
+            .label-mode-controls .string-offset-controls {
+                display: none;
+            }
+        }
+
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            /* Better touch feedback */
+            button:active {
+                transform: scale(0.95);
+                background: #ddd;
+            }
+
+            .song-card:active {
+                transform: scale(0.98);
+            }
+
+            .metric-card:active {
+                transform: translateY(0);
+            }
+
+            /* Disable hover effects that don't work on touch */
+            .song-card:hover {
+                transform: scale(1);
+            }
+
+            /* Larger scrollable areas */
+            .tablature-reference {
+                -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
+            }
+        }
+
+        /* Landscape mobile specific */
+        @media (max-width: 896px) and (orientation: landscape) {
+            .vertical-header {
+                width: 50px;
+            }
+
+            .section-title {
+                font-size: 9px;
+            }
+
+            .sections-container {
+                padding: 8px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="v4-container">
+
+        <!-- SONG HEADER -->
+        <!-- POSITION: x=0, y=0 (top of page) -->
+        <!-- DIMENSIONS: width=100vw, height=auto -->
+        <div class="song-header" style="width: 100%; background: white; border-bottom: 3px solid #3498db; padding: 20px; box-sizing: border-box; text-align: center;">
+            <h1 id="songTitle" style="margin: 0 0 10px 0; color: #2c3e50;">
+                {{SONG_NAME}}
+                <span style="font-size: 14px; color: #95a5a6; font-weight: normal; margin-left: 15px; padding: 4px 10px; background: #ecf0f1; border-radius: 4px;">{{VERSION}}</span>
+            </h1>
+            <p style="margin: 0; color: #7f8c8d;">V4 Tuning Analysis with Bent Note Detection + Drag-and-Drop Reordering</p>
+        </div>
+
+        <!-- SECTIONS CONTAINER -->
+        <!-- POSITION: x=0, y=after tablature -->
+        <!-- DIMENSIONS: width=100%, height=auto (content-based) -->
+        <div class="sections-container" id="sectionsContainer">
+
+            <!-- OPTIMAL TUNING SECTION (Fixed - Always on top) -->
+            <!-- POSITION: x=0, y=0 (first section) -->
+            <!-- DIMENSIONS: width=100%, height=auto -->
+            <div class="analysis-section" id="optimalTuningSection" data-order="0" data-focus="optimal-tuning">
+
+                <!-- VERTICAL HEADER -->
+                <!-- POSITION: x=0, y=0 (left edge of section) -->
+                <!-- DIMENSIONS: width=80px, height=100% of section content -->
+                <div class="vertical-header" onclick="toggleSection('optimalTuningSection')">
+
+                    <!-- SECTION ICON -->
+                    <!-- POSITION: x=40px (center of header), y=20px (top area) -->
+
+                    <!-- SECTION TITLE -->
+                    <!-- POSITION: x=40px (center of header), y=middle area -->
+                    <h3 class="section-title">Optimal Tuning</h3>
+
+                    <!-- VERTICAL CONTROLS -->
+                    <!-- POSITION: x=40px (center of header), y=bottom area -->
+                    <div class="vertical-controls">
+                        <!-- Note: No move arrows for first section (fixed position) -->
+
+                        <!-- COLLAPSE TOGGLE -->
+                        <!-- POSITION: x=40px (center), y=bottom of controls -->
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <!-- POSITION: x=80px (after vertical header), y=0 -->
+                <!-- DIMENSIONS: width=calc(100% - 80px), height=auto -->
+                <div class="section-content">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Optimal Tuning Analysis</h4>
+
+                    <!-- TUNING CONTROLS WITH ZOOM -->
+                    <div class="tuning-controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <div class="tuning-info" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <label style="font-weight: 600; color: #2c3e50;">Tuning System:</label>
+                            <span class="tuning-display" id="optimalTuning" style="font-family: monospace; font-size: 14px; color: #008080; font-weight: bold;">{{OPTIMAL_TUNING}}</span>
+                            <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
+                                <span class="bent-notes-count" id="optimalBentCount" style="color: #E67E22; font-weight: 600;">{{OPTIMAL_BENT_COUNT}} bent notes</span>
+                                <button class="bent-toggle-btn" onclick="toggleBentNotes('optimal')" title="Toggle bent notes visibility"
+                                        style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
+                                    Show/Hide
+                                </button>
+                            </span>
+
+                            <!-- V4.2.20: Note Label Mode Controls -->
+                            <div class="label-mode-controls" style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding-left: 15px; border-left: 1px solid #ddd;">
+                                <label style="font-weight: 600; color: #2c3e50; font-size: 12px;">Labels:</label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="optimalLabelMode" value="abc" checked onchange="updateLabelMode('optimal', 'abc')">
+                                    ABC
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="optimalLabelMode" value="doremi" onchange="updateLabelMode('optimal', 'doremi')">
+                                    Do-Re-Mi
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="optimalLabelMode" value="string" onchange="updateLabelMode('optimal', 'string')">
+                                    String#
+                                </label>
+                                <!-- String offset controls (only visible when String# mode is active) -->
+                                <div id="optimalStringOffset" style="display: none; align-items: center; gap: 4px; margin-left: 8px;">
+                                    <button onclick="adjustStringOffset('optimal', -1)" title="Shift string numbers down"
+                                            style="background: #3498db; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        −
+                                    </button>
+                                    <span id="optimalOffsetValue" style="font-size: 12px; min-width: 30px; text-align: center; font-weight: 600; font-family: monospace;">0</span>
+                                    <button onclick="adjustStringOffset('optimal', 1)" title="Shift string numbers up"
+                                            style="background: #3498db; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- V4.0.13: Playback Controls (Linked - between both tablatures) -->
+                        <div class="playback-controls" style="display: flex; align-items: center; gap: 8px; padding-right: 15px; border-right: 1px solid #ddd;">
+                            <button onclick="window.audioController && window.audioController.play()" title="Play tablature"
+                                    style="background: #27ae60; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ▶
+                            </button>
+                            <button onclick="window.audioController && window.audioController.stop()" title="Stop playback"
+                                    style="background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ■
+                            </button>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Tempo:</label>
+                                <input type="range" min="10" max="300" value="120" step="10" id="tempoSlider"
+                                       style="width: 80px; cursor: pointer;"
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value + ' BPM'; }">
+                                <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
+                                <label style="font-size: 12px; color: #666; margin-left: 10px;">Vol:</label>
+                                <input type="range" min="0.3" max="10" value="0.3" step="0.1" class="volumeSlider"
+                                       style="width: 60px; cursor: pointer;"
+                                       oninput="console.log('Volume slider moved to:', this.value); if(window.audioController) { window.audioController.setVolume(parseFloat(this.value)); } const spans = document.querySelectorAll('.volumeValue'); spans.forEach(s => s.textContent = this.value + 'x');">
+                                <span class="volumeValue" style="font-size: 12px; color: #666; min-width: 30px;">0.3x</span>
+                            </div>
+                        </div>
+
+                        <!-- V4 Zoom Controls (V3-style inline) -->
+                        <div class="zoom-controls" style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">X:</label>
+                                <input type="range" id="optimalXZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('optimal', 'x', this.value)">
+                                <span id="optimalXValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Y:</label>
+                                <input type="range" id="optimalYZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('optimal', 'y', this.value)">
+                                <span id="optimalYValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <button onclick="window.zoomController.fitToWidth('optimal')" style="padding: 2px 6px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">Fit</button>
+                        </div>
+                    </div>
+
+                    <!-- GLISSANDO SUGGESTIONS PANEL (includes vibrato controls) -->
+                    {{GLISSANDO_PANEL}}
+
+                    <!-- OPTIMAL TUNING TABLATURE -->
+                    <!-- POSITION: x=0 (relative to content), y=after controls -->
+                    <!-- DIMENSIONS: width=100% of content area, height=auto -->
+                    <!-- V4.2.7: Made scrollable and added ID for scroll sync with annotated phrases -->
+                    <!-- V4.3.24: Wrapped with tablature-wrapper for frozen string labels -->
+                    <div class="tablature-wrapper">
+                        <div class="tablature-reference" id="optimalScrollContainer" style="overflow-x: auto; overflow-y: hidden; box-sizing: border-box;">
+                            <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg" id="optimalSvg">
+                                {{OPTIMAL_SVG_CONTENT}}
+                            </svg>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ALTERNATIVE TUNING SECTION 1 (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="altTuning1Section" data-order="1" data-focus="alt-tuning-1">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('altTuning1Section')">
+
+                    <!-- SECTION ICON -->
+
+                    <!-- SECTION TITLE -->
+                    <h3 class="section-title">Alt Tuning</h3>
+
+                    <!-- VERTICAL CONTROLS -->
+                    <div class="vertical-controls">
+                        <!-- MOVE ARROWS (for moveable sections) -->
+                        <!-- UP ARROW -->
+                        <!-- POSITION: x=40px (center), y=controls top -->
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning1Section', 'up'); event.stopPropagation();">▲</button>
+
+                        <!-- DOWN ARROW -->
+                        <!-- POSITION: x=40px (center), y=after up arrow + gap -->
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning1Section', 'down'); event.stopPropagation();">▼</button>
+
+                        <!-- COLLAPSE TOGGLE -->
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Alternative Tuning Comparison 1</h4>
+
+                    <!-- TUNING CONTROLS WITH ZOOM -->
+                    <div class="tuning-controls" style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <div class="tuning-info" style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <label style="font-weight: 600; color: #2c3e50;">Tuning System:</label>
+                            <select class="tuning-selector" id="altTuning1Select" onchange="updateAlternativeTuning(1, this.value)"
+                                    style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                <optgroup label="═══ Vietnamese ═══">
+                                    <option value="C-D-E-G-A">Dan Tranh Standard (C-D-E-G-A)</option>
+                                    <option value="C-D-E-G-A">Dan Tranh Northern (C-D-E-G-A)</option>
+                                    <option value="C-D-F-G-A">Dan Tranh Southern (C-D-F-G-A)</option>
+                                    <option value="C-D-E-G-B">Dan Tranh Central (C-D-E-G-B)</option>
+                                    <option value="C-Eb-F-G-Bb">Ru Con (C-Eb-F-G-Bb)</option>
+                                    <option value="D-F-G-A-C">Nam Ai (D-F-G-A-C)</option>
+                                    <option value="D-E-F#-A-B">Nam Xuan (D-E-F#-A-B)</option>
+                                    <option value="C-D-F-G-A">Bac (C-D-F-G-A)</option>
+                                    <option value="C-Eb-F-G-Ab">Oan (C-Eb-F-G-Ab)</option>
+                                </optgroup>
+                                <optgroup label="═══ Pentatonic ═══">
+                                    <option value="C-D-E-G-A">Major (C-D-E-G-A)</option>
+                                    <option value="A-C-D-E-G">Minor (A-C-D-E-G)</option>
+                                    <option value="C-D-F-G-Bb">Egyptian (C-D-F-G-Bb)</option>
+                                    <option value="C-D-E-G-A">Chinese Gong (C-D-E-G-A)</option>
+                                    <option value="D-E-G-A-C">Chinese Shang (D-E-G-A-C)</option>
+                                    <option value="E-G-A-C-D">Chinese Jue (E-G-A-C-D)</option>
+                                    <option value="G-A-C-D-E">Chinese Zhi (G-A-C-D-E)</option>
+                                    <option value="A-C-D-E-G">Chinese Yu (A-C-D-E-G)</option>
+                                    <option value="C-D-Eb-G-Ab">Japanese Hirajoshi (C-D-Eb-G-Ab)</option>
+                                    <option value="C-Db-F-Gb-Bb">Japanese Iwato (C-Db-F-Gb-Bb)</option>
+                                    <option value="C-Db-F-G-Bb">Japanese In-sen (C-Db-F-G-Bb)</option>
+                                    <option value="C-D-Eb-G-A">Japanese Kumoi (C-D-Eb-G-A)</option>
+                                    <option value="C-D-F-G-A">Japanese Ritusen (C-D-F-G-A)</option>
+                                </optgroup>
+                                <optgroup label="═══ Hexatonic ═══">
+                                    <option value="C-D-Eb-E-G-A">Blues Major (C-D-Eb-E-G-A)</option>
+                                    <option value="C-Eb-F-Gb-G-Bb">Blues Minor (C-Eb-F-Gb-G-Bb)</option>
+                                    <option value="C-D-E-F#-G#-A#">Whole Tone (C-D-E-F#-G#-A#)</option>
+                                    <option value="C-D#-E-G-Ab-B">Augmented (C-D#-E-G-Ab-B)</option>
+                                </optgroup>
+                                <optgroup label="═══ Heptatonic ═══">
+                                    <option value="C-D-E-F-G-A-B">Major (C-D-E-F-G-A-B)</option>
+                                    <option value="A-B-C-D-E-F-G">Natural Minor (A-B-C-D-E-F-G)</option>
+                                    <option value="D-E-F-G-A-B-C">Dorian (D-E-F-G-A-B-C)</option>
+                                    <option value="E-F-G-A-B-C-D">Phrygian (E-F-G-A-B-C-D)</option>
+                                    <option value="F-G-A-B-C-D-E">Lydian (F-G-A-B-C-D-E)</option>
+                                    <option value="G-A-B-C-D-E-F">Mixolydian (G-A-B-C-D-E-F)</option>
+                                    <option value="A-B-C-D-E-F-G#">Harmonic Minor (A-B-C-D-E-F-G#)</option>
+                                </optgroup>
+                            </select>
+                            <span class="bent-notes-indicator" style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
+                                <span class="bent-notes-count" id="alt1BentCount" style="color: #E67E22; font-weight: 600;">{{COMPARISON_BENT_COUNT}} bent notes</span>
+                                <button class="bent-toggle-btn" onclick="toggleBentNotes('alt1')" title="Toggle bent notes visibility"
+                                        style="background: #E67E22; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;">
+                                    Show/Hide
+                                </button>
+                            </span>
+
+                            <!-- V4.2.20: Note Label Mode Controls for Alt1 -->
+                            <div class="label-mode-controls" style="display: flex; align-items: center; gap: 8px; margin-left: 15px; padding-left: 15px; border-left: 1px solid #ddd;">
+                                <label style="font-weight: 600; color: #2c3e50; font-size: 12px;">Labels:</label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="alt1LabelMode" value="abc" checked onchange="updateLabelMode('alt1', 'abc')">
+                                    ABC
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="alt1LabelMode" value="doremi" onchange="updateLabelMode('alt1', 'doremi')">
+                                    Do-Re-Mi
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer;">
+                                    <input type="radio" name="alt1LabelMode" value="string" onchange="updateLabelMode('alt1', 'string')">
+                                    String#
+                                </label>
+                                <!-- String offset controls (only visible when String# mode is active) -->
+                                <div id="alt1StringOffset" style="display: none; align-items: center; gap: 4px; margin-left: 8px;">
+                                    <button onclick="adjustStringOffset('alt1', -1)" title="Shift string numbers down"
+                                            style="background: #3498db; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        −
+                                    </button>
+                                    <span id="alt1OffsetValue" style="font-size: 12px; min-width: 30px; text-align: center; font-weight: 600; font-family: monospace;">0</span>
+                                    <button onclick="adjustStringOffset('alt1', 1)" title="Shift string numbers up"
+                                            style="background: #3498db; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- V4.0.13: Playback Controls (Linked - same as optimal) -->
+                        <div class="playback-controls" style="display: flex; align-items: center; gap: 8px; padding-right: 15px; border-right: 1px solid #ddd;">
+                            <button onclick="window.audioController && window.audioController.play()" title="Play tablature"
+                                    style="background: #27ae60; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ▶
+                            </button>
+                            <button onclick="window.audioController && window.audioController.stop()" title="Stop playback"
+                                    style="background: #e74c3c; color: white; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-size: 12px;">
+                                ■
+                            </button>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Tempo:</label>
+                                <input type="range" min="10" max="300" value="120" step="10" id="tempoSlider"
+                                       style="width: 80px; cursor: pointer;"
+                                       oninput="if(window.audioController) { window.audioController.setTempo(parseInt(this.value)); document.getElementById('tempoValue').textContent = this.value + ' BPM'; }">
+                                <span id="tempoValue" style="font-size: 12px; color: #666; min-width: 45px;">120 BPM</span>
+                                <label style="font-size: 12px; color: #666; margin-left: 10px;">Vol:</label>
+                                <input type="range" min="0.3" max="10" value="0.3" step="0.1" class="volumeSlider"
+                                       style="width: 60px; cursor: pointer;"
+                                       oninput="console.log('Volume slider moved to:', this.value); if(window.audioController) { window.audioController.setVolume(parseFloat(this.value)); } const spans = document.querySelectorAll('.volumeValue'); spans.forEach(s => s.textContent = this.value + 'x');">
+                                <span class="volumeValue" style="font-size: 12px; color: #666; min-width: 30px;">0.3x</span>
+                            </div>
+                        </div>
+
+                        <!-- V4 Zoom Controls (V3-style inline) -->
+                        <div class="zoom-controls" style="display: flex; align-items: center; gap: 15px;">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">X:</label>
+                                <input type="range" id="alt1XZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('alt1', 'x', this.value)">
+                                <span id="alt1XValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <label style="font-size: 12px; color: #666;">Y:</label>
+                                <input type="range" id="alt1YZoom" min="1" max="400" value="100"
+                                       style="width: 80px; height: 4px;"
+                                       oninput="window.zoomController.updateZoom('alt1', 'y', this.value)">
+                                <span id="alt1YValue" style="font-size: 12px; min-width: 35px;">100%</span>
+                            </div>
+                            <button onclick="window.zoomController.fitToWidth('alt1')" style="padding: 2px 6px; font-size: 11px; background: #3498db; color: white; border: none; border-radius: 3px; cursor: pointer;">Fit</button>
+                            <label style="font-size: 11px;">
+                                <input type="checkbox" id="linkZoom" checked onchange="toggleZoomLink(this.checked)" style="margin-right: 3px;">
+                                Link
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- V4.2.24: GLISSANDO SYSTEM FOR ALTERNATIVE TUNING -->
+                    <div class="glissando-panel" style="border: none; background: transparent; padding: 0; margin: 8px 0;">
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.9rem;">
+                            <span style="font-weight: 600; color: #008080;">Glissando Á</span>
+                            <button id="alt1ToggleAllGlissandosBtn" onclick="alt1ToggleAllGlissandos()" style="padding: 4px 10px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">Draw All</button>
+                            <div id="alt1DurationRadioButtons" style="display: flex; gap: 8px; align-items: center;">
+                                <!-- Checkboxes will be inserted here -->
+                            </div>
+                            <span id="alt1GlissandoInfo" style="color: #666; font-size: 0.85rem; margin-left: auto;">
+                                Select durations
+                            </span>
+
+                            <!-- Vibrato controls inline -->
+                            <div id="alt1VibratoControls" style="display: contents;">
+                                <!-- Vibrato checkboxes will be generated here by VibratoController -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ALTERNATIVE TUNING TABLATURE -->
+                    <!-- V4.3.24: Wrapped with tablature-wrapper for frozen string labels -->
+                    <div class="tablature-wrapper">
+                        <div class="tablature-reference">
+                            <svg width="{{SVG_WIDTH}}" height="{{SVG_HEIGHT}}" xmlns="http://www.w3.org/2000/svg" id="alt1Svg">
+                                {{COMPARISON_SVG_CONTENT}}
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- V4.2.24: Alt1 Glissando System JavaScript -->
+                    <script>
+                    // Alt1 Glissando Controller Instance
+                    window.alt1GlissandoController = null;
+
+                    // Initialize Alt1 glissando system when section becomes visible
+                    function initAlt1GlissandoSystem() {
+                        if (window.alt1GlissandoController) {
+                            console.log('Alt1 glissando already initialized');
+                            return;
+                        }
+
+                        try {
+                            // Create separate controller instance for alt1
+                            window.alt1GlissandoController = new GlissandoController();
+                            const initialized = window.alt1GlissandoController.initialize('alt1Svg');
+
+                            if (!initialized) {
+                                throw new Error('Could not initialize alt1 glissando controller');
+                            }
+
+                            // Analyze SVG notes
+                            window.alt1GlissandoController.analyzeSVGNotes();
+                            const candidates = window.alt1GlissandoController.glissandoCandidates;
+
+                            if (candidates && candidates.length > 0) {
+                                console.log(`Alt1: Found ${candidates.length} glissando candidates`);
+
+                                // Group by duration
+                                const durationGroups = {};
+                                candidates.forEach(c => {
+                                    if (!durationGroups[c.duration]) {
+                                        durationGroups[c.duration] = [];
+                                    }
+                                    durationGroups[c.duration].push(c);
+                                });
+
+                                // Sort durations
+                                const sortedDurations = Object.keys(durationGroups).map(parseFloat).sort((a, b) => b - a);
+
+                                // Create checkboxes
+                                const radioContainer = document.getElementById('alt1DurationRadioButtons');
+                                let checkboxesHTML = `
+                                    <label title="Draw glissando on the first note"
+                                           style="display: flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #FFD700; padding: 2px 6px; border-radius: 4px; background: rgba(255, 215, 0, 0.1);">
+                                        <input type="checkbox" id="alt1FirstNoteGlissando" onchange="alt1ToggleFirstNoteGlissando(this.checked)">
+                                        <span style="font-size: 0.85rem; font-weight: 600; color: #CC9900;">First</span>
+                                    </label>
+                                    <label title="Draw glissando on the last note"
+                                           style="display: flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #FFD700; padding: 2px 6px; border-radius: 4px; background: rgba(255, 215, 0, 0.1);">
+                                        <input type="checkbox" id="alt1LastNoteGlissando" onchange="alt1ToggleLastNoteGlissando(this.checked)">
+                                        <span style="font-size: 0.85rem; font-weight: 600; color: #CC9900;">Last</span>
+                                    </label>
+                                `;
+
+                                checkboxesHTML += sortedDurations.map((duration, index) => {
+                                    const count = durationGroups[duration].length;
+                                    const stats = window.alt1GlissandoController.durationStats[duration];
+                                    const percentage = stats ? stats.percentage : '0.0';
+                                    const opacity = Math.max(0.2, 1.0 - (index * 0.20));
+                                    const opacityPercent = Math.round(opacity * 100);
+
+                                    return `
+                                        <label title="${count} glissandos for ${duration}-beat notes (${percentage}%, ${opacityPercent}% opacity)"
+                                               style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                            <input type="checkbox" name="alt1GlissandoDuration" value="${duration}" onchange="alt1ToggleGlissandosByDuration(${duration}, this.checked)">
+                                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #000000; opacity: ${opacity};"></span>
+                                            <span style="font-size: 0.85rem;">${duration}b (${count}, ${percentage}%)</span>
+                                        </label>
+                                    `;
+                                }).join('');
+
+                                radioContainer.innerHTML = checkboxesHTML;
+                                alt1UpdateGlissandoInfo();
+                                alt1CheckAndGreyOutLastCheckbox();
+                            } else {
+                                document.getElementById('alt1GlissandoInfo').innerHTML = '<span style="color: #E67E22;">No candidates (no notes >= 1.5 beats)</span>';
+                            }
+                        } catch (error) {
+                            console.error('Error initializing alt1 glissando:', error);
+                            document.getElementById('alt1GlissandoInfo').innerHTML = `<span style="color: #E74C3C;">Error: ${error.message}</span>`;
+                        }
+                    }
+
+                    // Toggle glissandos by duration (alt1)
+                    function alt1ToggleGlissandosByDuration(duration, isChecked) {
+                        if (!window.alt1GlissandoController) return;
+                        const candidates = window.alt1GlissandoController.glissandoCandidates.filter(c => c.duration === duration);
+                        if (isChecked) {
+                            candidates.forEach(c => window.alt1GlissandoController.drawGlissandoForCandidate(c.noteIndex));
+                        } else {
+                            candidates.forEach(c => window.alt1GlissandoController.removeGlissandoForNote(c.noteIndex));
+                        }
+                        alt1UpdateGlissandoInfo();
+                        alt1UpdateToggleButtonState();
+                        alt1CheckAndGreyOutLastCheckbox();
+                    }
+
+                    // Update info panel (alt1)
+                    function alt1UpdateGlissandoInfo() {
+                        if (!window.alt1GlissandoController) return;
+                        const activeCount = window.alt1GlissandoController.glissandoPaths.length;
+                        document.getElementById('alt1GlissandoInfo').innerHTML = activeCount === 0 ?
+                            'Select duration checkboxes to draw glissandos.' :
+                            `<strong>${activeCount} glissandos</strong> drawn`;
+                        alt1UpdateToggleButtonState();
+                    }
+
+                    // Toggle all glissandos (alt1)
+                    function alt1ToggleAllGlissandos() {
+                        const button = document.getElementById('alt1ToggleAllGlissandosBtn');
+                        const durationCheckboxes = document.querySelectorAll('input[name="alt1GlissandoDuration"]');
+                        const firstCheckbox = document.getElementById('alt1FirstNoteGlissando');
+                        const lastCheckbox = document.getElementById('alt1LastNoteGlissando');
+
+                        const anyChecked = Array.from(durationCheckboxes).some(cb => cb.checked) ||
+                                          firstCheckbox?.checked || lastCheckbox?.checked;
+
+                        if (anyChecked) {
+                            durationCheckboxes.forEach(cb => { if (cb.checked) { cb.checked = false; alt1ToggleGlissandosByDuration(parseFloat(cb.value), false); } });
+                            if (firstCheckbox?.checked) { firstCheckbox.checked = false; alt1ToggleFirstNoteGlissando(false); }
+                            if (lastCheckbox?.checked && !lastCheckbox.disabled) { lastCheckbox.checked = false; alt1ToggleLastNoteGlissando(false); }
+                            button.textContent = 'Draw All';
+                        } else {
+                            durationCheckboxes.forEach(cb => { if (!cb.checked) { cb.checked = true; alt1ToggleGlissandosByDuration(parseFloat(cb.value), true); } });
+                            if (firstCheckbox && !firstCheckbox.checked) { firstCheckbox.checked = true; alt1ToggleFirstNoteGlissando(true); }
+                            if (lastCheckbox && !lastCheckbox.checked && !lastCheckbox.disabled) { lastCheckbox.checked = true; alt1ToggleLastNoteGlissando(true); }
+                            button.textContent = 'Clear All';
+                        }
+                        alt1UpdateGlissandoInfo();
+                    }
+
+                    // Update button state (alt1)
+                    function alt1UpdateToggleButtonState() {
+                        const button = document.getElementById('alt1ToggleAllGlissandosBtn');
+                        const durationCheckboxes = document.querySelectorAll('input[name="alt1GlissandoDuration"]');
+                        const firstCheckbox = document.getElementById('alt1FirstNoteGlissando');
+                        const lastCheckbox = document.getElementById('alt1LastNoteGlissando');
+                        const anyChecked = Array.from(durationCheckboxes).some(cb => cb.checked) || firstCheckbox?.checked || lastCheckbox?.checked;
+                        button.textContent = anyChecked ? 'Clear All' : 'Draw All';
+                    }
+
+                    // Toggle first note glissando (alt1)
+                    function alt1ToggleFirstNoteGlissando(isChecked) {
+                        if (!window.alt1GlissandoController) return;
+                        const svg = document.getElementById('alt1Svg');
+                        if (!svg) return;
+                        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+                        const firstMainNote = allNotes.find(note => note.getAttribute('r') !== '6');
+                        if (!firstMainNote) return;
+                        const firstNoteIndex = parseInt(firstMainNote.getAttribute('data-note-index'));
+                        if (isChecked) {
+                            const firstPriorityDelta = window.alt1GlissandoController.getFirstPriorityXDelta();
+                            if (firstPriorityDelta) {
+                                window.alt1GlissandoController.drawGlissandoToNote(firstNoteIndex, firstPriorityDelta);
+                            }
+                        } else {
+                            window.alt1GlissandoController.removeGlissandoForNote(firstNoteIndex);
+                        }
+                        alt1UpdateGlissandoInfo();
+                    }
+
+                    // Check and grey out last checkbox (alt1)
+                    function alt1CheckAndGreyOutLastCheckbox() {
+                        if (!window.alt1GlissandoController) return;
+                        const svg = document.getElementById('alt1Svg');
+                        if (!svg) return;
+                        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+                        const mainNotes = allNotes.filter(note => note.getAttribute('r') !== '6');
+                        const lastMainNote = mainNotes[mainNotes.length - 1];
+                        if (!lastMainNote) return;
+                        const lastNoteIndex = parseInt(lastMainNote.getAttribute('data-note-index'));
+                        const isInCandidates = window.alt1GlissandoController.glissandoCandidates.some(c => c.noteIndex === lastNoteIndex);
+                        const lastCheckbox = document.getElementById('alt1LastNoteGlissando');
+                        const lastLabel = lastCheckbox?.parentElement;
+                        if (isInCandidates) {
+                            if (lastCheckbox) { lastCheckbox.disabled = true; lastCheckbox.checked = false; }
+                            if (lastLabel) { lastLabel.style.opacity = '0.4'; lastLabel.style.cursor = 'not-allowed'; lastLabel.title = 'Last note already included in duration-based candidates'; }
+                        } else {
+                            if (lastCheckbox) lastCheckbox.disabled = false;
+                            if (lastLabel) { lastLabel.style.opacity = '1.0'; lastLabel.style.cursor = 'pointer'; lastLabel.title = 'Draw glissando on the last note'; }
+                        }
+                    }
+
+                    // Toggle last note glissando (alt1)
+                    function alt1ToggleLastNoteGlissando(isChecked) {
+                        if (!window.alt1GlissandoController) return;
+                        const svg = document.getElementById('alt1Svg');
+                        if (!svg) return;
+                        const allNotes = Array.from(svg.querySelectorAll('circle[data-note-index]'));
+                        const mainNotes = allNotes.filter(note => note.getAttribute('r') !== '6');
+                        const lastMainNote = mainNotes[mainNotes.length - 1];
+                        if (!lastMainNote) return;
+                        const lastNoteIndex = parseInt(lastMainNote.getAttribute('data-note-index'));
+                        if (isChecked) {
+                            const previousNote = window.alt1GlissandoController.findPreviousNote(lastNoteIndex);
+                            if (!previousNote) return;
+                            const deltaX = lastMainNote.getAttribute('cx') - previousNote.x;
+                            const xFrom = previousNote.isDotted ? previousNote.x + (deltaX * 1/3) : previousNote.x + (deltaX * 0.5);
+                            const lastNoteX = parseFloat(lastMainNote.getAttribute('cx'));
+                            const lastNoteY = parseFloat(lastMainNote.getAttribute('cy'));
+                            const yFrom = window.alt1GlissandoController.calculateGlissandoStartY(previousNote.y, lastNoteY);
+                            const chevrons = window.alt1GlissandoController.generateGlissando({ startX: xFrom, startY: yFrom, endX: lastNoteX, endY: lastNoteY, color: '#000000', opacity: 1.0 });
+                            const firstNote = svg.querySelector('circle');
+                            chevrons.forEach(chevron => svg.insertBefore(chevron, firstNote));
+                            window.alt1GlissandoController.glissandoPaths.push({ candidateIndex: lastNoteIndex, targetIndex: lastNoteIndex, xFrom, yFrom, xTo: lastNoteX, yTo: lastNoteY, chevrons, color: '#000000' });
+                            window.alt1GlissandoController.activeGlissandos.add(lastNoteIndex);
+                        } else {
+                            window.alt1GlissandoController.removeGlissandoForNote(lastNoteIndex);
+                        }
+                        alt1UpdateGlissandoInfo();
+                    }
+
+                    // Auto-initialize when alt1 section is expanded
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const altTuning1Section = document.getElementById('altTuning1Section');
+                        if (altTuning1Section) {
+                            // Watch for section expansion
+                            const observer = new MutationObserver((mutations) => {
+                                mutations.forEach((mutation) => {
+                                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                                        const sectionContent = altTuning1Section.querySelector('.section-content');
+                                        if (sectionContent && !sectionContent.classList.contains('collapsed')) {
+                                            // Section is now expanded - initialize glissando and vibrato systems
+                                            setTimeout(() => {
+                                                initAlt1GlissandoSystem();
+                                                // Initialize vibrato controller for alt1
+                                                if (window.VibratoController && !window.alt1VibratoController) {
+                                                    window.alt1VibratoController = new VibratoController();
+                                                    window.alt1VibratoController.initialize('alt1Svg', 'alt1VibratoControls');
+                                                    console.log('Alt1 Vibrato Controller initialized');
+                                                }
+                                            }, 300);
+                                        }
+                                    }
+                                });
+                            });
+                            observer.observe(altTuning1Section, { attributes: true, subtree: true });
+                        }
+                    });
+                    </script>
+
+                </div>
+            </div>
+
+            <!-- PHRASES IN TABLATURE SECTION (Moveable) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="altTuning3Section" data-order="7" data-focus="phrases-tablature">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('altTuning3Section')">
+                    <h3 class="section-title">Phrases in Tablature</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning3Section', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('altTuning3Section', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content collapsed">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Phrase-to-Note Alignment Visualization</h4>
+
+                    <!-- Phrase Bars Container (horizontal colored bars) -->
+                    <div id="phraseBarsContainer" style="width: 100%; overflow-x: auto; overflow-y: auto; min-height: 400px; max-height: 3000px; background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 10px;">
+                        <!-- Phrase bars SVG will be generated here by phrase-bars-controller.js -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- LYRICS SECTION (Collapsible) -->
+            <div class="analysis-section" id="lyricsSection" data-order="9" data-focus="lyrics">
+                <div class="vertical-header" onclick="toggleSection('lyricsSection')">
+                    <h3 class="section-title">Lyrics</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('lyricsSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('lyricsSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Vietnamese Lyrics (Extracted from MusicXML)</h4>
+
+                    <!-- Flex container: Lyrics table on left, data cards on right -->
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+
+                        <!-- Left: Lyrics table (flex-grow to take most space) -->
+                        <div style="flex: 1; min-width: 0;" id="lyricsTableContainer">
+                            <p style="padding: 20px; text-align: center; color: #999;">Loading lyrics...</p>
+                        </div>
+
+                        <!-- Right: Data cards stack (top-aligned, right next to table) -->
+                        <div style="display: flex; flex-direction: column; gap: 15px; width: 220px; flex-shrink: 0;">
+
+                            <!-- Lyrics Metrics Card -->
+                            <div class="lyrics-metrics-card" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h5 style="margin: 0 0 12px 0; color: #2c3e50; font-size: 16px; font-weight: 600; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 8px;">Lyrics Metrics</h5>
+
+                                <!-- Metric item template -->
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Total Phrases</div>
+                                    <div class="metric-value" id="totalPhrases" style="font-size: 24px; font-weight: bold; color: #2c3e50;">28</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Total Syllables</div>
+                                    <div class="metric-value" id="totalWords" style="font-size: 24px; font-weight: bold; color: #2c3e50;">119</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Avg Syllables</div>
+                                    <div class="metric-value" id="avgWordsPerPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">4.3</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Unique Types</div>
+                                    <div class="metric-value" id="uniqueTypes" style="font-size: 24px; font-weight: bold; color: #2c3e50;">7</div>
+                                </div>
+
+                                <!-- Linguistic type breakdown -->
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                                    <div style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Linguistic Types</div>
+                                    <div id="typeBreakdown" style="font-size: 12px; line-height: 1.6;">
+                                        <!-- Will be populated by controller -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Phrase Structures Card -->
+                            <div class="phrase-structures-card" style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                <h5 style="margin: 0 0 12px 0; color: #2c3e50; font-size: 16px; font-weight: 600; text-align: center; border-bottom: 2px solid #9b59b6; padding-bottom: 8px;">Phrase Structures</h5>
+
+                                <!-- Phrase length distribution -->
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Shortest Phrase</div>
+                                    <div class="metric-value" id="shortestPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">3 syllables</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Longest Phrase</div>
+                                    <div class="metric-value" id="longestPhrase" style="font-size: 24px; font-weight: bold; color: #2c3e50;">5 syllables</div>
+                                </div>
+
+                                <div class="metric-item" style="margin-bottom: 12px; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e9ecef;">
+                                    <div class="metric-label" style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">Most Common</div>
+                                    <div class="metric-value" id="mostCommonLength" style="font-size: 24px; font-weight: bold; color: #2c3e50;">4 syllables</div>
+                                </div>
+
+                                <!-- Length distribution breakdown -->
+                                <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid #e0e0e0;">
+                                    <div style="font-size: 11px; color: #7f8c8d; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Length Distribution</div>
+                                    <div id="lengthBreakdown" style="font-size: 12px; line-height: 1.6;">
+                                        <!-- Will be populated by controller -->
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- STRUCTURAL OVERVIEW SECTION (Simple text-based) -->
+            <!-- POSITION: x=0, y=after lyrics section + gap -->
+            <div class="analysis-section" id="structuralOverviewSection" data-order="10" data-focus="structural-overview">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('structuralOverviewSection')">
+                    <h3 class="section-title">Structure Overview</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">📊 Song Structure Analysis</h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; align-items: start;">
+                        {{STRUCTURAL_OVERVIEW_CARDS}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ANNOTATED PHRASES SECTION (Synchronized with Optimal Tuning) -->
+            <!-- POSITION: x=0, y=after structural overview + gap -->
+            <div class="analysis-section" id="annotatedPhrasesSection" data-order="11" data-focus="annotated-phrases">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('annotatedPhrasesSection')">
+                    <h3 class="section-title">Annotated Phrases</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('annotatedPhrasesSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('annotatedPhrasesSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">🎼 Structural Phrase Visualization</h4>
+
+                    <p style="margin: 0 0 15px 0; color: #555; font-size: 14px;">
+                        Visual analysis showing parallelism hierarchy (exact refrains, structural patterns) and semantic clustering (emotions, actions, nature vocabulary) aligned with tablature positions.
+                    </p>
+
+                    <!-- Zoom Controls -->
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                        <label style="font-weight: 600; color: #2c3e50;">X-Zoom:</label>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 67)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">67%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 100)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">100%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 150)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">150%</button>
+                        <button onclick="window.zoomController.updateZoom('annotated', 'x', 200)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">200%</button>
+                        <button onclick="window.zoomController.fitToWidth('annotated')" style="padding: 4px 10px; border: 1px solid #008080; border-radius: 4px; background: white; color: #008080; cursor: pointer; font-weight: 600;">Fit Width</button>
+                        <span style="margin-left: auto; font-size: 12px; color: #7f8c8d;">💡 Synced with Optimal Tuning (scroll & zoom)</span>
+                    </div>
+
+                    <!-- Scrollable SVG Container -->
+                    <div class="tablature-scroll-container" id="annotatedScrollContainer" style="overflow-x: auto; overflow-y: visible; border: 1px solid #ccc; background: white; box-sizing: border-box; min-height: 550px; padding: 10px 0;">
+                        <svg id="annotatedSvg" width="{{ANNOTATED_SVG_WIDTH}}" height="550">
+                            {{ANNOTATED_PHRASES_SVG}}
+                        </svg>
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                        <h5 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px; font-weight: 600;">📊 Legend</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; font-size: 12px;">
+                            <div><span style="display: inline-block; width: 20px; height: 3px; background: #FFD700; margin-right: 5px; vertical-align: middle;"></span> <strong>Gold:</strong> Exact Refrain</div>
+                            <div><span style="display: inline-block; width: 20px; height: 3px; background: #3498DB; margin-right: 5px; vertical-align: middle;"></span> <strong>Blue:</strong> Structural Parallel</div>
+                            <div style="color: #E74C3C;"><strong>😢 Emotion</strong> (khổ, thương, nhớ)</div>
+                            <div style="color: #9B59B6;"><strong>💭 Abstract</strong> (duyên, đời, lòng)</div>
+                            <div style="color: #27AE60;"><strong>🌳 Nature</strong> (chiều, gió, cây)</div>
+                            <div style="color: #3498DB;"><strong>🗣️ Action</strong> (đi, làm, ru)</div>
+                            <div style="color: #F39C12;"><strong>👤 Characters</strong> (bà, chồng, con)</div>
+                            <div style="color: #E67E22;"><strong>📣 Vocatives</strong> (ơi, hỡi, này)</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SYLLABLE LYRICS SECTION (NEW: V4.3.5+) -->
+            <!-- POSITION: x=0, y=after annotated phrases + gap -->
+            <div class="analysis-section" id="syllableLyricsSection" data-order="11.5" data-focus="syllable-lyrics">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('syllableLyricsSection')">
+                    <h3 class="section-title">Syllable Lyrics with X-Positions</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('syllableLyricsSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('syllableLyricsSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">📝 Lyrics with Tablature Positions</h4>
+
+                    <p style="margin: 0 0 15px 0; color: #555; font-size: 14px;">
+                        Each syllable displays its Vietnamese text, English translation, linguistic tone, and rhyme family.
+                        Syllables include X/Y coordinates for pattern visualization matching to tablature positions.
+                    </p>
+
+                    <!-- Syllable Lyrics HTML (Generated from notes-annotated data) -->
+                    {{SYLLABLE_LYRICS_HTML}}
+
+                    <!-- Interactive Highlighting Script -->
+                    <script>
+                    (function() {
+                        let currentHighlightTimer = null;
+
+                        // Wait for DOM to be ready
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', initSyllableHighlighting);
+                        } else {
+                            initSyllableHighlighting();
+                        }
+
+                        function initSyllableHighlighting() {
+                            const syllables = document.querySelectorAll('.syllable[data-note-id]');
+                            console.log(`[Syllable Highlighting] Found ${syllables.length} clickable syllables`);
+
+                            syllables.forEach(syllable => {
+                                syllable.addEventListener('click', function(e) {
+                                    e.stopPropagation(); // Prevent event bubbling
+
+                                    const noteId = this.getAttribute('data-note-id');
+                                    const noteX = parseFloat(this.getAttribute('data-note-x'));
+                                    const lyric = this.getAttribute('data-lyric');
+
+                                    console.log(`[Syllable Click] "${lyric}" → Note ID: ${noteId}, X: ${noteX}`);
+
+                                    if (!noteId) {
+                                        console.warn('[Syllable Click] No note ID found');
+                                        return;
+                                    }
+
+                                    // Clear any previous auto-clear timer
+                                    if (currentHighlightTimer) {
+                                        clearTimeout(currentHighlightTimer);
+                                    }
+
+                                    // Clear ALL previous highlights first (in all tablatures)
+                                    clearAllHighlights();
+
+                                    // Find note in BOTH tablatures
+                                    highlightNoteInTablature('optimalSvg', noteId, noteX);
+                                    highlightNoteInTablature('alt1Svg', noteId, noteX);
+
+                                    // Auto-clear after 4 seconds
+                                    currentHighlightTimer = setTimeout(() => {
+                                        console.log('[Auto-clear] Removing highlights after 4 seconds');
+                                        clearAllHighlights();
+                                    }, 4000);
+                                });
+                            });
+
+                            // Also allow clicking anywhere else to clear highlights
+                            document.addEventListener('click', function(e) {
+                                // Only clear if clicking outside syllables
+                                if (!e.target.closest('.syllable[data-note-id]')) {
+                                    clearAllHighlights();
+                                }
+                            });
+                        }
+
+                        function clearAllHighlights() {
+                            // Clear highlights in all SVGs
+                            const allHighlights = document.querySelectorAll('.syllable-highlight');
+                            allHighlights.forEach(el => {
+                                el.classList.remove('syllable-highlight');
+                            });
+
+                            if (allHighlights.length > 0) {
+                                console.log(`[Clear] Removed ${allHighlights.length} highlights`);
+                            }
+                        }
+
+                        function highlightNoteInTablature(svgContainerId, noteId, noteX) {
+                            const svg = document.getElementById(svgContainerId);
+                            if (!svg) {
+                                console.warn(`[Highlight] SVG container "${svgContainerId}" not found`);
+                                return;
+                            }
+
+                            // Find the note circle by ID
+                            const noteCircle = svg.querySelector(`circle[id="${noteId}"]`);
+                            if (!noteCircle) {
+                                console.warn(`[Highlight] Note circle "${noteId}" not found in ${svgContainerId}`);
+                                return;
+                            }
+
+                            // Apply highlight class
+                            noteCircle.classList.add('syllable-highlight');
+                            console.log(`[Highlight] Applied highlight to ${noteId} in ${svgContainerId}`);
+
+                            // Scroll tablature to show the note
+                            scrollToNote(svgContainerId, noteCircle, noteX);
+                        }
+
+                        function scrollToNote(svgContainerId, noteCircle, noteX) {
+                            const container = document.getElementById(svgContainerId);
+                            if (!container) return;
+
+                            // Get scroll container (parent with overflow)
+                            const scrollContainer = container.closest('.tablature-content') || container.parentElement;
+                            if (!scrollContainer) return;
+
+                            // Calculate scroll position to center the note
+                            const containerWidth = scrollContainer.clientWidth;
+                            const scrollLeft = noteX - (containerWidth / 2);
+
+                            // Smooth scroll to position
+                            scrollContainer.scrollTo({
+                                left: Math.max(0, scrollLeft),
+                                behavior: 'smooth'
+                            });
+
+                            console.log(`[Scroll] Scrolled ${svgContainerId} to X: ${noteX} (scroll position: ${scrollLeft})`);
+                        }
+                    })();
+                    </script>
+
+                    <!-- Highlight Styles -->
+                    <style>
+                    .syllable-highlight {
+                        filter: drop-shadow(0 0 12px rgba(52, 152, 219, 0.9)) !important;
+                        stroke: #3498DB !important;
+                        stroke-width: 3 !important;
+                        animation: syllable-pulse 1.5s ease-in-out infinite;
+                        pointer-events: auto !important; /* Ensure clickability */
+                        z-index: 100 !important; /* Ensure visibility */
+                    }
+
+                    @keyframes syllable-pulse {
+                        0%, 100% {
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                        50% {
+                            transform: scale(1.1);
+                            opacity: 0.9;
+                        }
+                    }
+
+                    /* Enhanced hover state for syllables */
+                    .syllable {
+                        cursor: pointer !important;
+                        transition: all 0.2s ease;
+                    }
+
+                    .syllable:hover {
+                        background: #e3f2fd !important;
+                        border-radius: 4px;
+                        padding: 4px 8px;
+                        transform: scale(1.05);
+                    }
+
+                    /* Ensure SVG elements don't block clicks */
+                    svg circle, svg rect, svg polygon {
+                        pointer-events: auto;
+                    }
+                    </style>
+
+                </div>
+            </div>
+
+            <!-- PATTERN VISUALIZATION SECTION (NEW: V4.3.5+) -->
+            <!-- POSITION: x=0, y=after syllable lyrics + gap -->
+            <div class="analysis-section" id="patternVisualizationSection" data-order="11.6" data-focus="pattern-visualization">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('patternVisualizationSection')">
+                    <h3 class="section-title">Tier 3 Pattern Visualization (KSIC, KTIC, KRIC)</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('patternVisualizationSection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('patternVisualizationSection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">🎨 Interactive Pattern Highlighting</h4>
+
+                    <p style="margin: 0 0 15px 0; color: #555; font-size: 14px;">
+                        Click pattern buttons below to highlight their occurrences in the tablature.
+                        Patterns are matched to syllable X-coordinates and highlighted in both lyrics and tablature.
+                    </p>
+
+                    <!-- Pattern Controls (rendered by controller) -->
+                    <div id="patternControlsContainer"></div>
+
+                    <p style="margin: 20px 0 0 0; padding: 15px; background: #e8f5e9; border-left: 4px solid #27ae60; font-size: 13px; color: #2c3e50;">
+                        <strong>How to use:</strong> Click any pattern button to see where that pattern occurs in the song.
+                        Connected syllables will be highlighted in both the lyrics section above and the tablature.<br><br>
+                        <strong>Pattern types:</strong><br>
+                        <span style="color: #9B59B6;">● Tone Patterns (KTIC)</span> - Vietnamese linguistic tone sequences (ngang→huyền, sắc→ngang, etc.)<br>
+                        <span style="color: #E67E22;">● Rhythm Patterns (KRIC)</span> - Note duration sequences (2→2 = eighth notes, 1→2 = quarter to eighth, etc.)<br>
+                        <span style="color: #3498DB;">● Syllable Patterns (KSIC)</span> - Most frequent syllables at phrase beginnings
+                    </p>
+
+                </div>
+            </div>
+
+            <!-- LIBRARY SECTION (Final Collapsible Section) -->
+            <!-- POSITION: x=0, y=after previous section + gap -->
+            <div class="analysis-section" id="librarySection" data-order="12" data-focus="song-library">
+
+                <!-- VERTICAL HEADER -->
+                <div class="vertical-header" onclick="toggleSection('librarySection')">
+                    <h3 class="section-title">Song Library</h3>
+                    <div class="vertical-controls">
+                        <button class="vertical-move-arrow" onclick="moveSection('librarySection', 'up'); event.stopPropagation();">▲</button>
+                        <button class="vertical-move-arrow" onclick="moveSection('librarySection', 'down'); event.stopPropagation();">▼</button>
+                        <span class="vertical-collapse-toggle">▼</span>
+                    </div>
+                </div>
+
+                <!-- SECTION CONTENT -->
+                <div class="section-content">
+
+                    <!-- SECTION LABEL -->
+                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Vietnamese Traditional Music Library</h4>
+
+                    <!-- LIBRARY CONTROLS -->
+                    <div class="library-controls" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+
+                        <!-- Sort By -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 60px;">Sort by:</label>
+                            <select id="librarySortBy" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="title">Title (A-Z)</option>
+                                <option value="region">Region</option>
+                                <option value="genre">Genre</option>
+                                <option value="totalNotes">Total Notes</option>
+                                <option value="bentNotes">Bent Notes (High-Low)</option>
+                                <option value="bentStrings">Bent Strings</option>
+                                <option value="optimalTuning">Optimal Tuning</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter by Region -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 50px;">Region:</label>
+                            <select id="libraryFilterRegion" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="all">All Regions</option>
+                                <option value="Northern">Northern</option>
+                                <option value="Southern">Southern</option>
+                                <option value="Central">Central</option>
+                                <option value="Highland">Highland</option>
+                            </select>
+                        </div>
+
+                        <!-- Filter by Genre -->
+                        <div class="control-group" style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 50px;">Genre:</label>
+                            <select id="libraryFilterGenre" onchange="window.libraryController.update()" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <option value="all">All Genres</option>
+                                <option value="Lý">Lý</option>
+                                <option value="Hò">Hò</option>
+                                <option value="Ru Con">Ru Con</option>
+                                <option value="Quan Họ">Quan Họ</option>
+                                <option value="Hát Chèo">Hát Chèo</option>
+                                <option value="Traditional">Traditional</option>
+                            </select>
+                        </div>
+
+                        <!-- Library Stats -->
+                        <div class="library-stats" style="margin-left: auto; display: flex; align-items: center; gap: 15px; font-size: 14px; color: #666;">
+                            <span id="libraryCount">0 songs</span>
+                            <button onclick="window.libraryController.refresh()" style="background: #008080; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer;">
+                                Refresh
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- LIBRARY GRID -->
+                    <div class="library-grid" id="libraryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                        <!-- Song cards will be populated here by JavaScript -->
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- VOCABULARY METRICS SECTION (Below Library) -->
+            <!-- Auto-updates when library changes -->
+            {{VOCABULARY_METRICS_SECTION}}
+
+        </div>
+    </div>
+
+    <script>
+        // V4 Vertical Header System with Cross-Highlighting
+
+        const verticalHeaderSystem = {
+            // Cross-reference relationships between sections
+            relationships: {
+                'tone-nga': ['melisma-groups', 'rank-17-notes', 'phrase-peaks'],
+                'pitch-e': ['string-usage', 'melodic-emphasis', 'traditional-elements'],
+                'melisma-count': ['tone-nga', 'grace-notes', 'phrase-endings'],
+                'unique-pitches': ['string-usage', 'tuning-system', 'cultural-context']
+            },
+
+            // Active highlights tracking
+            activeHighlights: new Set(),
+
+            // Correlation examples with positioning data
+            correlationExamples: {
+                'tone-nga': {
+                    description: "Ngã tone appears in 80% of melismas on rank #17 notes",
+                    relatedSections: ['melismaSection', 'patternsSection'],
+                    tablatureHighlights: ['tone-nga', 'melisma-groups', 'rank-17'],
+                    highlightPositions: [
+                        { x: 120, y: 80, type: 'tone-nga' },
+                        { x: 280, y: 110, type: 'melisma-groups' }
+                    ]
+                }
+            }
+        };
+
+        // ===================================================================
+        // V4.0.5 ZOOM SYSTEM - External Controller (Cleaned Up)
+        // ===================================================================
+        // Old inline zoom functions removed (~240 lines)
+        // Now using centralized ZoomController from zoom-controller.js
+        //
+        // Benefits:
+        // - No code duplication
+        // - Easy to test
+        // - Single source of truth
+        // - Built-in error handling
+        // ===================================================================
+
+        // V4.0.7: Simplified bent toggle using unified data-bent attribute
+        // Initialize bent notes to hidden state (default colors)
+        window.initializeBentNotesState = function(section) {
+            const svgId = section === 'optimal' ? 'optimalSvg' :
+                         section === 'alt1' ? 'alt1Svg' :
+                         section === 'alt2' ? 'alt2Svg' : 'alt3Svg';
+
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            svg.setAttribute('data-bent-visible', 'false');
+
+            // Use single selector for ALL bent elements (circles, triangles, lines, text)
+            const allBentElements = svg.querySelectorAll('[data-bent="true"]');
+
+            allBentElements.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                const elementId = element.id;
+
+                if (tagName === 'circle') {
+                    // V4.0.13: Register with VisualStateManager if available
+                    if (window.visualStateManager && elementId) {
+                        window.visualStateManager.applyState(elementId, 'bent-toggle', {
+                            fill: '#333333',  // Grey (hidden)
+                            stroke: '#000000'
+                        });
+                    } else {
+                        // Fallback: Direct style manipulation
+                        element.style.fill = '#333333';
+                        element.style.stroke = '#000000';
+                    }
+                } else if (tagName === 'polygon') {
+                    // Bent triangles: grey
+                    element.style.fill = '#666666';
+                } else if (tagName === 'line' || tagName === 'text') {
+                    // Bent indicators: hidden
+                    element.style.display = 'none';
+                }
+            });
+
+            console.log(`${section} initialized: ${allBentElements.length} bent elements set to default (hidden)`);
+        }
+
+        // Toggle bent notes visibility and colors
+        function toggleBentNotes(section) {
+            const svgId = section === 'optimal' ? 'optimalSvg' :
+                         section === 'alt1' ? 'alt1Svg' :
+                         section === 'alt2' ? 'alt2Svg' : 'alt3Svg';
+
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            // Toggle state
+            const isCurrentlyVisible = svg.getAttribute('data-bent-visible') === 'true';
+            const newVisibility = !isCurrentlyVisible;
+            svg.setAttribute('data-bent-visible', newVisibility);
+
+            // Use single selector for ALL bent elements
+            const allBentElements = svg.querySelectorAll('[data-bent="true"]');
+
+            allBentElements.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                const elementId = element.id;
+
+                if (tagName === 'circle') {
+                    // V4.0.13: Register with VisualStateManager if available
+                    if (window.visualStateManager && elementId) {
+                        window.visualStateManager.applyState(elementId, 'bent-toggle', {
+                            fill: newVisibility ? '#FF0000' : '#333333',
+                            stroke: newVisibility ? '#CC0000' : '#000000'
+                        });
+                    } else {
+                        // Fallback: Direct style manipulation
+                        element.style.fill = newVisibility ? '#FF0000' : '#333333';
+                        element.style.stroke = newVisibility ? '#CC0000' : '#000000';
+                    }
+                } else if (tagName === 'polygon') {
+                    // Toggle triangle colors
+                    element.style.fill = newVisibility ? '#FF0000' : '#666666';
+                } else if (tagName === 'line' || tagName === 'text') {
+                    // Toggle indicator visibility
+                    element.style.display = newVisibility ? 'block' : 'none';
+                }
+            });
+
+            // Update button appearance
+            const button = svg.closest('.section-content').querySelector('.bent-toggle-btn');
+            if (button) {
+                button.style.background = newVisibility ? '#FF0000' : '#E67E22';
+            }
+
+            console.log(`${section} bent: ${newVisibility ? 'SHOWN (red)' : 'HIDDEN (grey)'} - ${allBentElements.length} elements toggled`);
+        }
+
+        // SECTION TOGGLE FUNCTION
+        function toggleSection(sectionId) {
+            // UI ELEMENTS ACCESSED:
+            const content = document.querySelector(`#${sectionId} .section-content`); // CONTENT AREA
+            const toggle = document.querySelector(`#${sectionId} .vertical-collapse-toggle`); // TOGGLE ICON
+            const section = document.getElementById(sectionId); // ENTIRE SECTION
+            const header = document.querySelector(`#${sectionId} .vertical-header`); // VERTICAL HEADER
+
+            if (content.classList.contains('collapsed')) {
+                // EXPAND SECTION
+                content.classList.remove('collapsed');
+                toggle.textContent = '▼'; // EXPANDED ICON
+                section.classList.remove('collapsed');
+                header.classList.add('active-focus'); // ACTIVE HEADER STYLING
+
+                // ACTIVATE CROSS-HIGHLIGHTING
+                activateCrossHighlighting(sectionId);
+            } else {
+                // COLLAPSE SECTION
+                content.classList.add('collapsed');
+                toggle.textContent = '▶'; // COLLAPSED ICON
+                section.classList.add('collapsed');
+                header.classList.remove('active-focus');
+
+                // DEACTIVATE CROSS-HIGHLIGHTING
+                deactivateCrossHighlighting(sectionId);
+            }
+        }
+
+        // METRIC HIGHLIGHTING FUNCTION
+        function highlightMetric(metricId) {
+            console.log(`Highlighting metric: ${metricId}`);
+
+            // CLEAR PREVIOUS HIGHLIGHTS
+            clearAllHighlights();
+
+            // HIGHLIGHT RELATED ELEMENTS ON TABLATURE
+            const relatedElements = verticalHeaderSystem.relationships[metricId] || [];
+            relatedElements.forEach(elementType => {
+                highlightTablatureElements(elementType);
+            });
+
+            // HIGHLIGHT RELATED SECTIONS
+            highlightRelatedSections(metricId);
+
+            // SHOW CROSS-REFERENCE INFORMATION
+            showCrossReferences(metricId);
+
+            // UPDATE METRIC CARD APPEARANCE
+            document.querySelectorAll('.metric-card').forEach(card => {
+                card.classList.remove('highlighted');
+            });
+            document.querySelector(`[data-metric="${metricId}"]`).classList.add('highlighted');
+        }
+
+        // TABLATURE ELEMENT HIGHLIGHTING FUNCTION
+        function highlightTablatureElements(elementType) {
+            console.log(`Highlighting tablature elements: ${elementType}`);
+
+            // EXAMPLE HIGHLIGHT POSITIONS (would be calculated from real data)
+            const highlightPositions = {
+                'pitch-e': [{ x: 220, y: 140 }, { x: 340, y: 170 }],
+                'melisma-groups': [{ x: 180, y: 110 }, { x: 280, y: 110 }],
+                'tone-nga': [{ x: 120, y: 80 }],
+                'rank-17': [{ x: 220, y: 140 }]
+            };
+
+            const positions = highlightPositions[elementType] || [];
+            const className = `highlight-${elementType.replace('_', '-')}`;
+
+            addHighlightOverlays(className, positions);
+        }
+
+        // ADD HIGHLIGHT OVERLAYS FUNCTION
+        function addHighlightOverlays(className, positions) {
+            const container = document.getElementById('highlightOverlayContainer');
+
+            positions.forEach(pos => {
+                const overlay = document.createElement('div');
+                overlay.className = `highlight-overlay ${className} active`;
+                // OVERLAY POSITIONING
+                overlay.style.left = pos.x + 'px'; // X COORDINATE
+                overlay.style.top = pos.y + 'px';  // Y COORDINATE
+                overlay.style.width = '20px';     // OVERLAY WIDTH
+                overlay.style.height = '20px';    // OVERLAY HEIGHT
+                container.appendChild(overlay);
+            });
+        }
+
+        // MOVE SECTION FUNCTION (Fixed for Vertical Headers)
+        window.moveSection = function(sectionId, direction) {
+            console.log(`V4 Move: ${sectionId} ${direction}`);
+
+            const section = document.getElementById(sectionId);
+            if (!section) {
+                console.log('Section not found:', sectionId);
+                return false;
+            }
+
+            const container = document.getElementById('sectionsContainer');
+            const movableSections = Array.from(container.querySelectorAll('.analysis-section:not(#optimalTuningSection)'));
+
+            console.log('Found movable sections:', movableSections.map(s => s.id));
+
+            // ENSURE FLEXBOX LAYOUT
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+
+            // INITIALIZE ORDER VALUES
+            movableSections.forEach((s, i) => {
+                if (!s.style.order) {
+                    s.style.order = s.dataset.order || (i + 1);
+                }
+                console.log(`Section ${s.id} order: ${s.style.order}`);
+            });
+
+            // GET SORTED SECTIONS
+            const sortedSections = movableSections.map(s => ({
+                section: s,
+                order: parseInt(s.style.order),
+                id: s.id
+            })).sort((a, b) => a.order - b.order);
+
+            const currentIndex = sortedSections.findIndex(s => s.section === section);
+            console.log(`Current index: ${currentIndex}, direction: ${direction}`);
+
+            if (direction === 'up' && currentIndex > 0) {
+                // MOVE UP
+                const prevSection = sortedSections[currentIndex - 1];
+                const tempOrder = section.style.order;
+                section.style.order = prevSection.section.style.order;
+                prevSection.section.style.order = tempOrder;
+
+                console.log(`Moved ${sectionId} UP - swapped orders`);
+
+                // FORCE BROWSER REFLOW
+                container.style.display = 'none';
+                container.offsetHeight; // TRIGGER REFLOW
+                container.style.display = 'flex';
+
+                return true;
+
+            } else if (direction === 'down' && currentIndex < sortedSections.length - 1) {
+                // MOVE DOWN
+                const nextSection = sortedSections[currentIndex + 1];
+                const tempOrder = section.style.order;
+                section.style.order = nextSection.section.style.order;
+                nextSection.section.style.order = tempOrder;
+
+                console.log(`Moved ${sectionId} DOWN - swapped orders`);
+
+                // FORCE BROWSER REFLOW
+                container.style.display = 'none';
+                container.offsetHeight;
+                container.style.display = 'flex';
+
+                return true;
+            }
+
+            console.log('Move not possible - at boundary or invalid direction');
+            return false;
+        };
+
+        // OLD BENT NOTES TOGGLE FUNCTION - REMOVED (conflicts with new modular system)
+
+        // V4.2.20: LABEL MODE SWITCHING FUNCTIONS
+        // Store label mode state for each section
+        window.labelModeState = {
+            optimal: { mode: 'abc', offset: 0 },
+            alt1: { mode: 'abc', offset: 0 },
+            alt2: { mode: 'abc', offset: 0 },
+            alt3: { mode: 'abc', offset: 0 }
+        };
+
+        // Pitch class to Do-Re-Mi mapping (C = Do)
+        const DOREMI_MAP = {
+            'C': 'Do', 'C#': 'Di', 'Db': 'Ra', 'D': 'Re', 'D#': 'Ri', 'Eb': 'Me',
+            'E': 'Mi', 'F': 'Fa', 'F#': 'Fi', 'Gb': 'Se', 'G': 'Sol', 'G#': 'Si',
+            'Ab': 'Le', 'A': 'La', 'A#': 'Li', 'Bb': 'Te', 'B': 'Ti'
+        };
+
+        // Pitch class to chromatic semitone (C=0, C#=1, D=2, etc.)
+        const PITCH_TO_SEMITONE = {
+            'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4,
+            'F': 5, 'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9,
+            'A#': 10, 'Bb': 10, 'B': 11
+        };
+
+        // Update label mode (abc, string, doremi)
+        function updateLabelMode(section, mode) {
+            window.labelModeState[section].mode = mode;
+
+            // Show/hide string offset controls
+            const offsetControls = document.getElementById(`${section}StringOffset`);
+            if (offsetControls) {
+                offsetControls.style.display = (mode === 'string') ? 'flex' : 'none';
+            }
+
+            // Update all note labels
+            updateNoteLabels(section);
+        }
+
+        // Adjust string offset (+1 or -1)
+        function adjustStringOffset(section, delta) {
+            window.labelModeState[section].offset += delta;
+            document.getElementById(`${section}OffsetValue`).textContent = window.labelModeState[section].offset;
+            updateNoteLabels(section);
+        }
+
+        // Update all note text labels based on current mode
+        function updateNoteLabels(section) {
+            const svgId = section === 'optimal' ? 'optimalSvg' :
+                         section === 'alt1' ? 'alt1Svg' :
+                         section === 'alt2' ? 'alt2Svg' : 'alt3Svg';
+
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            const state = window.labelModeState[section];
+            const noteTexts = svg.querySelectorAll('.note-text');
+
+            noteTexts.forEach(text => {
+                const stringNum = parseInt(text.getAttribute('data-string')) || 0;
+                const pitchClass = text.getAttribute('data-pitch-class') || '';
+                const octave = text.getAttribute('data-octave') || '';
+
+                let newLabel = '';
+
+                if (state.mode === 'abc') {
+                    // ABC mode: C⁴, D⁵, etc.
+                    newLabel = pitchClass + toSuperscript(octave);
+
+                } else if (state.mode === 'string') {
+                    // String number mode with offset
+                    const adjustedString = stringNum + state.offset;
+
+                    // Check if this note is bent
+                    const noteCircle = svg.querySelector(`circle[cx="${text.getAttribute('x')}"][cy="${text.getAttribute('y')}"]`);
+                    const isBent = noteCircle && noteCircle.classList.contains('bent-note');
+
+                    if (isBent) {
+                        // Calculate semitones bent
+                        const semitones = calculateBentSemitones(svg, text);
+                        newLabel = `${adjustedString}.${semitones}`;
+                    } else {
+                        // Open string note
+                        newLabel = adjustedString.toString();
+                    }
+
+                } else if (state.mode === 'doremi') {
+                    // Do-Re-Mi mode
+                    const solfege = DOREMI_MAP[pitchClass] || pitchClass;
+                    newLabel = solfege + toSuperscript(octave);
+                }
+
+                text.textContent = newLabel;
+            });
+        }
+
+        // Calculate how many semitones a note is bent
+        function calculateBentSemitones(svg, noteText) {
+            const noteX = parseFloat(noteText.getAttribute('x'));
+            const noteY = parseFloat(noteText.getAttribute('y'));
+            const notePitchClass = noteText.getAttribute('data-pitch-class');
+            const noteOctave = parseInt(noteText.getAttribute('data-octave'));
+
+            // Find the bent indicator (red dot) to locate the source string
+            const bentDot = Array.from(svg.querySelectorAll('.bent-indicator')).find(dot => {
+                const dotX = parseFloat(dot.getAttribute('x'));
+                const dotY = parseFloat(dot.getAttribute('y'));
+                // Check if this dot is connected to our note (within ~20px X distance)
+                return Math.abs(dotX - (noteX - 15)) < 5;
+            });
+
+            if (!bentDot) return 0;
+
+            // Find the source string by matching Y position
+            const sourceY = parseFloat(bentDot.getAttribute('y'));
+            const stringLabels = svg.querySelectorAll('.string-label');
+            let sourcePitchClass = null;
+            let sourceOctave = null;
+
+            stringLabels.forEach(label => {
+                const labelY = parseFloat(label.getAttribute('y')) - 5; // Adjust for label offset
+                if (Math.abs(labelY - sourceY) < 5) {
+                    const labelText = label.textContent.trim(); // e.g., "C4", "D5"
+                    sourcePitchClass = labelText.match(/[A-G]#?b?/)?.[0];
+                    sourceOctave = parseInt(labelText.match(/\d/)?.[0]);
+                }
+            });
+
+            if (!sourcePitchClass) return 0;
+
+            // Calculate semitone difference
+            const noteSemitone = PITCH_TO_SEMITONE[notePitchClass] + (noteOctave * 12);
+            const sourceSemitone = PITCH_TO_SEMITONE[sourcePitchClass] + (sourceOctave * 12);
+            const bentSemitones = noteSemitone - sourceSemitone;
+
+            return Math.abs(bentSemitones);
+        }
+
+        // Helper function to convert number to superscript
+        function toSuperscript(num) {
+            const superscripts = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'};
+            return num.toString().split('').map(d => superscripts[d] || d).join('');
+        }
+
+        // UPDATE ALTERNATIVE TUNING FUNCTION
+        function updateAlternativeTuning(tuningNumber, selectedTuning) {
+            console.log(`Updating alternative tuning ${tuningNumber} to: ${selectedTuning}`);
+
+            // Update bent notes count based on tuning
+            const bentCountElement = document.getElementById(`alt${tuningNumber}BentCount`);
+            if (bentCountElement) {
+                // Simulate different bent note counts for different tunings
+                const bentCounts = {
+                    'C-D-F-G-A': 2,
+                    'C-D-E-G-Bb': 3,
+                    'C-Eb-F-G-Bb': 4,
+                    'D-E-G-A-B': 1
+                };
+                const count = bentCounts[selectedTuning.split(' ')[0]] || 0;
+                bentCountElement.textContent = `${count} bent note${count !== 1 ? 's' : ''}`;
+            }
+
+            // Here you would normally regenerate the SVG based on the new tuning
+            // For now, we'll just log the change
+        }
+
+        // PLACEHOLDER FUNCTIONS
+        function clearAllHighlights() { /* Clear all visual highlights */ }
+        function highlightRelatedSections(metricId) { /* Highlight related sections */ }
+        function showCrossReferences(metricId) { /* Show cross-reference information */ }
+        function activateCrossHighlighting(sectionId) { /* Activate cross-highlighting for section */ }
+        function deactivateCrossHighlighting(sectionId) { /* Deactivate cross-highlighting */ }
+
+        // INITIALIZATION
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('V4 Vertical Header Sections System Initialized');
+            console.log('UI Elements: Vertical headers, metric cards, cross-reference boxes, tablature references');
+        });
+
+    </script>
+
+    <!-- Include Client Tablature Generator -->
+    <script src="/static/client-tablature-generator.js"></script>
+
+    <!-- Dynamic Update Functions -->
+    <script>
+        // V4.2.28: Define VibratoSineWaveGenerator globally (before any controller initialization)
+        class VibratoSineWaveGenerator {
+            constructor() {
+                this.defaultAmplitude = 10;
+                this.defaultFrequency = 3;
+                this.defaultStrokeWidth = 3;
+            }
+
+            generateSineWave(startX, startY, endX, endY, amplitude, frequency) {
+                const distance = endX - startX;
+                const segments = Math.max(50, Math.floor(distance / 2));
+                const points = [];
+                const halfAmplitude = amplitude / 2;
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const x = startX + distance * t;
+                    const angle = t * frequency * Math.PI * 2;
+                    const y = startY + halfAmplitude - Math.cos(angle) * halfAmplitude;
+                    points.push(`${x},${y}`);
+                }
+
+                return `M ${points.join(' L ')}`;
+            }
+
+            createVibratoPath(startX, startY, endX, endY, options = {}) {
+                const amplitude = options.amplitude || this.defaultAmplitude;
+                const frequency = options.frequency || this.defaultFrequency;
+                const strokeWidth = options.strokeWidth || this.defaultStrokeWidth;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('class', 'vibrato-sinewave');
+                path.setAttribute('d', this.generateSineWave(startX, startY, endX, endY, amplitude, frequency));
+                path.setAttribute('stroke-width', strokeWidth);
+
+                path.dataset.vibratoStart = `${startX},${startY}`;
+                path.dataset.vibratoEnd = `${endX},${endY}`;
+                path.dataset.vibratoAmplitude = amplitude;
+                path.dataset.vibratoFrequency = frequency;
+
+                return path;
+            }
+
+            clearVibratos(svg) {
+                const vibratos = svg.querySelectorAll('.vibrato-sinewave');
+                vibratos.forEach(v => v.remove());
+            }
+        }
+
+        // Create global instance
+        window.vibratoGenerator = new VibratoSineWaveGenerator();
+
+        // Store bent note visibility state for each section (default: visible/on)
+        window.bentNotesVisible = {
+            optimal: true,
+            alt1: true,
+            alt2: true,
+            alt3: true
+        };
+
+        // V4.2.16: Fetch and update tablature with new tuning (no page reload!)
+        window.updateAlternativeTuning = async function(tuningNumber, selectedValue) {
+            console.log(`Updating Alternative Tuning ${tuningNumber} to: ${selectedValue}`);
+
+            // Get current song from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentSong = urlParams.get('song') || 'Bà rằng bà rí';
+
+            try {
+                // Fetch new tablature from API
+                const response = await fetch(`/api/generate-tuning/${encodeURIComponent(currentSong)}/${encodeURIComponent(selectedValue)}`);
+                const data = await response.json();
+
+                console.log('[UpdateTuning] Received SVG length:', data.svg?.length || 0);
+                console.log('[UpdateTuning] First 500 chars:', data.svg?.substring(0, 500) || 'NO SVG');
+
+                // Extract SVG content and update
+                const svgId = `alt${tuningNumber}Svg`;
+                const svg = document.getElementById(svgId);
+                const section = `alt${tuningNumber}`;
+
+                if (svg) {
+                    // Save current zoom levels (with safety checks)
+                    let currentXZoom = 1;
+                    let currentYZoom = 1;
+                    if (window.zoomController && window.zoomController.zoomState[section]) {
+                        currentXZoom = window.zoomController.zoomState[section].xZoom || 1;
+                        currentYZoom = window.zoomController.zoomState[section].yZoom || 1;
+                    }
+
+                    // Extract inner content
+                    const match = data.svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+                    const content = match ? match[1] : data.svg;
+
+                    // Extract width/height (support decimal values like 6542.5)
+                    const widthMatch = data.svg.match(/width="([\d.]+)"/);
+                    const heightMatch = data.svg.match(/height="([\d.]+)"/);
+
+                    // Update SVG content
+                    svg.innerHTML = content;
+                    if (widthMatch) svg.setAttribute('width', widthMatch[1]);
+                    if (heightMatch) svg.setAttribute('height', heightMatch[1]);
+
+                    // Debug: Check if content was actually set
+                    console.log(`[UpdateTuning] SVG innerHTML length: ${svg.innerHTML.length}`);
+                    console.log(`[UpdateTuning] SVG width attribute: ${svg.getAttribute('width')}`);
+                    console.log(`[UpdateTuning] SVG has ${svg.querySelectorAll('circle').length} circles`);
+
+                    // Check actual rendered dimensions
+                    const svgBBox = svg.getBoundingClientRect();
+                    const container = svg.parentElement;
+                    const containerBBox = container.getBoundingClientRect();
+                    console.log(`[UpdateTuning] SVG rendered width: ${svgBBox.width}px, height: ${svgBBox.height}px`);
+                    console.log(`[UpdateTuning] Container rendered width: ${containerBBox.width}px, height: ${containerBBox.height}px`);
+
+                    // Auto-expand the section so the tablature is visible
+                    const sectionContent = svg.closest('.section-content');
+                    console.log('[UpdateTuning] Section content element:', sectionContent);
+                    console.log('[UpdateTuning] Has collapsed class:', sectionContent?.classList.contains('collapsed'));
+
+                    if (sectionContent) {
+                        if (sectionContent.classList.contains('collapsed')) {
+                            sectionContent.classList.remove('collapsed');
+                            console.log('[UpdateTuning] Section auto-expanded to show tablature');
+                        } else {
+                            console.log('[UpdateTuning] Section already expanded');
+                        }
+                    } else {
+                        console.warn('[UpdateTuning] Could not find section-content parent!');
+                    }
+
+                    // Refresh zoom controller (re-cache element references and store base positions)
+                    if (window.zoomController) {
+                        window.zoomController.refresh();
+
+                        // Reapply previous zoom levels if they weren't 100%
+                        if (currentXZoom !== 1 || currentYZoom !== 1) {
+                            console.log(`Reapplying zoom: X=${(currentXZoom * 100).toFixed(0)}% Y=${(currentYZoom * 100).toFixed(0)}%`);
+                            window.zoomController.updateZoom(section, 'x', currentXZoom * 100);
+                            window.zoomController.updateZoom(section, 'y', currentYZoom * 100);
+                        }
+                    }
+
+                    // Initialize bent notes state for this section
+                    if (window.initializeBentNotesState) {
+                        window.initializeBentNotesState(section);
+                    }
+
+                    // Update bent note metrics for the new tuning
+                    // Count only .bent-note circles (most reliable)
+                    const bentNoteCircles = svg.querySelectorAll('.bent-note');
+                    const bentCount = bentNoteCircles.length;
+                    console.log(`[UpdateTuning] Found ${bentCount} bent note circles for ${section}`);
+
+                    // Update the bent count display element
+                    const bentCountElement = document.getElementById(`alt${tuningNumber}BentCount`);
+                    if (bentCountElement) {
+                        bentCountElement.textContent = bentCount === 1 ? '1 bent note' : `${bentCount} bent notes`;
+                        console.log(`[UpdateTuning] Updated alt${tuningNumber}BentCount to: ${bentCount} bent notes`);
+                    } else {
+                        console.warn(`[UpdateTuning] Could not find element alt${tuningNumber}BentCount`);
+                    }
+
+                    // Refresh audio controller with new note references
+                    // Always refresh audio controller when SVG changes
+                    if (window.audioController) {
+                        const optimalSvg = document.getElementById('optimalSvg');
+                        const alt1Svg = document.getElementById('alt1Svg');
+                        if (optimalSvg && alt1Svg) {
+                            window.audioController.setSVGReferences(optimalSvg, alt1Svg);
+                            console.log(`Audio controller refreshed after tuning change (section: ${section})`);
+                        }
+                    }
+
+                    // V4.3.24: Recreate frozen string labels after tuning change
+                    setTimeout(() => {
+                        // Remove old overlay first
+                        const svg = document.getElementById(svgId);
+                        if (svg) {
+                            const wrapper = svg.parentElement?.parentElement;
+                            if (wrapper) {
+                                const oldOverlay = wrapper.querySelector('.string-labels-fixed');
+                                if (oldOverlay) {
+                                    oldOverlay.remove();
+                                }
+                            }
+                        }
+
+                        // Create fresh labels with new tuning
+                        createFrozenStringLabels(svgId);
+                        console.log(`[Frozen Labels] Recreated after tuning change for ${svgId}`);
+                    }, 200); // Longer delay to ensure SVG is fully rendered
+
+                    console.log(`✓ Tablature updated with ${selectedValue}`);
+                }
+            } catch (error) {
+                console.error('Error updating tuning:', error);
+            }
+        };
+
+        // V4.0.7: Old window.toggleBentNotes wrapper removed
+        // Now using direct toggleBentNotes() function with unified data-bent attribute
+
+        // Toggle zoom linking (wrapper for checkbox)
+        function toggleZoomLink(linked) {
+            if (window.zoomController) {
+                window.zoomController.setZoomLinked(linked);
+            }
+        }
+
+        // Library Management Functions
+        let libraryData = [];
+
+        // Update library display based on current filters and sorting
+        window.updateLibrary = function() {
+            const sortBy = document.getElementById('librarySortBy').value;
+            const filterRegion = document.getElementById('libraryFilterRegion').value;
+            const filterGenre = document.getElementById('libraryFilterGenre').value;
+
+            console.log(`Updating library: sort=${sortBy}, region=${filterRegion}, genre=${filterGenre}`);
+
+            // Apply filters
+            let filteredData = libraryData.filter(song => {
+                const regionMatch = filterRegion === 'all' || song.region === filterRegion;
+                const genreMatch = filterGenre === 'all' || song.genre === filterGenre;
+                return regionMatch && genreMatch;
+            });
+
+            // Apply sorting
+            filteredData.sort((a, b) => {
+                const aVal = a[sortBy];
+                const bVal = b[sortBy];
+
+                if (typeof aVal === 'number') {
+                    return sortBy.includes('bent') ? bVal - aVal : aVal - bVal;
+                }
+                return aVal.localeCompare(bVal);
+            });
+
+            renderLibraryGrid(filteredData);
+            document.getElementById('libraryCount').textContent = `${filteredData.length} songs`;
+        };
+
+        // Track currently selected song
+        let currentSelectedSong = null;
+
+        // Render library grid with song cards
+        function renderLibraryGrid(songs) {
+            const grid = document.getElementById('libraryGrid');
+
+            if (songs.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">No songs found. Add MusicXML files to: v4/data/musicxml/</div>';
+                return;
+            }
+
+            grid.innerHTML = songs.map((song, index) => {
+                const isSelected = index === 0 && !currentSelectedSong || song.filename === currentSelectedSong;
+                const selectedClass = isSelected ? ' selected' : '';
+
+                return `
+                <div class="song-card${selectedClass}"
+                     data-filename="${song.filename}"
+                     onclick="openSongAnalysis('${song.filename}')">
+
+                    <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 16px; font-weight: 600;">${song.title}</h5>
+
+                    <div class="song-meta" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; margin-bottom: 10px;">
+                        <span style="color: #007bff;"><strong>Region:</strong> ${song.region}</span>
+                        <span style="color: #28a745;"><strong>Genre:</strong> ${song.genre}</span>
+                        <span style="color: #6f42c1;"><strong>Tuning:</strong> ${song.optimalTuning}</span>
+                        <span style="color: #dc3545;"><strong>Notes:</strong> ${song.totalNotes}</span>
+                    </div>
+
+                    <div class="song-stats" style="display: flex; justify-content: space-between; font-size: 12px; color: #666; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+                        <span><strong>${song.bentNotes}</strong> bent notes</span>
+                        <span><strong>${song.bentStrings}</strong> bent strings</span>
+                        <span><strong>${song.uniquePitches}</strong> unique pitches</span>
+                    </div>
+
+                </div>
+                `;
+            }).join('');
+
+            // Auto-select first song if none selected
+            if (!currentSelectedSong && songs.length > 0) {
+                currentSelectedSong = songs[0].filename;
+            }
+        }
+
+        // Refresh library from server
+        window.refreshLibrary = function() {
+            console.log('Refreshing library...');
+            fetch('/api/library')
+                .then(response => response.json())
+                .then(data => {
+                    libraryData = data;
+                    updateLibrary();
+                    console.log(`Loaded ${data.length} songs from library`);
+
+                    // Auto-load first song's tablature
+                    if (data.length > 0) {
+                        openSongAnalysis(data[0].filename);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading library:', error);
+                    // Use demo data if API fails
+                    loadDemoLibrary();
+                });
+        };
+
+        // Load demo library data
+        function loadDemoLibrary() {
+            libraryData = [
+                {
+                    title: "Lý Chiều Chiều",
+                    filename: "ly_chieu_chieu.xml",
+                    region: "Northern",
+                    genre: "Lý",
+                    optimalTuning: "C-D-E-G-A",
+                    totalNotes: 57,
+                    uniquePitches: 5,
+                    bentStrings: 2,
+                    bentNotes: 8
+                },
+                {
+                    title: "Hò Giã Gạo",
+                    filename: "ho_gia_gao.xml",
+                    region: "Southern",
+                    genre: "Hò",
+                    optimalTuning: "C-D-F-G-A",
+                    totalNotes: 43,
+                    uniquePitches: 6,
+                    bentStrings: 3,
+                    bentNotes: 12
+                },
+                {
+                    title: "Ru Con Quảng Nam",
+                    filename: "ru_con_quang_nam.xml",
+                    region: "Central",
+                    genre: "Ru Con",
+                    optimalTuning: "C-D-E-G-Bb",
+                    totalNotes: 32,
+                    uniquePitches: 4,
+                    bentStrings: 1,
+                    bentNotes: 3
+                }
+            ];
+            updateLibrary();
+
+            // Auto-load first song's tablature
+            if (libraryData.length > 0) {
+                openSongAnalysis(libraryData[0].filename);
+            }
+        }
+
+        // Load song tablature dynamically
+        async function openSongAnalysis(filename) {
+            console.log(`Loading tablature for: ${filename}`);
+
+            // Update selection state
+            currentSelectedSong = filename;
+
+            // Update UI: Remove 'selected' from all cards
+            document.querySelectorAll('.song-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+
+            // Add 'selected' to clicked card
+            const selectedCard = document.querySelector(`.song-card[data-filename="${filename}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
+
+            try {
+                // Fetch tablature data from server
+                const response = await fetch(`/api/tablature/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load song: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                // Update song title in header
+                document.getElementById('songTitle').textContent = data.songName;
+
+                // Extract SVG content (remove outer <svg> tags)
+                const extractSvgContent = (svgString) => {
+                    if (!svgString) return '';
+                    const match = svgString.match(/<svg[^>]*>([\s\S]*?)<\/svg>/);
+                    return match ? match[1] : svgString;
+                };
+
+                // Update optimal tuning section
+                const optimalSvg = document.getElementById('optimalSvg');
+                optimalSvg.innerHTML = extractSvgContent(data.optimalSVG);
+
+                // Update optimal tuning display
+                const optimalTuningDisplay = document.getElementById('optimalTuning');
+                if (optimalTuningDisplay) {
+                    optimalTuningDisplay.textContent = `${data.optimalTuning} (Optimal)`;
+                }
+
+                // Update comparison section
+                const comparisonSvg = document.getElementById('alt1Svg');
+                if (comparisonSvg) {
+                    comparisonSvg.innerHTML = extractSvgContent(data.comparisonSVG);
+                }
+
+                // Update alternative tuning display (if exists)
+                const altTuningDisplay = document.querySelector('#alternativeTuning1 .tuning-display');
+                if (altTuningDisplay) {
+                    altTuningDisplay.textContent = `${data.alternativeTuning} (Alternative)`;
+                }
+
+                // Scroll to top to show updated tablature
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                // V4.0.7: Initialize bent notes to hidden state for newly loaded song
+                setTimeout(() => {
+                    initializeBentNotesState('optimal');
+                    initializeBentNotesState('alt1');
+
+                    // V4.1.4: Refresh zoom controller after loading new SVG content
+                    // This updates element references without re-initializing
+                    if (window.zoomController && window.zoomController.refresh) {
+                        window.zoomController.refresh();
+                        console.log('Zoom controller refreshed after loading new song');
+                    }
+
+                    // V4.0.13: Re-initialize audio controller references
+                    if (window.audioController) {
+                        const optimalSvg = document.getElementById('optimalSvg');
+                        const alt1Svg = document.getElementById('alt1Svg');
+                        window.audioController.setSVGReferences(optimalSvg, alt1Svg);
+                    }
+
+                    // V4.2.22: Re-initialize glissando controller after SVG content loaded
+                    if (window.glissandoController) {
+                        console.log('%c[Glissando] Re-initializing after SVG loaded...', 'color: #FF9800; font-weight: bold;');
+                        const success = window.glissandoController.initialize('optimalSvg');
+                        if (success) {
+                            window.glissandoController.analyzeSVGNotes();
+                            console.log('%c[Glissando] Successfully re-initialized with SVG content', 'color: #4CAF50; font-weight: bold;');
+                        } else {
+                            console.error('[Glissando] Failed to re-initialize');
+                        }
+                    }
+
+                    // V4.3.24: Recreate frozen string labels after SVG content loaded
+                    createFrozenStringLabels('optimalSvg');
+                    createFrozenStringLabels('alt1Svg');
+                }, 100); // Small delay to ensure SVG content is rendered
+
+                console.log(`Loaded: ${data.songName}`);
+            } catch (error) {
+                console.error('Error loading tablature:', error);
+                alert(`Error loading song: ${error.message}`);
+            }
+        }
+
+        // NOTE: Bent note counts now come from server-side tuning optimizer
+        // The template uses {{OPTIMAL_BENT_COUNT}} and {{COMPARISON_BENT_COUNT}} placeholders
+        // No need to count SVG elements - values are pre-calculated and accurate
+        function updateBentNoteCountsFromSVG() {
+            // This function is deprecated but kept for backward compatibility
+            // Bent counts are now injected by server during template rendering
+            console.log('Bent note counts are server-calculated via tuning optimizer');
+        }
+
+        // V4.3.23: Initialize settings from URL parameters
+        function initializeFromURLParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            // 1. Apply tempo parameter (default: 120 BPM)
+            const tempo = urlParams.get('tempo');
+            if (tempo && window.audioController) {
+                const bpm = parseInt(tempo);
+                if (bpm >= 10 && bpm <= 300) {
+                    window.audioController.setTempo(bpm);
+
+                    // Update slider UI
+                    const tempoSlider = document.getElementById('tempoSlider');
+                    const tempoValue = document.getElementById('tempoValue');
+                    if (tempoSlider) tempoSlider.value = bpm;
+                    if (tempoValue) tempoValue.textContent = bpm + ' BPM';
+
+                    console.log(`[URL Params] Set tempo to ${bpm} BPM`);
+                }
+            }
+
+            // 2. Apply volume parameter (default: 0.3, range: 0.3-10.0)
+            const volume = urlParams.get('volume');
+            if (volume && window.audioController) {
+                const vol = parseFloat(volume);
+                if (vol >= 0.3 && vol <= 10.0) {
+                    window.audioController.setVolume(vol);
+
+                    // Update slider UI (all sliders with class)
+                    const volumeSliders = document.querySelectorAll('.volumeSlider');
+                    const volumeValues = document.querySelectorAll('.volumeValue');
+                    volumeSliders.forEach(slider => slider.value = vol);
+                    volumeValues.forEach(value => value.textContent = vol + 'x');
+
+                    console.log(`[URL Params] Set volume to ${vol}x`);
+                }
+            }
+
+            // 3. Apply label mode parameter (default: 'abc')
+            // Supports: abc, doremi, string
+            const labelMode = urlParams.get('labelMode');
+            if (labelMode && ['abc', 'doremi', 'string'].includes(labelMode)) {
+                // Apply to optimal section
+                updateLabelMode('optimal', labelMode);
+
+                // Update radio button UI
+                const radio = document.querySelector(`input[name="optimalLabelMode"][value="${labelMode}"]`);
+                if (radio) radio.checked = true;
+
+                // Also apply to alt1 section
+                updateLabelMode('alt1', labelMode);
+                const alt1Radio = document.querySelector(`input[name="alt1LabelMode"][value="${labelMode}"]`);
+                if (alt1Radio) alt1Radio.checked = true;
+
+                console.log(`[URL Params] Set label mode to ${labelMode}`);
+            }
+
+            // 4. Apply string offset parameter (default: 0)
+            // Only relevant when labelMode=string
+            const stringOffset = urlParams.get('stringOffset');
+            if (stringOffset && labelMode === 'string') {
+                const offset = parseInt(stringOffset);
+                if (offset >= -12 && offset <= 12) {
+                    window.labelModeState.optimal.offset = offset;
+                    window.labelModeState.alt1.offset = offset;
+
+                    // Update display
+                    const offsetDisplay = document.getElementById('optimalOffsetValue');
+                    if (offsetDisplay) offsetDisplay.textContent = offset;
+
+                    const alt1OffsetDisplay = document.getElementById('alt1OffsetValue');
+                    if (alt1OffsetDisplay) alt1OffsetDisplay.textContent = offset;
+
+                    // Refresh labels
+                    updateNoteLabels('optimal');
+                    updateNoteLabels('alt1');
+
+                    console.log(`[URL Params] Set string offset to ${offset}`);
+                }
+            }
+
+            console.log('[URL Params] Initialization complete');
+        }
+
+        // Spacebar to stop all sound
+        document.addEventListener('keydown', function(event) {
+            if (event.code === 'Space' && !event.target.matches('input, textarea')) {
+                event.preventDefault();
+                if (window.audioController) {
+                    window.audioController.stop();
+                    console.log('[Spacebar] Audio stopped');
+                }
+                if (window.lyricsController) {
+                    Object.keys(window.lyricsController.isLooping).forEach(id => {
+                        window.lyricsController.isLooping[id] = false;
+                    });
+                }
+            }
+        });
+
+        // V4.3.24: Frozen String Labels System
+        function createFrozenStringLabels(svgId) {
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+
+            const scrollContainer = svg.parentElement; // tablature-reference
+            const wrapper = scrollContainer.parentElement; // tablature-wrapper
+            if (!wrapper || !wrapper.classList.contains('tablature-wrapper')) return;
+
+            // Remove existing overlay if present
+            const existingOverlay = wrapper.querySelector('.string-labels-fixed');
+            if (existingOverlay) {
+                existingOverlay.remove();
+            }
+
+            // Extract string labels and string lines
+            const stringLabels = svg.querySelectorAll('.string-label');
+            const stringLines = svg.querySelectorAll('.string-line');
+            if (stringLabels.length === 0) return;
+
+            // Get SVG dimensions
+            const svgWidth = svg.getAttribute('width');
+            const svgHeight = svg.getAttribute('height');
+
+            // Create fixed overlay container
+            const fixedOverlay = document.createElement('div');
+            fixedOverlay.className = 'string-labels-fixed';
+            fixedOverlay.dataset.svgId = svgId;
+
+            // Create SVG for labels
+            const labelsSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            labelsSvg.setAttribute('width', '60');
+            labelsSvg.setAttribute('height', svgHeight);
+            labelsSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            labelsSvg.setAttribute('id', `${svgId}-frozen-labels`);
+
+            // Clone string labels and store base string Y positions
+            stringLabels.forEach((label, index) => {
+                // Get original label text (should include octave, e.g., "C4", "D5")
+                const labelText = label.textContent.trim();
+
+                // Create new text element (don't clone to ensure clean copy)
+                const clone = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                clone.setAttribute('class', 'string-label');
+                clone.setAttribute('x', label.getAttribute('x'));
+                clone.setAttribute('y', label.getAttribute('y'));
+                clone.textContent = labelText;
+
+                // Copy all other attributes
+                const attrs = label.attributes;
+                for (let i = 0; i < attrs.length; i++) {
+                    const attr = attrs[i];
+                    if (attr.name !== 'x' && attr.name !== 'y' && attr.name !== 'class') {
+                        clone.setAttribute(attr.name, attr.value);
+                    }
+                }
+
+                // Store base string Y (without +5 offset) for zoom calculations
+                if (stringLines[index]) {
+                    const stringY = parseFloat(stringLines[index].getAttribute('y1'));
+                    clone.setAttribute('data-base-string-y', stringY);
+                }
+
+                labelsSvg.appendChild(clone);
+                console.log(`[Frozen Label] "${labelText}" at Y=${clone.getAttribute('y')}, baseY=${clone.getAttribute('data-base-string-y')}`);
+            });
+
+            fixedOverlay.appendChild(labelsSvg);
+            wrapper.insertBefore(fixedOverlay, wrapper.firstChild);
+
+            // Ensure scroll is at 0 (fresh state)
+            scrollContainer.scrollLeft = 0;
+            scrollContainer.scrollTop = 0;
+
+            // Calculate offset of SVG relative to wrapper (after scroll reset)
+            setTimeout(() => {
+                const svgRect = svg.getBoundingClientRect();
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const topOffset = svgRect.top - wrapperRect.top;
+
+                // Position overlay to match SVG position
+                fixedOverlay.style.top = `${topOffset}px`;
+                fixedOverlay.style.height = `${scrollContainer.clientHeight}px`;
+
+                // Reset transform to initial state
+                labelsSvg.style.transform = 'translateY(0px)';
+
+                console.log(`[Frozen Labels] Created for ${svgId} with ${stringLabels.length} labels, offset: ${topOffset}px`);
+            }, 10);
+
+            // Sync vertical scroll using transform
+            scrollContainer.addEventListener('scroll', () => {
+                const scrollTop = scrollContainer.scrollTop;
+                labelsSvg.style.transform = `translateY(-${scrollTop}px)`;
+            });
+
+            // Return the labelsSvg for zoom integration
+            return labelsSvg;
+        }
+
+        // V4.3.24: Update frozen labels when Y-zoom changes
+        // Fix for Scaled Offset Problem: labels have +5px offset that shouldn't scale
+        function updateFrozenLabelsZoom(svgId) {
+            const labelsSvg = document.getElementById(`${svgId}-frozen-labels`);
+            if (!labelsSvg) return;
+
+            const mainSvg = document.getElementById(svgId);
+            if (!mainSvg) return;
+
+            // Get current Y zoom from zoom controller
+            const section = svgId === 'optimalSvg' ? 'optimal' : 'alt1';
+            const yZoom = window.zoomController ? window.zoomController.getZoomY(section) : 1.0;
+
+            // Get all frozen labels
+            const frozenLabels = labelsSvg.querySelectorAll('.string-label');
+
+            // Update Y positions using base string Y + fixed 5px offset
+            frozenLabels.forEach((label) => {
+                const baseStringY = parseFloat(label.getAttribute('data-base-string-y'));
+                if (!isNaN(baseStringY)) {
+                    // Apply zoom to base position, then add fixed 5px offset
+                    const newY = baseStringY * yZoom + 5;
+                    label.setAttribute('y', newY);
+                }
+            });
+
+            // Update SVG height to match
+            const newHeight = mainSvg.getAttribute('height');
+            if (newHeight) {
+                labelsSvg.setAttribute('height', newHeight);
+            }
+
+            console.log(`[Frozen Labels] Updated zoom for ${svgId}, Y-zoom: ${yZoom}`);
+        }
+
+        // Initialize tablatures on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // OLD DEMO TABLATURE REMOVED - Library controller loads real songs now
+            // tablatureGenerator.updateSVG('optimalSvg', 'C-D-E-G-A');
+            // tablatureGenerator.updateSVG('alt1Svg', 'C-D-F-G-A');
+            // tablatureGenerator.updateSVG('alt2Svg', 'C-D-E-G-Bb');
+            // tablatureGenerator.updateSVG('alt3Svg', 'C-Eb-F-G-Bb');
+
+            // V4.0.9: Initialize library controller (replaces 216 lines of inline code)
+            // V4.2.14: RE-ENABLED - phrase annotations now generated server-side
+            window.libraryController = new LibraryController();
+            window.libraryController.initialize();
+
+            // V4.3.5: Initialize pattern visualization controller (Tier 3: KWIC, KTIC, KRIC)
+            // Wait for syllable lyrics to be rendered, then initialize
+            setTimeout(() => {
+                if (window.patternController) {
+                    // Use backend ID from server (already converted from display name)
+                    const backendId = '{{BACKEND_ID}}';
+                    console.log('Initializing pattern controller for song:', backendId);
+                    window.patternController.initialize(backendId);
+                }
+            }, 1000); // Wait for syllables to be fully rendered
+
+            // V4.2.37: Set comparison tuning dropdown to match server-calculated value
+            const comparisonTuning = '{{COMPARISON_TUNING}}';
+            const altTuning1Select = document.getElementById('altTuning1Select');
+            if (altTuning1Select && comparisonTuning) {
+                // Find option with matching value
+                const options = altTuning1Select.options;
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === comparisonTuning) {
+                        altTuning1Select.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // Update bent note counts from actual SVG content
+            setTimeout(() => {
+                updateBentNoteCountsFromSVG();
+            }, 500); // Wait for SVGs to load
+
+            // V4.0.5: Initialize zoom controller (replaces old applyZoom calls)
+            window.zoomController = new ZoomController();
+            window.zoomController.initialize();
+
+            // Ensure zoom linking is enabled (checkbox starts checked)
+            const linkCheckbox = document.getElementById('linkZoom');
+            if (linkCheckbox && linkCheckbox.checked) {
+                window.zoomController.setZoomLinked(true);
+            }
+
+            // V4.2.28: Initialize vibrato controllers for optimal tablature (vibratoGenerator already created globally)
+            window.optimalVibratoController = new VibratoController();
+            window.optimalVibratoController.initialize('optimalSvg', 'optimalVibratoControls');
+
+            // V4.2.14: Initialize bent note button colors to match default state (visible/red)
+            document.querySelectorAll('.bent-toggle-btn').forEach(btn => {
+                btn.style.background = '#FF0000';  // Red = visible
+            });
+
+            // V4.0.13: Initialize visual state manager (before audio controller)
+            try {
+                window.visualStateManager = new VisualStateManager();
+                console.log('VisualStateManager loaded successfully');
+            } catch (error) {
+                console.warn('VisualStateManager not available, using fallback mode:', error.message);
+            }
+
+            // V4.0.12: Initialize audio playback controller (uses visualStateManager if available)
+            try {
+                window.audioController = new AudioPlaybackController();
+                window.audioController.initialize();
+                console.log('AudioPlaybackController loaded successfully');
+
+                // V4.3.23: Apply URL parameters AFTER audioController is initialized
+                initializeFromURLParams();
+
+                // Initialize with server-rendered SVG on page load
+                setTimeout(() => {
+                    const optimalSvg = document.getElementById('optimalSvg');
+                    const alt1Svg = document.getElementById('alt1Svg');
+                    if (optimalSvg && alt1Svg && window.audioController) {
+                        window.audioController.setSVGReferences(optimalSvg, alt1Svg);
+                        console.log('AudioPlaybackController: Initial SVG references set on page load');
+                    }
+
+                    // V4.3.24: Initialize frozen string labels
+                    createFrozenStringLabels('optimalSvg');
+                    createFrozenStringLabels('alt1Svg');
+
+                    // Register zoom callbacks to update frozen labels
+                    if (window.zoomController) {
+                        window.zoomController.onZoomChange('optimal', () => {
+                            updateFrozenLabelsZoom('optimalSvg');
+                        });
+                        window.zoomController.onZoomChange('alt1', () => {
+                            updateFrozenLabelsZoom('alt1Svg');
+                        });
+                    }
+                }, 100); // Small delay to ensure SVGs are fully rendered
+            } catch (error) {
+                console.error('Failed to initialize AudioPlaybackController:', error);
+            }
+
+            // Note: Audio controller is also updated when:
+            // - Library song is selected (library-controller.js)
+            // - Alternative tuning is changed (updateAlternativeTuning function)
+
+            // Initialize SortableJS for drag-and-drop section reordering
+            console.log('Initializing SortableJS...');
+            const sectionsContainer = document.getElementById('sectionsContainer');
+            console.log('Sections container found:', sectionsContainer);
+            console.log('SortableJS library available:', typeof window.Sortable !== 'undefined');
+
+            if (!sectionsContainer) {
+                console.error('ERROR: sectionsContainer not found!');
+            } else if (typeof window.Sortable === 'undefined') {
+                console.error('ERROR: SortableJS library not loaded from CDN!');
+            } else {
+                try {
+                    window.sectionSortable = new Sortable(sectionsContainer, {
+                        animation: 150,                      // Smooth 150ms animation
+                        handle: '.vertical-header',          // Drag only by vertical header
+                        filter: '#optimalTuningSection',     // Prevent dragging first section (fixed)
+                        preventOnFilter: false,              // CRITICAL: Allow input events on filtered sections!
+                        draggable: '.analysis-section',      // Which sections can be dragged
+                        ghostClass: 'sortable-ghost',        // CSS class for ghost element
+                        dragClass: 'sortable-drag',          // CSS class while dragging
+
+                        onStart: function(evt) {
+                            console.log('Started dragging:', evt.item.id);
+                        },
+
+                        onEnd: function(evt) {
+                            console.log('Dropped at new position');
+                            // Update style.order to match new visual order after drag
+                            const sections = Array.from(sectionsContainer.querySelectorAll('.analysis-section:not(#optimalTuningSection)'));
+                            sections.forEach((section, index) => {
+                                section.style.order = index + 1;
+                                section.dataset.order = index + 1;
+                            });
+
+                            console.log('Sections reordered via drag-and-drop:', sections.map(s => s.id));
+                        }
+                    });
+                    console.log('✅ SortableJS initialized successfully! Drag sections by their vertical headers.');
+                } catch (error) {
+                    console.error('ERROR initializing SortableJS:', error);
+                }
+            }
+
+            console.log('V4.0.13 Tablatures, Library, Zoom Controller, Visual State Manager, Audio Playback, Drag-and-Drop initialized');
+        });
+    </script>
+
+    <!-- UI TERMINOLOGY REFERENCE -->
+    <!--
+    LAYOUT STRUCTURE:
+    - TABLATURE OVERLAY CONTAINER: Top full-width area containing interactive tablature
+    - SECTIONS CONTAINER: Main content area containing all analysis sections
+    - ANALYSIS SECTION: Individual collapsible container for each analysis type
+
+    VERTICAL HEADER COMPONENTS:
+    - VERTICAL HEADER: Left-side vertical panel (replaces horizontal header/banner)
+    - SECTION ICON: Visual identifier (🎵, 🗣️, 🎶, etc.)
+    - SECTION TITLE: Text description of analysis type
+    - VERTICAL CONTROLS: Container for move arrows and collapse toggle
+    - VERTICAL MOVE ARROW: Up/down movement buttons
+    - VERTICAL COLLAPSE TOGGLE: Expand/collapse indicator
+
+    SECTION CONTENT COMPONENTS:
+    - SECTION CONTENT: Main content area (right side of section)
+    - METRIC GRID: Grid container for metric cards
+    - METRIC CARD: Individual metric display (rounded rectangle you mentioned)
+    - METRIC VALUE: Main numeric/text value
+    - METRIC LABEL: Descriptive text below value
+    - CROSS REFERENCE BOX: Shows relationships to other sections
+    - TABLATURE REFERENCE: Mini tablature clone for context
+
+    POSITIONING SYSTEM:
+    - X COORDINATES: 0 = left edge, increases rightward
+    - Y COORDINATES: 0 = top edge, increases downward
+    - VERTICAL HEADER: x=0, width=80px
+    - SECTION CONTENT: x=80px, width=calc(100% - 80px)
+    - METRIC CARDS: Grid positioning within content area
+    -->
+
+</body>
+</html>

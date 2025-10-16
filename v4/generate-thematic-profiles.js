@@ -14,12 +14,12 @@ class ThematicProfileGenerator {
 
         // Semantic patterns
         this.semanticPatterns = {
-            nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|trời|sương|mù|nắng|bão|lũ|hạn|nước|ao|hồ|suối|giếng|non|cành|lúa|ngô/i,
+            nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|trời|sương|mù|nắng|bão|lũ|hạn|nước|ao|hồ|suối|giếng|non|cành|lúa|ngô|cảnh/i,
             family: /chồng|vợ|mẹ|cha|con|anh|em|bà|ông|cô|chú|bác|cháu|bố|me|chị|trai|gái|nàng|phu|thê|nhi|tử|phụ|mẫu|người|bạn/i,
             emotion: /thương|nhớ|buồn|vui|khổ|đau|yêu|ghét|sợ|sầu|hận|oan|tình|cảm|vui|hạnh|phúc|giận|ức|óa/i,
-            work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|hò|giã|mài|hái|săn|đánh|bắn|đan|chẻ|xẻ/i,
+            work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|hò|giã|mài|hái|săn|đánh|bắn|đan|chẻ|xẻ|đi/i,
             time: /chiều|sáng|trưa|tối|đêm|hôm|mai|ngày|tháng|năm|mùa|lúc|khi|thời|rồi|nay|xưa|sớm|trước|sau/i,
-            place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|nơi|chốn|xứ|quê|hương|đất|trời|hang|hố|bờ|cửa|phủ|đình|chùa|miếu|quán|vườn|sân|đường|lối/i
+            place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|nơi|chốn|xứ|quê|hương|đất|trời|hang|hố|bờ|cửa|phủ|đình|chùa|miếu|quán|vườn|sân|đường|lối|xa/i
         };
 
         // Context-aware rules for ambiguous words (checked BEFORE default patterns)

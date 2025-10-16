@@ -115,12 +115,12 @@
 
     // Semantic patterns (same as generate-thematic-profiles.js)
     const semanticPatterns = {
-        nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|trời|sương|mù|nắng|bão|lũ|hạn|nước|ao|hồ|suối|giếng|non|cành|lúa|ngô/i,
+        nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|trời|sương|mù|nắng|bão|lũ|hạn|nước|ao|hồ|suối|giếng|non|cành|lúa|ngô|cảnh/i,
         family: /chồng|vợ|mẹ|cha|con|anh|em|bà|ông|cô|chú|bác|cháu|bố|me|chị|trai|gái|nàng|phu|thê|nhi|tử|phụ|mẫu|người|bạn/i,
         emotion: /thương|nhớ|buồn|vui|khổ|đau|yêu|ghét|sợ|sầu|hận|oan|tình|cảm|vui|hạnh|phúc|giận|ức|óa/i,
-        work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|hò|giã|mài|hái|săn|đánh|bắn|đan|chẻ|xẻ/i,
+        work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|hò|giã|mài|hái|săn|đánh|bắn|đan|chẻ|xẻ|đi/i,
         time: /chiều|sáng|trưa|tối|đêm|hôm|mai|ngày|tháng|năm|mùa|lúc|khi|thời|rồi|nay|xưa|sớm|trước|sau/i,
-        place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|nơi|chốn|xứ|quê|hương|đất|trời|hang|hố|bờ|cửa|phủ|đình|chùa|miếu|quán|vườn|sân|đường|lối/i
+        place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|nơi|chốn|xứ|quê|hương|đất|trời|hang|hố|bờ|cửa|phủ|đình|chùa|miếu|quán|vườn|sân|đường|lối|xa/i
     };
 
     // Context rules (same as generate-thematic-profiles.js)
@@ -218,13 +218,45 @@
             thematicProfiles = await profilesRes.json();
             vocabularyMetrics = await metricsRes.json();
 
-            // Get current song from URL parameter (same method as updateAlternativeTuning)
+            // Get current song from URL parameter
             const urlParams = new URLSearchParams(window.location.search);
-            const currentSongName = (urlParams.get('song') || 'Bà rằng bà rí').replace(/\.musicxml\.xml$/i, '');
+            let currentSongName = (urlParams.get('song') || 'Bà rằng bà rí').replace(/\.musicxml\.xml$/i, '');
 
-            currentSong = thematicProfiles.profiles.find(p =>
-                p.songName.toLowerCase().includes(currentSongName.toLowerCase())
-            ) || thematicProfiles.profiles[0];
+            // Try multiple matching strategies
+            currentSong = thematicProfiles.profiles.find(p => {
+                // Strategy 1: Exact songName match
+                if (p.songName.toLowerCase() === currentSongName.toLowerCase()) return true;
+                // Strategy 2: Exact songTitle match
+                if (p.songTitle && p.songTitle.toLowerCase() === currentSongName.toLowerCase()) return true;
+                // Strategy 3: Contains match (either way)
+                if (p.songName.toLowerCase().includes(currentSongName.toLowerCase())) return true;
+                if (p.songTitle && p.songTitle.toLowerCase().includes(currentSongName.toLowerCase())) return true;
+                if (currentSongName.toLowerCase().includes(p.songName.toLowerCase())) return true;
+                return false;
+            });
+
+            // If still not found, try backend format conversion (remove tones, lowercase, hyphenate)
+            if (!currentSong) {
+                const backendFormat = currentSongName
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+                    .trim()
+                    .replace(/\s+/g, '-'); // Spaces to hyphens
+
+                console.log('[ThematicRadar] Trying backend format:', backendFormat);
+
+                currentSong = thematicProfiles.profiles.find(p =>
+                    p.songName.toLowerCase().includes(backendFormat) ||
+                    backendFormat.includes(p.songName.toLowerCase())
+                );
+            }
+
+            // Last resort: first song
+            if (!currentSong) {
+                console.warn('[ThematicRadar] Could not match song, using first:', currentSongName);
+                currentSong = thematicProfiles.profiles[0];
+            }
 
             console.log('[ThematicRadar] URL song parameter:', currentSongName);
 

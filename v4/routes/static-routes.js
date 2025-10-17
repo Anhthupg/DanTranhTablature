@@ -18,6 +18,12 @@ module.exports = function(app, baseDir) {
         res.sendFile(path.join(baseDir, 'zoom-controller.js'));
     });
 
+    // V4.4.11: Zoom link controller (synchronized zoom across sections)
+    app.get('/zoom-link-controller.js', (req, res) => {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.sendFile(path.join(baseDir, 'zoom-link-controller.js'));
+    });
+
     // V4.0.9: Library controller
     app.get('/library-controller.js', (req, res) => {
         res.setHeader('Content-Type', 'application/javascript');

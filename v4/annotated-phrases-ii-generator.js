@@ -1,30 +1,31 @@
 /**
- * Lyrics-Based Analyses Generator (Pure Lyrics Analysis)
+ * Lyrics-Based Analyses Generator (Pure Lyrics STRUCTURAL Analysis)
  * Clean, server-side SVG generation with zoom-aware design
  *
- * IMPORTANT: This analyzes LYRICS TEXT ONLY - no tone, rhyme, pitch, or duration
- * Future sections will handle: Tone-Based, Rhyme-Based, Pitch-Based, Duration-Based
+ * IMPORTANT: This analyzes LYRICS TEXT STRUCTURE ONLY
+ * - Shows: Phrase text, repetition, linguistic types (question, exclamatory, etc.)
+ * - Does NOT show: Tone, rhyme, pitch, duration, or semantic themes
+ * - Semantic themes (nature, family, emotion) → See Radar Chart section instead
  *
- * 3-Row Linguistic Analysis System:
- * - ROW 1: Phrase boxes (color = identical text) + Connection arcs
- * - ROW 2: Linguistic type bands (thin colored ribbons with labels)
- * - ROW 3: Semantic themes (icon indicators)
+ * 2-Row Linguistic STRUCTURE System:
+ * - ROW 1: Phrase boxes (rainbow hue colors) + Connection arcs
+ * - ROW 2: Linguistic type bands (7 distinct colors showing phrase function)
  *
- * Visual Encoding (V4.4.10+ Final):
- * - Fill color = Identical phrase text (same text = same color)
+ * Visual Encoding (V4.4.8 Final):
+ * - Fill color = Rainbow hue progression for unique phrases (Red→Orange→Yellow→Green→Blue→Purple)
  * - Badges = REPEAT groups only (Roman numerals: I, II, III...)
- * - Solid arcs = REPEAT groups (identical text, labeled with badges)
- * - Dashed arcs = PARALLEL groups (LLM thematic similarities, no badges)
- * - No arcs = Unique phrases (appear once)
+ * - Solid arcs = REPEAT groups (identical text)
+ * - Dashed arcs = PARALLEL groups (LLM thematic similarities)
  * - Linguistic bands = 7 distinct colors (Red, Blue, Green, Purple, Orange, Pink, Teal)
  *
  * Technical Features:
  * - Vietnamese text with proper centering
  * - Perfect zoom alignment (no inline style issues)
  * - Server-side SVG generation
- * - 2-arc system (REPEAT + PARALLEL only, STRUCTURAL removed)
- * - Ribbon-style bands to avoid confusion with phrase boxes
- * - Curved arc connections with adaptive height based on distance
+ * - 2-arc system (REPEAT + PARALLEL only)
+ * - 2-row system (removed semantic themes - redundant with radar chart)
+ * - Ribbon-style bands clearly distinct from phrase boxes
+ * - Curved arc connections with adaptive height
  */
 
 const PhraseAnnotationsGenerator = require('./generate-phrase-annotations');
@@ -63,8 +64,8 @@ class AnnotatedPhrasesIIGenerator {
     }
 
     /**
-     * Generate complete Lyrics-Based Analyses SVG (Pure Lyrics Analysis)
-     * 3-row system: phrase boxes, linguistic type bands, semantic themes
+     * Generate complete Lyrics-Based Analyses SVG (Pure Lyrics STRUCTURE Analysis)
+     * 2-row system: phrase boxes + connection arcs, linguistic type bands
      * @param {Object} lyricsData - Lyrics segmentation data
      * @param {Object} relationships - Word-to-note mappings
      * @param {Array} positionedNotes - Notes with X/Y positions from tablature (index-based)
@@ -162,12 +163,12 @@ class AnnotatedPhrasesIIGenerator {
         }
 
         const maxX = Math.max(...enrichedPhrases.map(p => p.position.endX)) + 200;
-        const totalHeight = 420; // Increased from 360: 120px top padding (for tall dashed arcs) + 120px boxes + 60px gap + 33px band + 60px icons
+        const totalHeight = 480; // 120px arcs + 120px Row 1 + 33px Row 2 + (5 methods × 25px) + padding
 
         // Build SVG with 3-row architecture
-        const svg = this.buildSVG(enrichedPhrases, analysis.sections, maxX, totalHeight);
+        const svg = this.buildSVG(enrichedPhrases, analysis.sections, maxX, totalHeight, lyricsData);
 
-        console.log(`[AnnotatedPhrasesII] Generated ${enrichedPhrases.length} phrases in 3-row layout (${maxX}x${totalHeight})`);
+        console.log(`[AnnotatedPhrasesII] Generated ${enrichedPhrases.length} phrases in 2-row layout (${maxX}x${totalHeight})`);
 
         return {
             svg,
@@ -387,13 +388,14 @@ class AnnotatedPhrasesIIGenerator {
     }
 
     /**
-     * Build complete SVG with 3-row pure lyrics analysis architecture
-     * Row 1: Phrase boxes (color = text identity, arcs = relationships)
-     * Row 2: Linguistic type bands (thin ribbons with labels)
-     * Row 3: Semantic themes (icons showing vocabulary themes)
-     * + Connection lines: solid arcs = identical text, dashed arcs = thematic parallels
+     * Build complete SVG with 2-row pure lyrics STRUCTURE architecture
+     * Row 1: Phrase boxes (rainbow hue colors, arcs show repetition/parallels)
+     * Row 2: Linguistic type bands (7 distinct colors show phrase function)
+     * + Connection lines: solid arcs = REPEAT, dashed arcs = PARALLEL
+     * + Rows 3-7: 5 sectionization methods (different ways to segment the song)
+     * Note: Semantic themes removed (redundant with radar chart, not structural)
      */
-    buildSVG(enrichedPhrases, sections, width, height) {
+    buildSVG(enrichedPhrases, sections, width, height, lyricsData) {
         const svgNS = 'http://www.w3.org/2000/svg';
         const svg = [];
 
@@ -412,8 +414,10 @@ class AnnotatedPhrasesIIGenerator {
         // ROW 2: Merged linguistic type boxes
         svg.push(this.renderRow2LinguisticTypes(enrichedPhrases));
 
-        // ROW 3: Semantic theme indicators
-        svg.push(this.renderRow3SemanticThemes(enrichedPhrases));
+        // ROWS 3-6: Multiple sectionization methods (different ways to segment the song)
+        svg.push(this.renderSectionizationMethods(enrichedPhrases, lyricsData));
+
+        // ROW 3 REMOVED: Semantic themes redundant with radar chart (not linguistic structure)
 
         svg.push('</svg>');
 
@@ -567,7 +571,9 @@ class AnnotatedPhrasesIIGenerator {
             fill-opacity="0.4"
             rx="4"
             data-base-x="${position.startX}"
-            data-base-width="${position.width}">
+            data-base-width="${position.width}"
+            data-base-y="${rowY}"
+            data-base-height="${rowHeight}">
             <title>${this.escapeXML(phrase.text)}</title>
         </rect>
 
@@ -583,7 +589,8 @@ class AnnotatedPhrasesIIGenerator {
             stroke="#FFFFFF"
             stroke-width="2"
             paint-order="stroke"
-            data-base-x="${position.centerX}">
+            data-base-x="${position.centerX}"
+            data-base-y="${rowY + 25}">
             ${parallelism.badge.text}
         </text>` : ''}
 
@@ -598,7 +605,8 @@ class AnnotatedPhrasesIIGenerator {
             stroke="#FFFFFF"
             stroke-width="3"
             paint-order="stroke"
-            data-base-x="${position.centerX}">
+            data-base-x="${position.centerX}"
+            data-base-y="${rowY + 70}">
             ${this.escapeXML(phrase.text.substring(0, 30))}${phrase.text.length > 30 ? '...' : ''}
         </text>
 
@@ -612,7 +620,8 @@ class AnnotatedPhrasesIIGenerator {
             stroke="#FFFFFF"
             stroke-width="2"
             paint-order="stroke"
-            data-base-x="${position.centerX}">
+            data-base-x="${position.centerX}"
+            data-base-y="${rowY + 110}">
             #${phrase.id}
         </text>
     </g>`);
@@ -720,34 +729,252 @@ class AnnotatedPhrasesIIGenerator {
     }
 
     /**
-     * ROW 3: Semantic theme indicators
-     * - Shows dominant themes or metaphor patterns
+     * ROWS 3-7: Multiple Sectionization Methods
+     * Shows different ways to segment the song based on lyrics alone
      */
-    renderRow3SemanticThemes(enrichedPhrases) {
-        const icons = [];
-        const rowY = 350;  // Increased to match new layout (280 + 33 + 20 padding)
-        const rowHeight = 40;
+    renderSectionizationMethods(enrichedPhrases, lyricsData) {
+        const methods = [];
+        const startY = 320; // Start after Row 2 (280 + 8px band + 32px padding)
+        const bandHeight = 18;  // Increased from 6 to 18 for labels
+        const rowGap = 30;  // Increased gap for better separation
 
-        enrichedPhrases.forEach(phrase => {
-            const { position, semantics } = phrase;
+        // Method 1: Repetition-Based (Verse-Refrain structure)
+        methods.push(this.renderRepetitionSections(enrichedPhrases, startY, bandHeight));
 
-            // Show semantic icons
-            if (semantics.icons && semantics.icons.length > 0) {
-                const iconText = semantics.icons.map(i => i.icon).join(' ');
+        // Method 2: Dialogue-Based (Question-Answer pairs)
+        methods.push(this.renderDialogueSections(enrichedPhrases, startY + rowGap, bandHeight));
 
-                icons.push(`
-    <text
-        x="${position.centerX}"
-        y="${rowY + 25}"
-        text-anchor="middle"
-        font-size="14"
-        data-base-x="${position.centerX}">
-        ${iconText}
-    </text>`);
+        // Method 3: Emotion-Based (Emotional intensity shifts)
+        methods.push(this.renderEmotionSections(enrichedPhrases, startY + rowGap * 2, bandHeight));
+
+        // Method 4: Narrative-Based (Story progression)
+        methods.push(this.renderNarrativeSections(enrichedPhrases, startY + rowGap * 3, bandHeight));
+
+        // Method 5: Parallelism-Based (Structural patterns)
+        methods.push(this.renderParallelismSections(enrichedPhrases, startY + rowGap * 4, bandHeight));
+
+        return methods.join('\n');
+    }
+
+    /**
+     * Method 1: Repetition-Based Sectionization (Verse-Refrain Structure)
+     * Visual: Wave contour - Verses dip down, Refrains rise up (like musical dynamics)
+     * Height encoding: Refrain = tall (12px), Verse = short (6px), Unique = medium (9px)
+     */
+    renderRepetitionSections(enrichedPhrases, startY, baseHeight) {
+        const bands = [];
+
+        // Detect sections by repetition - merge adjacent same-type sections
+        const sections = [];
+        let currentSection = null;
+        let verseCounter = 0;
+        let refrainCounter = 0;
+
+        enrichedPhrases.forEach((phrase, idx) => {
+            const isRepeated = phrase.repeatGroupID !== undefined;
+            const sectionType = isRepeated ? 'REFRAIN' : 'VERSE';
+
+            if (!currentSection || currentSection.type !== sectionType) {
+                // Start new section
+                if (currentSection) sections.push(currentSection);
+
+                // Increment counter for this type
+                if (sectionType === 'VERSE') verseCounter++;
+                else refrainCounter++;
+
+                currentSection = {
+                    type: sectionType,
+                    startX: phrase.position.startX,
+                    endX: phrase.position.endX,
+                    phrases: [phrase],
+                    number: sectionType === 'VERSE' ? verseCounter : refrainCounter
+                };
+            } else {
+                // Extend current section (adjacent same type)
+                currentSection.endX = phrase.position.endX;
+                currentSection.phrases.push(phrase);
             }
         });
 
-        return icons.join('\n');
+        if (currentSection) sections.push(currentSection);
+
+        // Render merged bars with labels inside
+        sections.forEach((section, idx) => {
+            const width = section.endX - section.startX;
+            const centerX = (section.startX + section.endX) / 2;
+
+            // Color: Refrains gold, Verses blue
+            const color = section.type === 'REFRAIN' ? '#F39C12' : '#3498DB';
+            const label = section.type === 'REFRAIN' ? `REF ${section.number}` : `V${section.number}`;
+
+            bands.push(`
+    <g class="repetition-section">
+        <!-- Thick bar -->
+        <rect
+            x="${section.startX}"
+            y="${startY}"
+            width="${width}"
+            height="${baseHeight}"
+            fill="${color}"
+            fill-opacity="0.75"
+            rx="4"
+            data-base-x="${section.startX}"
+            data-base-width="${width}">
+            <title>${section.type} ${section.number} (${section.phrases.length} phrases)</title>
+        </rect>
+
+        <!-- Label on bar -->
+        <text
+            x="${centerX}"
+            y="${startY + baseHeight / 2 + 4}"
+            text-anchor="middle"
+            font-size="10"
+            font-weight="700"
+            fill="white"
+            data-base-x="${centerX}">
+            ${label}
+        </text>
+    </g>`);
+        });
+
+        // Row label on left
+        bands.unshift(`
+    <text x="10" y="${startY + baseHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Repetition:</text>`);
+
+        return bands.join('\n');
+    }
+
+    /**
+     * Method 2: Dialogue-Based (Q-A Flow)
+     * Visual: Bracket shapes - Questions curve left, Answers curve right (conversation flow)
+     */
+    renderDialogueSections(enrichedPhrases, startY, bandHeight) {
+        const bands = [];
+        const sections = [];
+        let current = null;
+
+        enrichedPhrases.forEach(phrase => {
+            const type = phrase.linguisticType === 'question' ? 'Q' :
+                        phrase.linguisticType === 'answer' ? 'A' : 'MONO';
+
+            if (!current || current.type !== type) {
+                if (current) sections.push(current);
+                current = { type, startX: phrase.position.startX, endX: phrase.position.endX, count: 1 };
+            } else {
+                current.endX = phrase.position.endX;
+                current.count++;
+            }
+        });
+        if (current) sections.push(current);
+
+        sections.forEach(s => {
+            const w = s.endX - s.startX;
+            const cx = (s.startX + s.endX) / 2;
+            const color = s.type === 'Q' ? '#3498DB' : s.type === 'A' ? '#2ECC71' : '#95A5A6';
+
+            bands.push(`<rect x="${s.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="0.75" rx="4" data-base-x="${s.startX}" data-base-width="${w}"><title>${s.type} (${s.count})</title></rect>
+<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="10" font-weight="700" fill="white" data-base-x="${cx}">${s.type}</text>`);
+        });
+
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Dialogue:</text>`);
+        return bands.join('\n');
+    }
+
+    /**
+     * Method 3: Emotion-Based (Intensity Curve)
+     * Visual: Height = emotional intensity, creates mountain-like contour
+     */
+    renderEmotionSections(enrichedPhrases, startY, bandHeight) {
+        const bands = [];
+
+        enrichedPhrases.forEach(phrase => {
+            const isEmotional = phrase.linguisticType === 'exclamatory' || phrase.linguisticType === 'complaint';
+            const h = isEmotional ? bandHeight : bandHeight * 0.5;
+            const y = isEmotional ? startY : startY + bandHeight * 0.25;
+            const color = phrase.linguisticType === 'exclamatory' ? '#E74C3C' :
+                         phrase.linguisticType === 'complaint' ? '#F39C12' : '#BDC3C7';
+            const w = phrase.position.width;
+            const label = phrase.linguisticType === 'exclamatory' ? 'EX' :
+                         phrase.linguisticType === 'complaint' ? 'CM' : '';
+
+            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}"/>
+${isEmotional && w > 50 ? `<text x="${phrase.position.startX + w/2}" y="${y + h/2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${phrase.position.startX + w/2}">${label}</text>` : ''}`);
+        });
+
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Emotion:</text>`);
+        return bands.join('\n');
+    }
+
+    /**
+     * Method 4: Narrative-Based (Story Arc)
+     * Visual: Ascending steps (setup → climax), then descending (resolution)
+     */
+    renderNarrativeSections(enrichedPhrases, startY, bandHeight) {
+        const bands = [];
+        const total = enrichedPhrases.length;
+
+        enrichedPhrases.forEach((phrase, idx) => {
+            const progress = idx / total;
+            const h = bandHeight;
+            const y = startY;
+            const color = `hsl(${progress * 120}, 70%, 50%)`;
+            const w = phrase.position.width;
+
+            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}"/>`);
+        });
+
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Narrative:</text>`);
+        return bands.join('\n');
+    }
+
+    /**
+     * Method 5: Repeat Groups (Show which specific lyrics repeat)
+     * Visual: Each repeat group (I, II, III, IV) gets its own color
+     */
+    renderParallelismSections(enrichedPhrases, startY, bandHeight) {
+        const bands = [];
+
+        // Group phrases by their repeat group (I, II, III, IV) or mark as UNIQUE
+        const repeatGroups = new Map();
+        enrichedPhrases.forEach(phrase => {
+            const groupID = phrase.repeatGroupID || 'UNIQUE';
+            if (!repeatGroups.has(groupID)) {
+                repeatGroups.set(groupID, []);
+            }
+            repeatGroups.get(groupID).push(phrase);
+        });
+
+        // Assign colors - repeat groups get bright colors, UNIQUE gets grey
+        const colors = {
+            'I': '#E74C3C',      // Red
+            'II': '#3498DB',     // Blue
+            'III': '#27AE60',    // Green
+            'IV': '#F39C12',     // Orange
+            'V': '#9B59B6',      // Purple
+            'VI': '#1ABC9C',     // Turquoise
+            'VII': '#E67E22',    // Dark orange
+            'VIII': '#16A085',   // Teal
+            'UNIQUE': '#BDC3C7'  // Grey
+        };
+
+        // Render each phrase with its group color
+        enrichedPhrases.forEach(phrase => {
+            const groupID = phrase.repeatGroupID || 'UNIQUE';
+            const color = colors[groupID] || '#95A5A6';
+            const opacity = groupID === 'UNIQUE' ? 0.3 : 0.75;
+            const w = phrase.position.width;
+            const cx = phrase.position.startX + w / 2;
+
+            // Add label if wide enough and has repeat group
+            const showLabel = groupID !== 'UNIQUE' && w > 40;
+
+            bands.push(`<rect x="${phrase.position.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="${opacity}" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}">
+<title>${groupID === 'UNIQUE' ? 'Unique phrase (no repeat)' : `Repeat Group ${groupID}`}</title></rect>${showLabel ? `
+<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${cx}">${groupID}</text>` : ''}`);
+        });
+
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Repeat Groups:</text>`);
+        return bands.join('\n');
     }
 
     /**

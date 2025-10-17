@@ -11,10 +11,10 @@
 
 class ZoomController {
     constructor() {
-        this.sections = ['optimal', 'alt1', 'alt2', 'alt3', 'annotated', 'annotatedII'];
+        this.sections = ['optimal', 'alt1', 'alt2', 'alt3', 'annotated', 'annotatedII', 'phrases'];
         this.zoomState = this.initializeZoomState();
         this.initialized = false;
-        this.zoomLinked = true;  // Default: zoom is linked between sections
+        this.zoomLinked = false;  // V4.4.11: Disabled global linking - use explicit checkboxes instead
         this.onZoomChangeCallbacks = {}; // Callbacks to execute when zoom changes
     }
 
@@ -208,7 +208,8 @@ class ZoomController {
             'alt2': 'alt2Svg',
             'alt3': 'alt3Svg',
             'annotated': 'annotatedSvg',
-            'annotatedII': 'annotatedIISvg'
+            'annotatedII': 'annotatedIISvg',
+            'phrases': 'phraseBarsContainer'
         };
         return idMap[section] || null;
     }
@@ -471,6 +472,9 @@ class ZoomController {
         // First ensure base positions are stored
         this.storeBasePositions(svg);
 
+        // Check if this is the annotatedII section (Lyrics-Based Analyses)
+        const isAnnotatedII = svg.id === 'annotatedIISvg';
+
         // Transform circles (notes) - PIVOT at 120
         svg.querySelectorAll('circle').forEach(circle => {
             const baseCx = parseFloat(circle.dataset.baseCx);
@@ -551,11 +555,24 @@ class ZoomController {
 
         // Transform rects (phrase boxes and section boxes in annotated section)
         svg.querySelectorAll('rect').forEach(rect => {
+            // For annotatedII: Only transform phrase boxes in Row 1, skip all other rows
+            if (isAnnotatedII) {
+                const isRow1PhraseBox = rect.closest('g.phrase-box-row1');
+                if (!isRow1PhraseBox) {
+                    // Skip linguistic bands, section headers, and sectionization method bands
+                    return;
+                }
+            }
+
             // V4.2.14: Prioritize getAttribute (server-generated) over dataset (client-set)
             const baseX = parseFloat(rect.getAttribute('data-base-x') || rect.dataset.baseX);
             const baseY = parseFloat(rect.getAttribute('data-base-y') || rect.dataset.baseY);
             const baseWidth = parseFloat(rect.getAttribute('data-base-width') || rect.dataset.baseWidth);
             const baseHeight = parseFloat(rect.getAttribute('data-base-height') || rect.dataset.baseHeight);
+
+            if (isAnnotatedII) {
+                console.log('[Zoom] Phrase rect - baseX:', baseX, 'baseY:', baseY, 'baseWidth:', baseWidth, 'baseHeight:', baseHeight);
+            }
 
             if (!isNaN(baseX) && !isNaN(baseWidth)) {
                 // X-axis scaling with pivot at 120 (string label boundary)
@@ -564,11 +581,21 @@ class ZoomController {
 
                 rect.setAttribute('x', scaledX);
                 rect.setAttribute('width', scaledWidth);
+
+                if (isAnnotatedII) {
+                    console.log('[Zoom]   -> X transformed: scaledX:', scaledX, 'scaledWidth:', scaledWidth);
+                }
             }
 
             if (!isNaN(baseY) && !isNaN(baseHeight)) {
                 rect.setAttribute('y', baseY * yZoom);
                 rect.setAttribute('height', baseHeight * yZoom);
+
+                if (isAnnotatedII) {
+                    console.log('[Zoom]   -> Y transformed: y:', baseY * yZoom, 'height:', baseHeight * yZoom);
+                }
+            } else if (isAnnotatedII) {
+                console.log('[Zoom]   -> Y NOT transformed (baseY or baseHeight is NaN)');
             }
         });
 
@@ -592,6 +619,15 @@ class ZoomController {
 
         // V4.2.14: Transform text elements with data-base-x (section labels, phrase labels)
         svg.querySelectorAll('text[data-base-x]').forEach(text => {
+            // For annotatedII: Only transform text inside Row 1 phrase boxes, skip all other text
+            if (isAnnotatedII) {
+                const isRow1PhraseText = text.closest('g.phrase-box-row1');
+                if (!isRow1PhraseText) {
+                    // Skip linguistic bands, section headers, row labels, etc.
+                    return;
+                }
+            }
+
             // Prioritize getAttribute (server-generated)
             const baseX = parseFloat(text.getAttribute('data-base-x') || text.dataset.baseX);
             const baseY = parseFloat(text.getAttribute('data-base-y') || text.dataset.baseY);
@@ -688,6 +724,87 @@ class ZoomController {
             // Use the centralized transformation logic that regenerates chevrons as needed
             this.transformGlissandoChevrons(svg, allChevrons, xZoom, yZoom);
         }
+
+        // V4.4.11: Transform arcs (paths) in annotatedII section
+        if (isAnnotatedII) {
+            svg.querySelectorAll('path').forEach(path => {
+                const d = path.getAttribute('d');
+                if (!d) return;
+
+                // Store base path if not already stored
+                if (!path.dataset.baseD) {
+                    path.dataset.baseD = d;
+                }
+
+                // Parse and transform the path
+                const baseD = path.dataset.baseD;
+                const transformedD = this.transformPathData(baseD, xZoom, yZoom);
+                path.setAttribute('d', transformedD);
+            });
+        }
+    }
+
+    /**
+     * Transform SVG path data (for arcs in annotatedII section)
+     * @param {string} pathData - Original path d attribute
+     * @param {number} xZoom - X zoom multiplier
+     * @param {number} yZoom - Y zoom multiplier
+     * @returns {string} Transformed path data
+     */
+    transformPathData(pathData, xZoom, yZoom) {
+        // Parse path commands and transform coordinates
+        return pathData.replace(/([MLHVCSQTAZ])\s*([-\d.,\s]+)/gi, (match, command, coords) => {
+            const numbers = coords.trim().split(/[\s,]+/).map(parseFloat).filter(n => !isNaN(n));
+
+            // Transform based on command type
+            const cmd = command.toUpperCase();
+            if (cmd === 'M' || cmd === 'L') {
+                // Move/Line: transform X and Y with pivot
+                const transformedNumbers = [];
+                for (let i = 0; i < numbers.length; i += 2) {
+                    const x = numbers[i];
+                    const y = numbers[i + 1];
+                    transformedNumbers.push(60 + (x - 60) * xZoom);
+                    transformedNumbers.push(y * yZoom);
+                }
+                return command + transformedNumbers.join(',');
+            } else if (cmd === 'C') {
+                // Cubic Bezier: transform all control points
+                const transformedNumbers = [];
+                for (let i = 0; i < numbers.length; i += 2) {
+                    const x = numbers[i];
+                    const y = numbers[i + 1];
+                    transformedNumbers.push(60 + (x - 60) * xZoom);
+                    transformedNumbers.push(y * yZoom);
+                }
+                return command + transformedNumbers.join(',');
+            } else if (cmd === 'Q') {
+                // Quadratic Bezier: transform control point and end point
+                const transformedNumbers = [];
+                for (let i = 0; i < numbers.length; i += 2) {
+                    const x = numbers[i];
+                    const y = numbers[i + 1];
+                    transformedNumbers.push(60 + (x - 60) * xZoom);
+                    transformedNumbers.push(y * yZoom);
+                }
+                return command + transformedNumbers.join(',');
+            } else if (cmd === 'A') {
+                // Arc: rx,ry,rotation,large-arc,sweep,x,y
+                // Only transform the endpoint (x,y), not the radii
+                if (numbers.length >= 7) {
+                    const rx = numbers[0] * xZoom; // Scale radii with zoom
+                    const ry = numbers[1] * yZoom;
+                    const rotation = numbers[2];
+                    const largeArc = numbers[3];
+                    const sweep = numbers[4];
+                    const x = 60 + (numbers[5] - 60) * xZoom;
+                    const y = numbers[6] * yZoom;
+                    return command + [rx, ry, rotation, largeArc, sweep, x, y].join(',');
+                }
+            }
+            // For other commands or if parsing fails, return original
+            return match;
+        });
     }
 
     /**

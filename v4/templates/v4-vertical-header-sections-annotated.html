@@ -6,7 +6,11 @@
     <title>V4.3.32</title>
 
     <!-- V4.0.5: External Zoom Controller -->
-    <script src="/zoom-controller.js?v=20251015-4"></script>
+    <script src="/zoom-controller.js?v=20251016-1"></script>
+
+    <!-- V4.4.11: Zoom Link Controller (Synchronized zoom across sections) -->
+    <script src="/zoom-link-controller.js?v=20251016-1"></script>
+
     <script src="/glissando-controller.js"></script>
 
     <!-- V4.0.9: External Library Controller -->
@@ -1562,6 +1566,32 @@
                 <div class="section-content collapsed">
                     <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Phrase-to-Note Alignment Visualization</h4>
 
+                    <!-- Zoom Controls for Phrase Bars -->
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <!-- X-Zoom Slider (controls phrase bar width) -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 60px;">X-Zoom:</label>
+                            <input type="range" id="phrasesXZoom" min="1" max="400" value="100"
+                                   style="width: 120px; height: 4px; cursor: pointer;"
+                                   oninput="if(window.phraseBarsController){window.phraseBarsController.currentZoomX=this.value/100;window.phraseBarsController.updatePhraseBarsZoom();document.getElementById('phrasesXValue').textContent=this.value+'%';}">
+                            <span id="phrasesXValue" style="font-size: 12px; min-width: 45px; color: #555;">100%</span>
+                        </div>
+
+                        <!-- Info about Y-zoom -->
+                        <div style="font-size: 11px; color: #666; font-style: italic;">
+                            (Y-zoom not applicable - phrase bars are fixed height)
+                        </div>
+
+                        <!-- Link Checkboxes -->
+                        <div style="display: flex; gap: 15px; margin-left: auto; padding: 5px 10px; background: white; border-radius: 4px; border: 1px solid #ddd;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px;">
+                                <input type="checkbox" id="phrasesLinkOptimal" checked
+                                       onchange="if(this.checked && window.zoomController){const xZoom=window.zoomController.zoomState.optimal?.x||1.0;document.getElementById('phrasesXZoom').value=xZoom*100;window.phraseBarsController.currentZoomX=xZoom;window.phraseBarsController.updatePhraseBarsZoom();}">
+                                <span>Auto-sync with Optimal Tuning</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Phrase Bars Container (horizontal colored bars) -->
                     <div id="phraseBarsContainer" style="width: 100%; overflow-x: auto; overflow-y: auto; min-height: 400px; max-height: 3000px; background: #fafafa; border: 1px solid #ddd; border-radius: 6px; padding: 10px;">
                         <!-- Phrase bars SVG will be generated here by phrase-bars-controller.js -->
@@ -1600,15 +1630,64 @@
                         </p>
                     </div>
 
-                    <!-- Zoom Controls -->
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
-                        <label style="font-weight: 600; color: #2c3e50;">X-Zoom:</label>
-                        <button onclick="window.zoomController.updateZoom('annotatedII', 'x', 67)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">67%</button>
-                        <button onclick="window.zoomController.updateZoom('annotatedII', 'x', 100)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">100%</button>
-                        <button onclick="window.zoomController.updateZoom('annotatedII', 'x', 150)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">150%</button>
-                        <button onclick="window.zoomController.updateZoom('annotatedII', 'x', 200)" style="padding: 4px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">200%</button>
-                        <button onclick="window.zoomController.fitToWidth('annotatedII')" style="padding: 4px 10px; border: 1px solid #008080; border-radius: 4px; background: white; color: #008080; cursor: pointer; font-weight: 600;">Fit Width</button>
+                    <!-- Zoom Controls for Lyrics Analysis -->
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 6px; flex-wrap: wrap;">
+                        <!-- X-Zoom Slider -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 60px;">X-Zoom:</label>
+                            <input type="range" id="annotatedIIXZoom" min="1" max="400" value="100"
+                                   style="width: 120px; height: 4px; cursor: pointer;"
+                                   oninput="zoomLyricsAnalysis('x', this.value); document.getElementById('annotatedIIXValue').textContent=this.value+'%';">
+                            <span id="annotatedIIXValue" style="font-size: 12px; min-width: 45px; color: #555;">100%</span>
+                        </div>
+
+                        <!-- Y-Zoom Slider -->
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label style="font-weight: 600; color: #2c3e50; min-width: 60px;">Y-Zoom:</label>
+                            <input type="range" id="annotatedIIYZoom" min="1" max="400" value="100"
+                                   style="width: 120px; height: 4px; cursor: pointer;"
+                                   oninput="zoomLyricsAnalysis('y', this.value); document.getElementById('annotatedIIYValue').textContent=this.value+'%';">
+                            <span id="annotatedIIYValue" style="font-size: 12px; min-width: 45px; color: #555;">100%</span>
+                        </div>
+
+                        <!-- Link Checkboxes -->
+                        <div style="display: flex; gap: 15px; margin-left: auto; padding: 5px 10px; background: white; border-radius: 4px; border: 1px solid #ddd;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px;">
+                                <input type="checkbox" id="annotatedIILinkOptimal"
+                                       onchange="if(this.checked && window.zoomController){const xZoom=window.zoomController.zoomState.optimal?.x||1.0; const yZoom=window.zoomController.zoomState.optimal?.y||1.0; document.getElementById('annotatedIIXZoom').value=xZoom*100; document.getElementById('annotatedIIYZoom').value=yZoom*100; zoomLyricsAnalysis('x',xZoom*100); zoomLyricsAnalysis('y',yZoom*100);}">
+                                <span>Link to Optimal</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px;">
+                                <input type="checkbox" id="annotatedIILinkAlt1"
+                                       onchange="if(this.checked && window.zoomController){const xZoom=window.zoomController.zoomState.alt1?.x||1.0; const yZoom=window.zoomController.zoomState.alt1?.y||1.0; document.getElementById('annotatedIIXZoom').value=xZoom*100; document.getElementById('annotatedIIYZoom').value=yZoom*100; zoomLyricsAnalysis('x',xZoom*100); zoomLyricsAnalysis('y',yZoom*100);}">
+                                <span>Link to Alt Tuning</span>
+                            </label>
+                        </div>
                     </div>
+
+                    <script>
+                    // Custom zoom function for Lyrics-Based Analyses
+                    // Uses existing zoomController but the annotatedII section is already configured
+                    function zoomLyricsAnalysis(axis, percent) {
+                        console.log(`[LyricsZoom] Called with axis=${axis}, percent=${percent}`);
+
+                        // Check if SVG exists
+                        const svg = document.getElementById('annotatedIISvg');
+                        console.log(`[LyricsZoom] SVG found:`, svg ? 'YES' : 'NO');
+                        if (svg) {
+                            console.log(`[LyricsZoom] SVG id:`, svg.id);
+                            console.log(`[LyricsZoom] SVG dimensions:`, svg.getAttribute('width'), 'x', svg.getAttribute('height'));
+                        }
+
+                        // Just delegate to the existing zoom controller which already handles annotatedII
+                        if (window.zoomController) {
+                            console.log(`[LyricsZoom] Calling zoomController.updateZoom('annotatedII', '${axis}', ${percent})`);
+                            window.zoomController.updateZoom('annotatedII', axis, percent);
+                        } else {
+                            console.error('[LyricsZoom] zoomController not available');
+                        }
+                    }
+                    </script>
 
                     <!-- Scrollable SVG Container -->
                     <div class="tablature-scroll-container" id="annotatedIIScrollContainer" style="overflow-x: auto; overflow-y: auto; border: 1px solid #ccc; background: white; box-sizing: border-box; max-height: 600px; padding: 10px;">
@@ -1630,57 +1709,47 @@
                             </p>
                         </div>
 
-                        <!-- 3-Row System Explanation -->
-                        <h6 style="margin: 15px 0 10px 0; color: #2c3e50; font-weight: 600; font-size: 14px;">How to Read the 3-Row Visualization:</h6>
+                        <!-- 2-Row System Explanation -->
+                        <h6 style="margin: 15px 0 10px 0; color: #2c3e50; font-weight: 600; font-size: 14px;">How to Read the 2-Row Visualization:</h6>
 
-                        <div style="display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
 
                             <!-- Row 1: Phrase Boxes -->
                             <div style="padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #3498db;">
-                                <h6 style="margin: 0 0 8px 0; color: #3498db; font-weight: 700;">ROW 1: Phrase Text Boxes</h6>
+                                <h6 style="margin: 0 0 8px 0; color: #3498db; font-weight: 700;">ROW 1: Phrase Text & Repetition</h6>
                                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #555;">
-                                    Each box = one phrase. Color shows identical text (same color = same lyrics).
+                                    Each box = one phrase. Rainbow hue colors distinguish unique phrases.
                                 </p>
                                 <div style="font-size: 11px; color: #777; line-height: 1.6;">
-                                    <div>• <strong>Solid arcs</strong> (above) = Identical phrases (exact text match)</div>
-                                    <div>• <strong>Dashed arcs</strong> (above) = Thematic parallels (similar pattern, different words)</div>
-                                    <div>• <strong>Fill color</strong> = Same phrase text across song</div>
+                                    <div>• <strong>Rainbow progression</strong>: Red → Orange → Yellow → Green → Blue → Purple</div>
+                                    <div>• <strong>Solid arcs</strong> (above) = REPEAT groups (I, II, III...)</div>
+                                    <div>• <strong>Dashed arcs</strong> (above) = Thematic parallels</div>
+                                    <div>• <strong>Badges</strong> = REPEAT groups only (Roman numerals)</div>
                                 </div>
                             </div>
 
                             <!-- Row 2: Linguistic Type Bands -->
                             <div style="padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #f39c12;">
-                                <h6 style="margin: 0 0 8px 0; color: #f39c12; font-weight: 700;">ROW 2: Linguistic Type Bands (Thin Ribbons)</h6>
+                                <h6 style="margin: 0 0 8px 0; color: #f39c12; font-weight: 700;">ROW 2: Linguistic Function</h6>
                                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #555;">
-                                    Colored bands show what TYPE each phrase is (question, exclamatory, etc.).
+                                    Thin bands show phrase TYPE (how it functions in the song).
                                 </p>
                                 <div style="font-size: 11px; color: #777; line-height: 1.6;">
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #E74C3C; margin-right: 5px; border-radius: 2px;"></span> <strong>Red</strong> = Exclamatory (ơi, ới, hỡi)</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #3498DB; margin-right: 5px; border-radius: 2px;"></span> <strong>Blue</strong> = Question (ai, gì, đâu)</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #2ECC71; margin-right: 5px; border-radius: 2px;"></span> <strong>Green</strong> = Answer</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #9B59B6; margin-right: 5px; border-radius: 2px;"></span> <strong>Purple</strong> = Narrative</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #F39C12; margin-right: 5px; border-radius: 2px;"></span> <strong>Orange</strong> = Complaint (khổ, buồn)</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #E91E63; margin-right: 5px; border-radius: 2px;"></span> <strong>Pink</strong> = Onomatopoeia</div>
-                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #16A085; margin-right: 5px; border-radius: 2px;"></span> <strong>Teal</strong> = Descriptive</div>
+                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #E74C3C; margin-right: 5px;"></span> Red = Exclamatory</div>
+                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #3498DB; margin-right: 5px;"></span> Blue = Question</div>
+                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #2ECC71; margin-right: 5px;"></span> Green = Answer</div>
+                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #9B59B6; margin-right: 5px;"></span> Purple = Narrative</div>
+                                    <div><span style="display: inline-block; width: 16px; height: 8px; background: #F39C12; margin-right: 5px;"></span> Orange = Complaint</div>
                                 </div>
                             </div>
 
-                            <!-- Row 3: Semantic Icons -->
-                            <div style="padding: 12px; background: white; border-radius: 6px; border-left: 4px solid #9b59b6;">
-                                <h6 style="margin: 0 0 8px 0; color: #9b59b6; font-weight: 700;">ROW 3: Semantic Icons (Vocabulary Themes)</h6>
-                                <p style="margin: 0 0 8px 0; font-size: 12px; color: #555;">
-                                    Icons show what the phrase is ABOUT. Multiple icons = multiple themes.
-                                </p>
-                                <div style="font-size: 11px; color: #777; line-height: 1.6;">
-                                    <div>👤 <strong>characters</strong> - people (bà, chồng, con, mẹ)</div>
-                                    <div>😢 <strong>emotion</strong> - feelings (khổ, thương, nhớ, buồn)</div>
-                                    <div>🗣️ <strong>action</strong> - verbs (đi, làm, ru, hát)</div>
-                                    <div>🌳 <strong>nature</strong> - natural world (chiều, gió, cây, hoa)</div>
-                                    <div>💭 <strong>abstract</strong> - concepts (duyên, đời, lòng, tình)</div>
-                                    <div>📣 <strong>vocative</strong> - calling out (ơi, hỡi, này, kìa)</div>
-                                </div>
-                            </div>
+                        </div>
 
+                        <div style="padding: 10px; background: #e8f5e9; border-left: 4px solid #27ae60; border-radius: 4px; margin-bottom: 15px;">
+                            <strong style="color: #27ae60;">Note:</strong>
+                            <span style="font-size: 12px; color: #555;">
+                                Semantic themes (nature, family, emotion) are shown in the Radar Chart section, not here. This section focuses on TEXT STRUCTURE only.
+                            </span>
                         </div>
 
                         <!-- Badges Explanation -->
@@ -1713,12 +1782,92 @@
                             </div>
                         </div>
 
+                        <!-- 5 Sectionization Methods Legend -->
+                        <div style="padding-top: 15px; border-top: 2px solid #ddd; margin-top: 15px;">
+                            <h6 style="margin: 0 0 12px 0; color: #2c3e50; font-weight: 600; font-size: 14px;">5 Ways to Segment the Song (Rows 3-7):</h6>
+                            <p style="margin: 0 0 12px 0; font-size: 12px; color: #666;">
+                                Each row shows a different way to group phrases based on lyrics alone. Same song, 5 different perspectives!
+                            </p>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+
+                                <!-- Method 1: Repetition -->
+                                <div style="padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                                    <h6 style="margin: 0 0 6px 0; color: #2c3e50; font-weight: 700; font-size: 12px;">1. Repetition (Verse-Refrain)</h6>
+                                    <div style="font-size: 11px; color: #555; line-height: 1.5;">
+                                        <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 30px; height: 12px; background: #3498DB; margin-right: 5px; border-radius: 2px;"></span> <strong>V1, V2, V3...</strong> = Verses (unique lyrics)</div>
+                                        <div><span style="display: inline-block; width: 30px; height: 12px; background: #F39C12; margin-right: 5px; border-radius: 2px;"></span> <strong>REF 1, REF 2...</strong> = Refrains (repeated lyrics)</div>
+                                        <div style="margin-top: 6px; color: #777; font-style: italic;">Shows traditional song structure - which parts repeat?</div>
+                                    </div>
+                                </div>
+
+                                <!-- Method 2: Dialogue -->
+                                <div style="padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                                    <h6 style="margin: 0 0 6px 0; color: #2c3e50; font-weight: 700; font-size: 12px;">2. Dialogue (Question-Answer)</h6>
+                                    <div style="font-size: 11px; color: #555; line-height: 1.5;">
+                                        <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 20px; height: 12px; background: #3498DB; margin-right: 5px; border-radius: 2px;"></span> <strong>Q</strong> = Question phrases</div>
+                                        <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 20px; height: 12px; background: #2ECC71; margin-right: 5px; border-radius: 2px;"></span> <strong>A</strong> = Answer phrases</div>
+                                        <div><span style="display: inline-block; width: 20px; height: 12px; background: #95A5A6; margin-right: 5px; border-radius: 2px;"></span> <strong>MONO</strong> = Monologue (neither Q nor A)</div>
+                                        <div style="margin-top: 6px; color: #777; font-style: italic;">Shows conversational flow - call and response patterns</div>
+                                    </div>
+                                </div>
+
+                                <!-- Method 3: Emotion -->
+                                <div style="padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                                    <h6 style="margin: 0 0 6px 0; color: #2c3e50; font-weight: 700; font-size: 12px;">3. Emotion (Intensity Curve)</h6>
+                                    <div style="font-size: 11px; color: #555; line-height: 1.5;">
+                                        <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 20px; height: 16px; background: #E74C3C; margin-right: 5px; border-radius: 2px;"></span> <strong>Tall bars</strong> = High emotion (exclamatory)</div>
+                                        <div style="margin-bottom: 4px;"><span style="display: inline-block; width: 20px; height: 16px; background: #F39C12; margin-right: 5px; border-radius: 2px;"></span> <strong>Tall bars</strong> = Complaint/grief</div>
+                                        <div><span style="display: inline-block; width: 20px; height: 8px; background: #BDC3C7; margin-right: 5px; border-radius: 2px;"></span> <strong>Short bars</strong> = Neutral tone</div>
+                                        <div style="margin-top: 6px; color: #777; font-style: italic;">Bar height = emotional intensity. Creates mountain-like contour.</div>
+                                    </div>
+                                </div>
+
+                                <!-- Method 4: Narrative -->
+                                <div style="padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                                    <h6 style="margin: 0 0 6px 0; color: #2c3e50; font-weight: 700; font-size: 12px;">4. Narrative (Story Arc)</h6>
+                                    <div style="font-size: 11px; color: #555; line-height: 1.5;">
+                                        <div style="margin-bottom: 6px;">
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: hsl(0, 70%, 50%); margin-right: 3px; border-radius: 2px;"></span>
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: hsl(40, 70%, 50%); margin-right: 3px; border-radius: 2px;"></span>
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: hsl(80, 70%, 50%); margin-right: 3px; border-radius: 2px;"></span>
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: hsl(120, 70%, 50%); margin-right: 3px; border-radius: 2px;"></span>
+                                            <strong>Color gradient</strong>
+                                        </div>
+                                        <div style="color: #777;">Red → Yellow → Green shows progression from beginning to end</div>
+                                        <div style="margin-top: 6px; color: #777; font-style: italic;">Visualizes story progression through the song</div>
+                                    </div>
+                                </div>
+
+                                <!-- Method 5: Repeat Groups -->
+                                <div style="padding: 12px; background: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+                                    <h6 style="margin: 0 0 6px 0; color: #2c3e50; font-weight: 700; font-size: 12px;">5. Repeat Groups (Which Lyrics Repeat)</h6>
+                                    <div style="font-size: 11px; color: #555; line-height: 1.5;">
+                                        <div style="margin-bottom: 4px;">
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: #E74C3C; margin-right: 3px; border-radius: 2px;"></span> <strong>I</strong> = Repeat Group I
+                                        </div>
+                                        <div style="margin-bottom: 4px;">
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: #3498DB; margin-right: 3px; border-radius: 2px;"></span> <strong>II</strong> = Repeat Group II
+                                        </div>
+                                        <div style="margin-bottom: 4px;">
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: #27AE60; margin-right: 3px; border-radius: 2px;"></span> <strong>III</strong> = Repeat Group III
+                                        </div>
+                                        <div style="margin-bottom: 4px;">
+                                            <span style="display: inline-block; width: 15px; height: 12px; background: #BDC3C7; margin-right: 3px; border-radius: 2px; opacity: 0.3;"></span> <strong>Grey</strong> = Unique (doesn't repeat)
+                                        </div>
+                                        <div style="margin-top: 6px; color: #777; font-style: italic;">Each color = one group of identical lyrics. Easy to see at a glance!</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
                         <!-- Reading Tip -->
                         <div style="margin-top: 15px; padding: 10px; background: #e8f5e9; border-left: 4px solid #27ae60; border-radius: 4px;">
                             <strong style="color: #27ae60;">💡 How to Read:</strong>
                             <span style="font-size: 12px; color: #555;">
-                                Read top to bottom: Row 1 shows WHAT (phrase text), Row 2 shows TYPE (linguistic category), Row 3 shows THEMES (vocabulary).
-                                Solid arcs connect identical phrases - the song's recurring hooks!
+                                Row 1 shows WHAT (phrase text + repetition). Row 2 shows HOW (linguistic function).
+                                Rows 3-7 show 5 different ways to GROUP phrases - same song, 5 analytical perspectives!
                             </span>
                         </div>
 
@@ -1728,29 +1877,6 @@
             </div>
 
             <!-- STRUCTURAL OVERVIEW SECTION (Simple text-based) -->
-            <!-- POSITION: x=0, y=after annotated phrases + gap -->
-            <div class="analysis-section" id="structuralOverviewSection" data-order="8.7" data-focus="structural-overview">
-
-                <!-- VERTICAL HEADER -->
-                <div class="vertical-header" onclick="toggleSection('structuralOverviewSection')">
-                    <h3 class="section-title">Structure Overview</h3>
-                    <div class="vertical-controls">
-                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'up'); event.stopPropagation();">▲</button>
-                        <button class="vertical-move-arrow" onclick="moveSection('structuralOverviewSection', 'down'); event.stopPropagation();">▼</button>
-                        <span class="vertical-collapse-toggle">▼</span>
-                    </div>
-                </div>
-
-                <!-- SECTION CONTENT -->
-                <div class="section-content">
-                    <h4 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">📊 Song Structure Analysis</h4>
-
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; align-items: start;">
-                        {{STRUCTURAL_OVERVIEW_CARDS}}
-                    </div>
-                </div>
-            </div>
-
             <!-- LYRICS SECTION (Collapsible) -->
             <div class="analysis-section" id="lyricsSection" data-order="9" data-focus="lyrics">
                 <div class="vertical-header" onclick="toggleSection('lyricsSection')">

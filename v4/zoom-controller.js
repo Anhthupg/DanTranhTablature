@@ -193,7 +193,11 @@ class ZoomController {
     setupContainer(container) {
         container.style.overflowX = 'auto';
         container.style.overflowY = 'auto';
-        container.style.maxHeight = '600px';
+        // Note: maxHeight set in HTML template (350px for annotatedII, 600px for others)
+        // Don't override if already set
+        if (!container.style.maxHeight) {
+            container.style.maxHeight = '600px';
+        }
         container.style.position = 'relative';
         container.style.boxSizing = 'border-box';
     }
@@ -356,7 +360,8 @@ class ZoomController {
         }
 
         // Calculate new dimensions
-        const newWidth = baseWidth * xZoom;
+        // For width: never shrink below base width (prevents cropping at low zoom)
+        const newWidth = Math.max(baseWidth, baseWidth * xZoom);
         const newHeight = baseHeight * yZoom;
 
         // Update SVG dimensions
@@ -504,6 +509,12 @@ class ZoomController {
             const baseX = parseFloat(text.dataset.baseX);
             const baseY = parseFloat(text.dataset.baseY);
 
+            // Row labels (e.g., "Repetition:", "Dialogue:") are completely fixed - no zoom
+            const isRowLabel = text.classList.contains('row-label-fixed');
+            if (isRowLabel) {
+                return; // Skip completely - stays at original position
+            }
+
             if (isNaN(baseX) || isNaN(baseY)) return;
 
             // X: pivot at 120
@@ -555,11 +566,14 @@ class ZoomController {
 
         // Transform rects (phrase boxes and section boxes in annotated section)
         svg.querySelectorAll('rect').forEach(rect => {
-            // For annotatedII: Only transform phrase boxes in Row 1, skip all other rows
+            // For annotatedII: Transform phrase boxes (Row 1) AND sectionization method bars (Rows 3-7)
             if (isAnnotatedII) {
                 const isRow1PhraseBox = rect.closest('g.phrase-box-row1');
-                if (!isRow1PhraseBox) {
-                    // Skip linguistic bands, section headers, and sectionization method bands
+                const isSectionizationBar = rect.closest('g.repetition-section, g.linguistic-type-band');
+                const hasSectionizationData = rect.hasAttribute('data-base-y') && rect.hasAttribute('data-base-height');
+
+                if (!isRow1PhraseBox && !isSectionizationBar && !hasSectionizationData) {
+                    // Skip Row 2 linguistic bands and other elements without zoom attributes
                     return;
                 }
             }
@@ -619,11 +633,14 @@ class ZoomController {
 
         // V4.2.14: Transform text elements with data-base-x (section labels, phrase labels)
         svg.querySelectorAll('text[data-base-x]').forEach(text => {
-            // For annotatedII: Only transform text inside Row 1 phrase boxes, skip all other text
+            // For annotatedII: Transform text in Row 1 phrase boxes AND sectionization method labels
             if (isAnnotatedII) {
                 const isRow1PhraseText = text.closest('g.phrase-box-row1');
-                if (!isRow1PhraseText) {
-                    // Skip linguistic bands, section headers, row labels, etc.
+                const isSectionizationLabel = text.closest('g.repetition-section, g.linguistic-type-band');
+                const hasSectionizationData = text.hasAttribute('data-base-y');
+
+                if (!isRow1PhraseText && !isSectionizationLabel && !hasSectionizationData) {
+                    // Skip Row 2 linguistic bands and other labels without zoom attributes
                     return;
                 }
             }

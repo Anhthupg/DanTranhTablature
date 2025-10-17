@@ -162,7 +162,7 @@ class AnnotatedPhrasesIIGenerator {
             return { svg: '', width: 2000, height: 800, phraseCount: 0 };
         }
 
-        const maxX = Math.max(...enrichedPhrases.map(p => p.position.endX)) + 200;
+        const maxX = Math.max(...enrichedPhrases.map(p => p.position.endX)) + 400; // Extra padding for X-zoom
         const totalHeight = 480; // 120px arcs + 120px Row 1 + 33px Row 2 + (5 methods × 25px) + padding
 
         // Build SVG with 3-row architecture
@@ -683,7 +683,9 @@ class AnnotatedPhrasesIIGenerator {
             fill-opacity="0.8"
             rx="4"
             data-base-x="${group.startX}"
-            data-base-width="${width}">
+            data-base-width="${width}"
+            data-base-y="${rowY}"
+            data-base-height="${bandHeight}">
             <title>${group.type.toUpperCase()} (${group.phrases.length} phrases): #${phraseIds}</title>
         </rect>
 
@@ -697,7 +699,9 @@ class AnnotatedPhrasesIIGenerator {
             stroke-width="1"
             opacity="0.4"
             data-base-x1="${group.startX}"
-            data-base-x2="${group.startX}"/>
+            data-base-x2="${group.startX}"
+            data-base-y1="${rowY + bandHeight}"
+            data-base-y2="${labelY - 5}"/>
 
         <!-- Connecting vertical line (right edge) -->
         <line
@@ -709,7 +713,9 @@ class AnnotatedPhrasesIIGenerator {
             stroke-width="1"
             opacity="0.4"
             data-base-x1="${group.endX}"
-            data-base-x2="${group.endX}"/>
+            data-base-x2="${group.endX}"
+            data-base-y1="${rowY + bandHeight}"
+            data-base-y2="${labelY - 5}"/>
 
         <!-- Type label (below band) -->
         <text
@@ -719,7 +725,8 @@ class AnnotatedPhrasesIIGenerator {
             font-size="11"
             font-weight="600"
             fill="${typeColor}"
-            data-base-x="${centerX}">
+            data-base-x="${centerX}"
+            data-base-y="${labelY}">
             ${group.type.toUpperCase()} (${group.phrases.length})
         </text>
     </g>`);
@@ -819,7 +826,9 @@ class AnnotatedPhrasesIIGenerator {
             fill-opacity="0.75"
             rx="4"
             data-base-x="${section.startX}"
-            data-base-width="${width}">
+            data-base-width="${width}"
+            data-base-y="${startY}"
+            data-base-height="${baseHeight}">
             <title>${section.type} ${section.number} (${section.phrases.length} phrases)</title>
         </rect>
 
@@ -831,15 +840,16 @@ class AnnotatedPhrasesIIGenerator {
             font-size="10"
             font-weight="700"
             fill="white"
-            data-base-x="${centerX}">
+            data-base-x="${centerX}"
+            data-base-y="${startY + baseHeight / 2 + 4}">
             ${label}
         </text>
     </g>`);
         });
 
-        // Row label on left
+        // Row label on left (completely fixed - no X or Y zoom)
         bands.unshift(`
-    <text x="10" y="${startY + baseHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Repetition:</text>`);
+    <text x="10" y="${startY + baseHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666" class="row-label-fixed">Repetition:</text>`);
 
         return bands.join('\n');
     }
@@ -872,11 +882,11 @@ class AnnotatedPhrasesIIGenerator {
             const cx = (s.startX + s.endX) / 2;
             const color = s.type === 'Q' ? '#3498DB' : s.type === 'A' ? '#2ECC71' : '#95A5A6';
 
-            bands.push(`<rect x="${s.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="0.75" rx="4" data-base-x="${s.startX}" data-base-width="${w}"><title>${s.type} (${s.count})</title></rect>
-<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="10" font-weight="700" fill="white" data-base-x="${cx}">${s.type}</text>`);
+            bands.push(`<rect x="${s.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="0.75" rx="4" data-base-x="${s.startX}" data-base-width="${w}" data-base-y="${startY}" data-base-height="${bandHeight}"><title>${s.type} (${s.count})</title></rect>
+<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="10" font-weight="700" fill="white" data-base-x="${cx}" data-base-y="${startY + bandHeight / 2 + 4}">${s.type}</text>`);
         });
 
-        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Dialogue:</text>`);
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666" class="row-label-fixed">Dialogue:</text>`);
         return bands.join('\n');
     }
 
@@ -897,11 +907,11 @@ class AnnotatedPhrasesIIGenerator {
             const label = phrase.linguisticType === 'exclamatory' ? 'EX' :
                          phrase.linguisticType === 'complaint' ? 'CM' : '';
 
-            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}"/>
-${isEmotional && w > 50 ? `<text x="${phrase.position.startX + w/2}" y="${y + h/2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${phrase.position.startX + w/2}">${label}</text>` : ''}`);
+            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}" data-base-y="${y}" data-base-height="${h}"/>
+${isEmotional && w > 50 ? `<text x="${phrase.position.startX + w/2}" y="${y + h/2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${phrase.position.startX + w/2}" data-base-y="${y + h/2 + 4}">${label}</text>` : ''}`);
         });
 
-        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Emotion:</text>`);
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666" class="row-label-fixed">Emotion:</text>`);
         return bands.join('\n');
     }
 
@@ -920,10 +930,10 @@ ${isEmotional && w > 50 ? `<text x="${phrase.position.startX + w/2}" y="${y + h/
             const color = `hsl(${progress * 120}, 70%, 50%)`;
             const w = phrase.position.width;
 
-            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}"/>`);
+            bands.push(`<rect x="${phrase.position.startX}" y="${y}" width="${w}" height="${h}" fill="${color}" opacity="0.75" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}" data-base-y="${y}" data-base-height="${h}"/>`);
         });
 
-        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Narrative:</text>`);
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666" class="row-label-fixed">Narrative:</text>`);
         return bands.join('\n');
     }
 
@@ -968,12 +978,12 @@ ${isEmotional && w > 50 ? `<text x="${phrase.position.startX + w/2}" y="${y + h/
             // Add label if wide enough and has repeat group
             const showLabel = groupID !== 'UNIQUE' && w > 40;
 
-            bands.push(`<rect x="${phrase.position.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="${opacity}" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}">
+            bands.push(`<rect x="${phrase.position.startX}" y="${startY}" width="${w}" height="${bandHeight}" fill="${color}" opacity="${opacity}" rx="4" data-base-x="${phrase.position.startX}" data-base-width="${w}" data-base-y="${startY}" data-base-height="${bandHeight}">
 <title>${groupID === 'UNIQUE' ? 'Unique phrase (no repeat)' : `Repeat Group ${groupID}`}</title></rect>${showLabel ? `
-<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${cx}">${groupID}</text>` : ''}`);
+<text x="${cx}" y="${startY + bandHeight / 2 + 4}" text-anchor="middle" font-size="9" font-weight="700" fill="white" data-base-x="${cx}" data-base-y="${startY + bandHeight / 2 + 4}">${groupID}</text>` : ''}`);
         });
 
-        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666">Repeat Groups:</text>`);
+        bands.unshift(`<text x="10" y="${startY + bandHeight / 2 + 4}" font-size="10" font-weight="700" fill="#666" class="row-label-fixed">Repeat Groups:</text>`);
         return bands.join('\n');
     }
 

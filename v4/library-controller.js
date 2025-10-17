@@ -109,7 +109,7 @@ class LibraryController {
             return `
             <div class="song-card${selectedClass}"
                  data-filename="${song.filename}"
-                 onclick="window.libraryController.selectSong('${song.filename}')">
+                 onclick="window.libraryController.selectSong('${song.filename.replace(/'/g, "\\'")}')">
 
                 <h5 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 16px; font-weight: 600;">${song.title}</h5>
 

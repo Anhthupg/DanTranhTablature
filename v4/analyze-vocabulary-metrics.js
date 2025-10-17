@@ -1,6 +1,6 @@
 /**
- * Vietnamese Vocabulary Metrics Analyzer
- * Analyzes all words across 121 songs for linguistic insights
+ * Bilingual Vocabulary Metrics Analyzer (Vietnamese & English)
+ * Analyzes all words across all songs for linguistic insights
  */
 
 const fs = require('fs');
@@ -87,7 +87,7 @@ class VocabularyAnalyzer {
         const files = fs.readdirSync(this.lyricsDir).filter(f => f.endsWith('.json'));
 
         console.log(`\n╔════════════════════════════════════════════════════════════╗`);
-        console.log(`║  Vietnamese Vocabulary Metrics Analyzer                   ║`);
+        console.log(`║  Bilingual Vocabulary Metrics Analyzer (VN & EN)          ║`);
         console.log(`╚════════════════════════════════════════════════════════════╝\n`);
 
         // Data structures
@@ -112,14 +112,14 @@ class VocabularyAnalyzer {
             place: new Set()
         };
 
-        // Semantic keyword patterns
+        // Bilingual semantic keyword patterns (Vietnamese | English)
         const semanticPatterns = {
-            nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao/,
-            family: /chồng|vợ|mẹ|cha|con|anh|em|bà|ông|cô|chú|bác|cháu/,
-            emotion: /thương|nhớ|buồn|vui|khổ|đau|yêu|ghét|sợ|giận|hạnh phúc/,
-            work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu/,
-            time: /chiều|sáng|trưa|tối|đêm|hôm|mai|ngày|tháng|năm|mùa/,
-            place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi/
+            nature: /trăng|sông|chiều|hoa|cò|đò|mây|núi|biển|cây|lá|rừng|đồng|rẫy|mưa|gió|sao|moon|sun|star|stars|sky|cloud|clouds|river|mountain|tree|trees|flower|flowers|bird|birds|water|rain|wind|lightning|nature|ocean|sea|forest|light|shine|shining|bright|unicorn|creature|creatures|bug|bugs|laser|beam/i,
+            family: /chồng|vợ|mẹ|cha|con|anh|em|bà|ông|cô|chú|bác|cháu|mother|father|mom|dad|sister|brother|family|child|children|kid|kids|parent|parents|son|daughter|baby|grandmother|grandfather/i,
+            emotion: /thương|nhớ|buồn|vui|khổ|đau|yêu|ghét|sợ|giận|hạnh phúc|love|happy|sad|joy|fear|afraid|angry|glad|hurt|pain|smile|cry|laugh|feel|feeling|heart|soul|believe|dream|hope|strong|kind|wild|hiding|shining|golden|born|moment/i,
+            work: /làm|giã|đập|chèo|kéo|cày|bừa|trồng|thu|dệt|may|nấu|work|working|job|make|making|build|create|doing|hunter|hunters|getting|paid|stage/i,
+            time: /chiều|sáng|trưa|tối|đêm|hôm|mai|ngày|tháng|năm|mùa|day|days|night|morning|evening|time|moment|year|years|today|tomorrow|yesterday|forever|now|when|waited|live|lived|lives|life/i,
+            place: /làng|thành|phố|chợ|nhà|lầu|cầu|đò|thuyền|bến|sông|núi|home|house|place|town|city|world|room|wall|walls|way|throne|guitar/i
         };
 
         let totalWords = 0;

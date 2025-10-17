@@ -1,183 +1,44 @@
-# V4.3.3 - Phase 3: Configuration & Documentation Complete
-
-## Current Version
-**V4.3.3** - Released October 6, 2025
-
-## Status
-✅ PRODUCTION READY
+# V4.4.13 - Bilingual Lyrics Analysis Support (2025-10-17)
 
 ## Summary
-Completed all 3 phases of the Prioritized Action Plan:
-1. Template system utilities (Phase 1)
-2. Service layer architecture (Phase 2)
-3. Configuration & documentation (Phase 3)
+Added complete English language support to the lyrics-based analysis system, enabling proper visualization for non-Vietnamese songs.
 
-## Key Achievements
+## Changes
 
-### Architecture
-- Server reduced from 999 → 104 lines (89% reduction)
-- Clean 5-layer architecture
-- Modular, testable, scalable design
+### 1. New Songs Added (5 total)
+- **Lý Ngựa Ô** (Vietnamese folk song) - 16 phrases, 71 syllables
+- **Bèo Giạt Mây Trôi** (Vietnamese folk song) - 20 phrases, 83 syllables
+- **Lý Ngựa Ô - Tranh** (Vietnamese instrumental) - 5 phrases, 22 syllables
+- **We're Gonna Shine** (English contemporary) - 30 phrases, 114 syllables
+- **Golden K-Pop Demon Hunters** (English/Korean) - 49 phrases, 297 syllables
 
-### Infrastructure
-- Centralized configuration system
-- JSDoc type definitions for IDE support
-- Comprehensive documentation (1,470 lines)
+### 2. Bilingual Vocabulary Analyzer
+**File**: analyze-vocabulary-metrics.js
 
-### Performance
-- Template caching: 50-100x faster loads
-- Clean separation of concerns
-- O(1) configuration lookups
+**Categories Enhanced with English patterns**:
+- nature: +30 English words
+- family: +15 English words
+- emotion: +30 English words
+- work: +10 English words
+- time: +15 English words
+- place: +10 English words
 
-## File Structure
+### 3. Results
+English songs now have complete lyrics-based visualizations:
+- Word Cloud Visualization (semantic categories)
+- Vocabulary Insights (statistics)
+- Thematic Radar Chart (6 dimensions)
+- Pattern Analysis (KPIC, KDIC, KSIC)
 
-```
-v4/
-├── config/defaults.js              # Centralized configuration
-├── types.d.js                      # JSDoc type definitions
-├── docs/
-│   ├── TEMPLATE-SYSTEM-ARCHITECTURE.md
-│   └── structure-template-component-parser-guide.md
-├── utils/
-│   ├── template-loader.js
-│   └── template-composer.js
-├── routes/
-│   ├── main-page.js
-│   ├── api-routes.js
-│   └── static-routes.js
-├── services/
-│   ├── song-data-service.js
-│   ├── tuning-service.js
-│   ├── tablature-service.js
-│   ├── lyrics-service.js
-│   └── phrase-service.js
-└── vertical-demo-server.js         # 104 lines
-```
+Total songs: 140 (was 135)
 
-## What's New in V4.3.3
+## Files Modified
+- analyze-vocabulary-metrics.js
+- add-new-file-mappings.js
+- package.json (4.3.25 → 4.4.13)
 
-### Phase 3 Deliverables
-1. **Configuration System** (`config/defaults.js`)
-   - Server, paths, templates, visual, data defaults
-   - Environment-specific settings
-   - Component mapping system
-
-2. **Type Definitions** (`types.d.js`)
-   - 15+ JSDoc typedefs
-   - Full API documentation
-   - IDE autocomplete support
-
-3. **Documentation** (1,470 lines)
-   - Complete architecture guide
-   - Best practices and anti-patterns
-   - Migration checklist
-   - Performance guidelines
-
-4. **CLAUDE.md Enhancement**
-   - Added Phase 3 section
-   - Migration checklist
-   - Future roadmap
-
-## Version History
-
-### V4.3.3 (Current - Oct 6, 2025)
-- Phase 3: Configuration & Documentation
-- Centralized config, types, comprehensive docs
-
-### V4.2.42 (Oct 6, 2025)
-- Phase 2: Service Layer Architecture
-- Extracted services, clean route handlers
-
-### V4.2.41 (Oct 6, 2025)
-- Phase 1: Template System Utilities
-- Created TemplateLoader and TemplateComposer
-
-### Earlier Versions
-- V4.2.40: Naming convention system
-- V4.2.39: Backend/frontend name mapping
-- V4.2.37-38: Word Journey Sankey enhancements
-- V4.2.36: Sankey diagram improvements
-- V4.2.18: Library selection & radar chart sync
-- V4.2.0-17: Core features development
-
-## Migration from V4.2.42
-
-### New Dependencies
-```javascript
-const config = require('./config/defaults');
-const loader = new TemplateLoader(config.PATHS.base);
-const composer = new TemplateComposer(loader);
-```
-
-### Type Hints
-```javascript
-/**
- * @param {SongData} songData - Song data object
- * @param {RenderOptions} options - Rendering options
- * @returns {string} Rendered HTML
- */
-function renderPage(songData, options) { }
-```
-
-### Configuration Usage
-```javascript
-// Before
-const port = 3006;
-const templatesDir = path.join(__dirname, 'templates');
-
-// After
-const config = require('./config/defaults');
-const port = config.SERVER.port;
-const templatesDir = config.PATHS.templates;
-```
-
-## Next Steps
-
-### Planned for V4.3.4+
-1. Partial templates support
-2. Conditional rendering
-3. Loop rendering
-4. Helper functions
-5. Template inheritance
-6. Hot reloading (dev)
-7. Template compilation
-8. Multi-language i18n
-
-## Testing
-
-### Quick Verification
-```bash
-# Test configuration
-node -e "const c = require('./config/defaults'); console.log(c.SERVER.port);"
-
-# Test template loader
-node -e "const TL = require('./utils/template-loader'); const l = new TL('.'); console.log('OK');"
-
-# Verify server starts
-PORT=3006 node vertical-demo-server.js
-```
-
-### Expected Results
-- Configuration loads correctly
-- Template loader initializes
-- Server starts on port 3006
-- All routes respond correctly
-
-## Backup Location
-```
-Versions/V4.3.3-phase-3-configuration-documentation/
-```
-
-## Documentation
-
-- **Architecture**: See `docs/TEMPLATE-SYSTEM-ARCHITECTURE.md`
-- **Best Practices**: See `docs/structure-template-component-parser-guide.md`
-- **Types**: See `types.d.js`
-- **Configuration**: See `config/defaults.js`
-- **Complete Guide**: See `CLAUDE.md`
-
----
-
-**Last Updated**: October 6, 2025
-**Status**: Production Ready
-**Next Version**: V4.3.4
+## Files Created
+- add-word-mappings-to-english.js
+- 5 lyrics segmentation files
+- 5 relationships files
+- 5 pattern files

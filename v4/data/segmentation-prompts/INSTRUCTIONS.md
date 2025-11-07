@@ -37,11 +37,14 @@ Process next batch and repeat Steps 2-3.
 ## Batches
 
 
-### Batch 1 (2 songs)
+### Batch 1 (5 songs)
 
 Songs:
-1. Dạ Cổ Hoài Lang
-2. Let It Be
+1. Bèo Giạt Mây Trôi
+2. Lý Ngựa Ô
+3. Lý Ngựa Ô - Tranh
+4. We're Gonna Shine
+5. Golden K-Pop Demon Hunters
 
 Prompt: `data/segmentation-prompts/batch-1.txt`
 

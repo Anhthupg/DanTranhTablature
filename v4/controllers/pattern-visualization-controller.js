@@ -27,7 +27,24 @@ class PatternVisualizationController {
 
             // Get syllable data from DOM (already loaded by NoteLyricsService)
             this.syllableData = this.extractSyllableData();
-            console.log('Extracted syllable data:', this.syllableData.length, 'syllables');
+            console.log('[Pattern Controller] Extracted syllable data:', this.syllableData.length, 'syllables');
+
+            // Debug: Show first few syllables
+            if (this.syllableData.length > 0) {
+                console.log('[Pattern Controller] Sample syllables:', this.syllableData.slice(0, 3));
+            } else {
+                console.warn('[Pattern Controller] No syllables found! Checking if section exists...');
+                const section = document.getElementById('syllableLyricsSection');
+                console.log('[Pattern Controller] Section exists:', !!section);
+                if (section) {
+                    const allSyllables = section.querySelectorAll('.syllable');
+                    console.log('[Pattern Controller] Total .syllable elements in section:', allSyllables.length);
+                    if (allSyllables.length > 0) {
+                        console.log('[Pattern Controller] First syllable element:', allSyllables[0]);
+                        console.log('[Pattern Controller] First syllable datasets:', allSyllables[0].dataset);
+                    }
+                }
+            }
 
             // Render pattern controls
             this.renderPatternControls();
@@ -39,27 +56,153 @@ class PatternVisualizationController {
 
     /**
      * Extract syllable data from DOM elements
+     * ONLY extracts from "Lyrics with Tablature Positions" section (has position data)
      * @returns {Array} Array of syllable objects with positions and linguistic data
      */
     extractSyllableData() {
         const syllables = [];
-        const syllableElements = document.querySelectorAll('.syllable');
 
-        syllableElements.forEach(el => {
-            syllables.push({
-                element: el,
-                lyric: el.dataset.lyric,
-                tone: el.dataset.tone,
-                rhyme: el.dataset.rhyme,
-                phraseId: el.dataset.phraseId,
-                noteIndex: parseInt(el.dataset.noteIndex),
-                x: parseFloat(el.dataset.noteX),
-                y: parseFloat(el.dataset.noteY),
-                noteId: el.dataset.noteId
-            });
+        // Find the "Syllable Lyrics with X-Positions" section specifically
+        const lyricsWithPositions = document.getElementById('syllableLyricsSection');
+        if (!lyricsWithPositions) {
+            console.warn('Syllable Lyrics section not found');
+            return syllables;
+        }
+
+        // Only get syllables from this section (these have data-note-x, data-note-y, data-note-id)
+        const syllableElements = lyricsWithPositions.querySelectorAll('.syllable');
+
+        console.log(`[Syllable Extraction] Found ${syllableElements.length} .syllable elements`);
+
+        if (syllableElements.length > 0) {
+            console.log('[Syllable Extraction] First syllable element:', syllableElements[0]);
+            console.log('[Syllable Extraction] First syllable datasets:', syllableElements[0].dataset);
+        }
+
+        syllableElements.forEach((el, index) => {
+            // Only include syllables that have position data
+            // Note: noteId might be empty string for some syllables, but we still need X/Y positions
+            if (el.dataset.noteX && el.dataset.noteY) {
+                // Find matching syllable in main Lyrics table
+                const lyricsTableSyllable = this.findLyricsTableSyllable(el);
+
+                syllables.push({
+                    element: el,
+                    lyric: el.dataset.lyric,
+                    tone: el.dataset.tone,
+                    rhyme: el.dataset.rhyme,
+                    phraseId: el.dataset.phraseId,
+                    noteIndex: parseInt(el.dataset.noteIndex),
+                    x: parseFloat(el.dataset.noteX),
+                    y: parseFloat(el.dataset.noteY),
+                    noteId: el.dataset.noteId,
+                    lyricsTableElement: lyricsTableSyllable
+                });
+            } else if (index < 3) {
+                // Log first few rejected syllables to see why
+                console.warn('[Syllable Extraction] Rejected syllable (missing data):', {
+                    element: el,
+                    hasNoteX: !!el.dataset.noteX,
+                    hasNoteY: !!el.dataset.noteY,
+                    hasNoteId: !!el.dataset.noteId,
+                    datasets: el.dataset
+                });
+            }
         });
 
         return syllables;
+    }
+
+    /**
+     * Find corresponding syllable element in the main Lyrics section
+     * Looks for syllable with same lyric, tone, and phraseId
+     * @param {HTMLElement} syllableElement - Syllable from "Lyrics with Tablature Positions"
+     * @returns {HTMLElement|null} - Corresponding element in Lyrics section or null
+     */
+    findLyricsSectionSyllable(syllableElement) {
+        const lyric = syllableElement.dataset.lyric;
+        const tone = syllableElement.dataset.tone;
+        const phraseId = syllableElement.dataset.phraseId;
+        const noteIndex = syllableElement.dataset.noteIndex;
+
+        // Look in the main Lyrics section for matching syllable
+        const lyricsSection = document.getElementById('lyricsSection');
+        if (!lyricsSection) {
+            console.warn('[Find Lyrics] lyricsSection not found');
+            return null;
+        }
+
+        // Find all syllables in lyrics section with matching attributes
+        const candidates = lyricsSection.querySelectorAll('.syllable');
+
+        // Debug: Only log once during initialization
+        if (!this._loggedLyricsSection) {
+            console.log('[Find Lyrics] lyricsSection found:', !!lyricsSection);
+            console.log('[Find Lyrics] Total .syllable elements in lyricsSection:', candidates.length);
+            if (candidates.length > 0) {
+                console.log('[Find Lyrics] First candidate:', candidates[0]);
+                console.log('[Find Lyrics] First candidate datasets:', candidates[0].dataset);
+            }
+            this._loggedLyricsSection = true;
+        }
+
+        // Note: lyricsSection uses data-vn, syllableLyricsSection uses data-lyric
+        // Try matching by phraseId and Vietnamese text (vn vs lyric)
+        for (const candidate of candidates) {
+            if (candidate.dataset.vn === lyric &&
+                candidate.dataset.phraseId === phraseId) {
+                return candidate;
+            }
+        }
+
+        // If no match, try case-insensitive
+        const normalizedLyric = lyric ? lyric.toLowerCase().trim() : '';
+        for (const candidate of candidates) {
+            const candidateVn = candidate.dataset.vn ? candidate.dataset.vn.toLowerCase().trim() : '';
+            if (candidateVn === normalizedLyric &&
+                candidate.dataset.phraseId === phraseId) {
+                return candidate;
+            }
+        }
+
+        console.warn('[Find Lyrics] No match found for:', { lyric, tone, phraseId, noteIndex });
+        return null;
+    }
+
+    /**
+     * Find matching syllable in main Lyrics table
+     * Lyrics table uses data-vn, data-phrase-id, data-word-index
+     * @param {HTMLElement} syllableElement - Syllable from syllableLyricsSection
+     * @returns {HTMLElement|null}
+     */
+    findLyricsTableSyllable(syllableElement) {
+        const lyric = syllableElement.dataset.lyric;
+        const phraseId = syllableElement.dataset.phraseId;
+
+        const lyricsSection = document.getElementById('lyricsSection');
+        if (!lyricsSection) return null;
+
+        const candidates = lyricsSection.querySelectorAll('.syllable');
+
+        // Match by data-vn (Vietnamese text) and phraseId
+        for (const candidate of candidates) {
+            if (candidate.dataset.vn === lyric &&
+                candidate.dataset.phraseId === phraseId) {
+                return candidate;
+            }
+        }
+
+        // Try case-insensitive
+        const normalizedLyric = lyric ? lyric.toLowerCase().trim() : '';
+        for (const candidate of candidates) {
+            const candidateVn = candidate.dataset.vn ? candidate.dataset.vn.toLowerCase().trim() : '';
+            if (candidateVn === normalizedLyric &&
+                candidate.dataset.phraseId === phraseId) {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -190,6 +333,13 @@ class PatternVisualizationController {
      * @param {HTMLElement} buttonElement - Button that was clicked
      */
     highlightPattern(category, pattern, buttonElement) {
+        // If syllable data is empty, try to re-extract (might have loaded after initialization)
+        if (this.syllableData.length === 0) {
+            console.warn('[Pattern Controller] Syllable data empty, re-extracting...');
+            this.syllableData = this.extractSyllableData();
+            console.log('[Pattern Controller] Re-extracted:', this.syllableData.length, 'syllables');
+        }
+
         // Clear previous highlights
         this.clearHighlights();
 
@@ -245,6 +395,17 @@ class PatternVisualizationController {
         const matches = [];
         const field = category === 'ktic' ? 'tone' :
                      category === 'kric' ? 'rhyme' : 'lyric';
+
+        // Debug: Log what we're searching for
+        console.log(`[Pattern Matching] Searching for ${category} pattern: "${first}"${second ? ' → ' + second : ''}`);
+        console.log(`[Pattern Matching] Field to match: "${field}"`);
+        console.log(`[Pattern Matching] Total syllables: ${this.syllableData.length}`);
+
+        // Show sample of what values exist in the data
+        if (this.syllableData.length > 0) {
+            const sampleValues = this.syllableData.slice(0, 5).map(s => s[field]);
+            console.log(`[Pattern Matching] Sample ${field} values:`, sampleValues);
+        }
 
         // Normalize function for case-insensitive comparison
         const normalize = (str) => str ? str.toLowerCase().trim() : '';
@@ -336,29 +497,33 @@ class PatternVisualizationController {
                      category === 'kric' ? '#E67E22' : '#3498DB';
 
         // Debug: Log what's being highlighted
-        if (category === 'ktic') {
-            console.log(`Highlighting KTIC match:`, {
-                first: match.first?.lyric || 'N/A',
-                firstTone: match.first?.tone || 'N/A',
-                second: match.second?.lyric || 'N/A',
-                secondTone: match.second?.tone || 'N/A'
-            });
-        }
+        console.log(`[Highlight] Highlighting ${category} match: "${match.first?.lyric}" (color: ${color})`);
 
         // Handle multi-syllable patterns (KSIC with multiple words)
         if (match.allSyllables && match.allSyllables.length > 0) {
             // Highlight all syllables in the sequence
             match.allSyllables.forEach(syllable => {
+                // Highlight in Syllable Lyrics section
                 if (syllable.element) {
-                    syllable.element.style.background = color;
-                    syllable.element.style.color = 'white';
-                    syllable.element.style.padding = '4px 8px';
-                    syllable.element.style.borderRadius = '4px';
+                    syllable.element.style.setProperty('background', color, 'important');
+                    syllable.element.style.setProperty('color', 'white', 'important');
+                    syllable.element.style.setProperty('padding', '4px 8px', 'important');
+                    syllable.element.style.setProperty('border-radius', '4px', 'important');
+                    syllable.element.style.setProperty('font-weight', 'bold', 'important');
+                    syllable.element.style.setProperty('transform', 'scale(1.1)', 'important');
                 }
-                // Highlight note in tablature
-                if (syllable.noteId) {
-                    this.highlightNoteInTablature(syllable.noteId, color);
+                // Highlight in main Lyrics table
+                if (syllable.lyricsTableElement) {
+                    syllable.lyricsTableElement.style.setProperty('background', color, 'important');
+                    syllable.lyricsTableElement.style.setProperty('color', 'white', 'important');
+                    syllable.lyricsTableElement.style.setProperty('padding', '4px 8px', 'important');
+                    syllable.lyricsTableElement.style.setProperty('border-radius', '4px', 'important');
+                    syllable.lyricsTableElement.style.setProperty('font-weight', 'bold', 'important');
                 }
+                // Highlight note in tablature (try by ID, fallback to position)
+                this.highlightNoteInTablature(syllable.noteId, color, syllable.x, syllable.y);
+                // Highlight lyric text in tablature by text content
+                this.highlightLyricInTablature(syllable.lyric, color);
             });
 
             // Draw connection lines between syllables
@@ -367,20 +532,40 @@ class PatternVisualizationController {
             }
         } else {
             // Handle single syllable or transition patterns
-            // Highlight first syllable in DOM
+            // Highlight first syllable in Syllable Lyrics section
             if (match.first.element) {
-                match.first.element.style.background = color;
-                match.first.element.style.color = 'white';
-                match.first.element.style.padding = '4px 8px';
-                match.first.element.style.borderRadius = '4px';
+                match.first.element.style.setProperty('background', color, 'important');
+                match.first.element.style.setProperty('color', 'white', 'important');
+                match.first.element.style.setProperty('padding', '4px 8px', 'important');
+                match.first.element.style.setProperty('border-radius', '4px', 'important');
+                match.first.element.style.setProperty('font-weight', 'bold', 'important');
+                match.first.element.style.setProperty('transform', 'scale(1.1)', 'important');
+            }
+            // Highlight in main Lyrics table
+            if (match.first.lyricsTableElement) {
+                match.first.lyricsTableElement.style.setProperty('background', color, 'important');
+                match.first.lyricsTableElement.style.setProperty('color', 'white', 'important');
+                match.first.lyricsTableElement.style.setProperty('padding', '4px 8px', 'important');
+                match.first.lyricsTableElement.style.setProperty('border-radius', '4px', 'important');
+                match.first.lyricsTableElement.style.setProperty('font-weight', 'bold', 'important');
             }
 
             // Highlight second syllable if it exists (for transitions)
             if (match.second && match.second.element) {
-                match.second.element.style.background = color;
-                match.second.element.style.color = 'white';
-                match.second.element.style.padding = '4px 8px';
-                match.second.element.style.borderRadius = '4px';
+                match.second.element.style.setProperty('background', color, 'important');
+                match.second.element.style.setProperty('color', 'white', 'important');
+                match.second.element.style.setProperty('padding', '4px 8px', 'important');
+                match.second.element.style.setProperty('border-radius', '4px', 'important');
+                match.second.element.style.setProperty('font-weight', 'bold', 'important');
+                match.second.element.style.setProperty('transform', 'scale(1.1)', 'important');
+            }
+            // Highlight in main Lyrics table
+            if (match.second && match.second.lyricsTableElement) {
+                match.second.lyricsTableElement.style.setProperty('background', color, 'important');
+                match.second.lyricsTableElement.style.setProperty('color', 'white', 'important');
+                match.second.lyricsTableElement.style.setProperty('padding', '4px 8px', 'important');
+                match.second.lyricsTableElement.style.setProperty('border-radius', '4px', 'important');
+                match.second.lyricsTableElement.style.setProperty('font-weight', 'bold', 'important');
             }
 
             // Draw connection line in tablature (only for transitions)
@@ -388,10 +573,16 @@ class PatternVisualizationController {
                 this.drawConnectionLine(match.first, match.second, color);
             }
 
-            // Highlight notes in tablature
-            this.highlightNoteInTablature(match.first.noteId, color);
+            // Highlight notes in tablature (try by ID, fallback to position)
+            this.highlightNoteInTablature(match.first.noteId, color, match.first.x, match.first.y);
             if (match.second) {
-                this.highlightNoteInTablature(match.second.noteId, color);
+                this.highlightNoteInTablature(match.second.noteId, color, match.second.x, match.second.y);
+            }
+
+            // Highlight lyric text in tablature by text content
+            this.highlightLyricInTablature(match.first.lyric, color);
+            if (match.second) {
+                this.highlightLyricInTablature(match.second.lyric, color);
             }
         }
 
@@ -405,6 +596,16 @@ class PatternVisualizationController {
     drawConnectionLine(first, second, color) {
         const svg = document.getElementById('optimalSvg');
         if (!svg) return;
+
+        // Validate coordinates - must be valid numbers
+        if (!first || !second ||
+            typeof first.x !== 'number' || isNaN(first.x) ||
+            typeof first.y !== 'number' || isNaN(first.y) ||
+            typeof second.x !== 'number' || isNaN(second.x) ||
+            typeof second.y !== 'number' || isNaN(second.y)) {
+            console.warn('Invalid coordinates for connection line:', { first, second });
+            return;
+        }
 
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', first.x);
@@ -421,14 +622,68 @@ class PatternVisualizationController {
 
     /**
      * Highlight a note in the tablature SVG
+     * Finds note by position (cx, cy) matching the syllable's x, y coordinates
      */
-    highlightNoteInTablature(noteId, color) {
-        if (!noteId) return;
+    highlightNoteInTablature(noteId, color, x, y) {
+        const svg = document.getElementById('optimalSvg');
+        if (!svg) return;
 
-        const noteElement = document.getElementById(noteId);
-        if (noteElement) {
-            noteElement.style.filter = `drop-shadow(0 0 8px ${color})`;
-            noteElement.style.fill = color;
+        let noteElements = [];
+
+        // Try by ID first
+        if (noteId && noteId.trim()) {
+            const noteById = document.getElementById(noteId);
+            if (noteById) {
+                noteElements.push(noteById);
+            }
+        }
+
+        // Always also try position-based matching (more reliable)
+        if (x && y) {
+            const notes = svg.querySelectorAll('circle.main-note, circle.grace-note, circle[class*="note"]');
+            for (const note of notes) {
+                const cx = parseFloat(note.getAttribute('cx'));
+                const cy = parseFloat(note.getAttribute('cy'));
+                // Match if within 10 pixels
+                if (Math.abs(cx - x) < 10 && Math.abs(cy - y) < 10) {
+                    noteElements.push(note);
+                }
+            }
+        }
+
+        // Apply highlighting to all found notes
+        noteElements.forEach(noteElement => {
+            noteElement.style.setProperty('filter', `drop-shadow(0 0 12px ${color})`, 'important');
+            noteElement.style.setProperty('fill', color, 'important');
+            noteElement.style.setProperty('stroke', '#FFFFFF', 'important');
+            noteElement.style.setProperty('stroke-width', '3', 'important');
+            console.log('[Note Highlight] Highlighted note at', noteElement.getAttribute('cx'), noteElement.getAttribute('cy'));
+        });
+    }
+
+    /**
+     * Highlight lyric text in tablature SVG by matching text content
+     * @param {string} lyricText - The lyric text to highlight (e.g., "đi", "Rí")
+     */
+    highlightLyricInTablature(lyricText, color) {
+        const svg = document.getElementById('optimalSvg');
+        if (!svg || !lyricText) return;
+
+        // Normalize the lyric text for matching
+        const normalizedTarget = lyricText.toLowerCase().trim();
+
+        // Find all lyric text elements
+        const lyrics = svg.querySelectorAll('text.lyric-text, text[class*="lyric"]');
+
+        for (const lyric of lyrics) {
+            const lyricContent = lyric.textContent.toLowerCase().trim();
+
+            // Match by text content
+            if (lyricContent === normalizedTarget) {
+                lyric.style.setProperty('fill', color, 'important');
+                lyric.style.setProperty('font-weight', 'bold', 'important');
+                lyric.style.setProperty('font-size', '16px', 'important');
+            }
         }
     }
 
@@ -436,13 +691,24 @@ class PatternVisualizationController {
      * Clear all pattern highlights
      */
     clearHighlights() {
-        // Clear syllable highlights
+        // Clear syllable highlights in both sections
         this.syllableData.forEach(syl => {
+            // Clear Syllable Lyrics section
             if (syl.element) {
-                syl.element.style.background = '';
-                syl.element.style.color = '';
-                syl.element.style.padding = '';
-                syl.element.style.borderRadius = '';
+                syl.element.style.removeProperty('background');
+                syl.element.style.removeProperty('color');
+                syl.element.style.removeProperty('padding');
+                syl.element.style.removeProperty('border-radius');
+                syl.element.style.removeProperty('font-weight');
+                syl.element.style.removeProperty('transform');
+            }
+            // Clear main Lyrics table
+            if (syl.lyricsTableElement) {
+                syl.lyricsTableElement.style.removeProperty('background');
+                syl.lyricsTableElement.style.removeProperty('color');
+                syl.lyricsTableElement.style.removeProperty('padding');
+                syl.lyricsTableElement.style.removeProperty('border-radius');
+                syl.lyricsTableElement.style.removeProperty('font-weight');
             }
         });
 
@@ -481,6 +747,17 @@ class PatternVisualizationController {
         // Remove connection lines
         const lines = document.querySelectorAll('.pattern-connection-line');
         lines.forEach(line => line.remove());
+
+        // Clear tablature lyric text highlights
+        const svg = document.getElementById('optimalSvg');
+        if (svg) {
+            const lyrics = svg.querySelectorAll('text.lyric-text, text[class*="lyric"]');
+            lyrics.forEach(lyric => {
+                lyric.style.removeProperty('fill');
+                lyric.style.removeProperty('font-weight');
+                lyric.style.removeProperty('font-size');
+            });
+        }
 
         this.currentHighlights = [];
     }

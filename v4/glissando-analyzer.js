@@ -33,14 +33,26 @@ class GlissandoAnalyzer {
     getDurationStatistics() {
         const durations = this.notes.map(n => n.duration);
 
+        // Safety check for empty notes array
+        if (durations.length === 0) {
+            return {
+                mode: 0,
+                mean: 0,
+                percentile80: 0,
+                durations: {}
+            };
+        }
+
         // Calculate mode (most common duration)
         const durationCounts = {};
         durations.forEach(d => {
             durationCounts[d] = (durationCounts[d] || 0) + 1;
         });
 
-        const mode = Object.entries(durationCounts)
-            .sort((a, b) => b[1] - a[1])[0][0];
+        const entries = Object.entries(durationCounts);
+        const mode = entries.length > 0
+            ? entries.sort((a, b) => b[1] - a[1])[0][0]
+            : 0;
 
         // Calculate mean
         const mean = durations.reduce((a, b) => a + b, 0) / durations.length;

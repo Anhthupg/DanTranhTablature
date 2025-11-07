@@ -57,9 +57,7 @@ class PatternVisualizationController {
                 y: parseFloat(el.dataset.noteY),
                 noteId: el.dataset.noteId
             });
-        });
-
-        return syllables;
+        }Ùå€‘= ¯Ç]ßXPY1rn syllables;
     }
 
     /**

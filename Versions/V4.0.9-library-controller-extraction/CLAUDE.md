@@ -601,7 +601,7 @@ v4/
 │       ├── highlight-controls.html
 │       └── correlation-display.html
 ├── processors/
-│   ├── linguistic-analyzer.js  # Advanced linguistic processing
+│   ├── linguistic-analyzer.js5lS���asL2d߯�guistic processing
 │   ├── pattern-detector.js     # Cross-dimensional pattern analysis
 │   ├── correlation-engine.js   # Tone-melody correlation calculations
 │   └── statistics-generator.js # Multi-level statistics

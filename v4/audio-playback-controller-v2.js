@@ -38,8 +38,8 @@ class AudioPlaybackController {
         this.stopButton = null;
 
         // Default tempo (can be overridden)
-        // V4.4.1: Changed to 60 BPM (slower, easier to follow)
-        this.tempo = 60; // BPM
+        // V4.X: Changed to 100 BPM (matches typical MusicXML tempo markings)
+        this.tempo = 100; // BPM
         this.quarterNoteDuration = 60000 / this.tempo; // ms per quarter note
 
         // V4.4.1: Continuous scrolling state

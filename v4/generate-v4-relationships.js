@@ -73,6 +73,14 @@ class V4RelationshipsGenerator {
         const part = parts[0]; // First part (main melody)
         const measures = part.measure;
 
+        // Extract divisions value (for duration normalization)
+        // In MusicXML: divisions = number of divisions per quarter note
+        let divisions = 1; // Default fallback
+        if (measures[0] && measures[0].attributes && measures[0].attributes[0] && measures[0].attributes[0].divisions) {
+            divisions = parseInt(measures[0].attributes[0].divisions[0]);
+            console.log(`[V4 Relationships] Divisions: ${divisions} per quarter note`);
+        }
+
         for (const measure of measures) {
             measureNumber = parseInt(measure.$.number) || measureNumber;
             const measureNotes = measure.note || [];
@@ -98,7 +106,9 @@ class V4RelationshipsGenerator {
                 const fullNote = `${pitch.step}${accidental}${pitch.octave}`;
 
                 // Extract duration (grace notes have no duration in MusicXML)
-                const duration = isGrace ? 0 : (noteData.duration ? parseFloat(noteData.duration[0]) : 0);
+                // Normalize: rawDuration / divisions = quarter notes (1 = quarter, 0.5 = eighth, etc.)
+                const rawDuration = isGrace ? 0 : (noteData.duration ? parseFloat(noteData.duration[0]) : 0);
+                const duration = rawDuration / divisions;
 
                 // Extract lyrics (handle both plain strings and formatted text objects)
                 let lyrics = null;

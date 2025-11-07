@@ -131,10 +131,66 @@ function findOptimalTuning(notes, candidateTunings = null) {
     };
 }
 
+// Calculate optimal tuning from pitch class frequency
+function calculateFrequencyBasedTuning(notes) {
+    // Count pitch class frequencies
+    const pitchCounts = {};
+
+    notes
+        .filter(n => !n.isGrace)
+        .forEach(n => {
+            let pitchClass;
+            if (n.step) {
+                pitchClass = n.step;
+            } else if (n.pitch) {
+                // Extract pitch class (remove octave number)
+                pitchClass = n.pitch.replace(/[0-9]/g, '');
+            }
+
+            if (pitchClass) {
+                pitchCounts[pitchClass] = (pitchCounts[pitchClass] || 0) + 1;
+            }
+        });
+
+    // Get top 5 most frequent pitch classes
+    const sorted = Object.entries(pitchCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(x => x[0]);
+
+    // Sort alphabetically for standard notation
+    sorted.sort();
+
+    return sorted.join('-');
+}
+
 // Analyze all tunings for a song (for display)
 function analyzeAllTunings(notes) {
-    const allTunings = Object.keys(TUNING_SYSTEMS);
-    return findOptimalTuning(notes, allTunings);
+    // V4.X: Calculate optimal tuning from frequency (top 5 pitch classes)
+    const frequencyTuning = calculateFrequencyBasedTuning(notes);
+    const frequencyBentCount = countBentNotes(notes, frequencyTuning);
+
+    console.log(`[Tuning] Frequency-based (top 5): ${frequencyTuning} (${frequencyBentCount} bent)`);
+
+    // Also test all pre-defined tunings for comparison (PENTATONIC ONLY)
+    const pentatonicTunings = Object.keys(TUNING_SYSTEMS).filter(t => {
+        const noteCount = t.split('-').length;
+        return noteCount === 5;  // Only 5-note scales
+    });
+
+    const comparisonResult = findOptimalTuning(notes, pentatonicTunings);
+    console.log(`[Tuning] Best pre-defined: ${comparisonResult.optimal} (${comparisonResult.bentNotes} bent)`);
+
+    // Always prefer frequency-based tuning (top 5 notes)
+    return {
+        optimal: frequencyTuning,
+        bentNotes: frequencyBentCount,
+        allResults: [
+            { tuning: frequencyTuning, bentCount: frequencyBentCount },
+            ...comparisonResult.allResults
+        ].sort((a, b) => a.bentCount - b.bentCount),
+        description: `Frequency-based (${frequencyTuning})`
+    };
 }
 
 module.exports = {

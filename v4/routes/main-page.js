@@ -114,6 +114,7 @@ module.exports = function(app, baseDir, templateComposer) {
                 VERSION: `v${packageJson.version}`,
                 SONG_NAME: songData.metadata.title,
                 BACKEND_ID: backendId,  // For client-side pattern controller
+                TEMPO: songData.metadata.tempo || '',  // Tempo from MusicXML (empty if not found)
                 SVG_WIDTH: tablatures.width,
                 SVG_HEIGHT: '800',
                 OPTIMAL_SVG_CONTENT: tablatureService.extractSvgContent(tablatures.optimalSVG),

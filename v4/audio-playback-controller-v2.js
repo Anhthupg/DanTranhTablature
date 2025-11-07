@@ -38,8 +38,9 @@ class AudioPlaybackController {
         this.stopButton = null;
 
         // Default tempo (can be overridden)
-        // V4.X: Changed to 100 BPM (matches typical MusicXML tempo markings)
-        this.tempo = 100; // BPM
+        // V4.X: 60 BPM default - works well with existing library
+        // Duration normalization handles varying MusicXML divisions
+        this.tempo = 60; // BPM
         this.quarterNoteDuration = 60000 / this.tempo; // ms per quarter note
 
         // V4.4.1: Continuous scrolling state
@@ -75,7 +76,7 @@ class AudioPlaybackController {
             // V4.4.1: Changed to 1.0 (full volume for better audibility)
             this.masterGain.gain.value = 1.0; // Master volume
 
-            console.log('AudioPlaybackController: Audio context created (tempo: 60 BPM, volume: 1.0)');
+            console.log(`AudioPlaybackController: Audio context created (tempo: ${this.tempo} BPM, volume: 1.0)`);
         } catch (error) {
             console.error('AudioPlaybackController: Failed to create audio context', error);
         }
@@ -87,6 +88,22 @@ class AudioPlaybackController {
     setSVGReferences(optimalSvg, alt1Svg) {
         this.svgElements.optimal = optimalSvg;
         this.svgElements.alt1 = alt1Svg;
+
+        // Extract tempo from SVG metadata if available
+        const tempoAttr = optimalSvg?.getAttribute('data-tempo');
+        if (tempoAttr) {
+            const tempo = parseInt(tempoAttr);
+            if (tempo >= 10 && tempo <= 300) {
+                this.setTempo(tempo);
+                console.log(`AudioPlaybackController: Using song tempo ${tempo} BPM from metadata`);
+
+                // Update UI sliders to match
+                const tempoSlider = document.getElementById('tempoSlider');
+                const tempoValue = document.getElementById('tempoValue');
+                if (tempoSlider) tempoSlider.value = tempo;
+                if (tempoValue) tempoValue.textContent = tempo + ' BPM';
+            }
+        }
 
         // Extract note data from optimal tablature
         this.extractNotesFromSVG(optimalSvg);

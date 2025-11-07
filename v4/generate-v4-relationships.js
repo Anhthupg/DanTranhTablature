@@ -39,16 +39,16 @@ class V4RelationshipsGenerator {
             throw new Error(`Lyrics segmentation not found for song: ${songName}`);
         }
 
-        // Extract notes from MusicXML
-        let notes = this.extractNotes(parsedXML);
-        console.log(`[V4 Relationships] Extracted ${notes.length} total notes`);
+        // Extract notes and tempo from MusicXML
+        const { notes: extractedNotes, tempo } = this.extractNotes(parsedXML);
+        console.log(`[V4 Relationships] Extracted ${extractedNotes.length} total notes`);
 
         // Convert slurs/ties to single notes (hard-coded rule)
-        notes = this.convertSlursToTies(notes);
+        let notes = this.convertSlursToTies(extractedNotes);
         console.log(`[V4 Relationships] After slur-to-tie conversion: ${notes.length} notes`);
 
-        // Map syllables to notes
-        const relationships = this.mapSyllablesToNotes(notes, lyricsData);
+        // Map syllables to notes (pass tempo to be included in metadata)
+        const relationships = this.mapSyllablesToNotes(notes, lyricsData, tempo);
         console.log(`[V4 Relationships] Mapped ${relationships.wordToNoteMap.length} syllables to notes`);
 
         // Save relationships using backend ID
@@ -79,6 +79,21 @@ class V4RelationshipsGenerator {
         if (measures[0] && measures[0].attributes && measures[0].attributes[0] && measures[0].attributes[0].divisions) {
             divisions = parseInt(measures[0].attributes[0].divisions[0]);
             console.log(`[V4 Relationships] Divisions: ${divisions} per quarter note`);
+        }
+
+        // Extract initial tempo from first measure's direction/sound elements
+        let tempo = null; // Default: use audio controller's default (60 BPM)
+        for (const measure of measures) {
+            if (measure.direction) {
+                for (const direction of measure.direction) {
+                    if (direction.sound && direction.sound[0].$ && direction.sound[0].$.tempo) {
+                        tempo = parseInt(direction.sound[0].$.tempo);
+                        console.log(`[V4 Relationships] Found tempo: ${tempo} BPM`);
+                        break;
+                    }
+                }
+                if (tempo) break;
+            }
         }
 
         for (const measure of measures) {
@@ -162,7 +177,7 @@ class V4RelationshipsGenerator {
             }
         }
 
-        return notes;
+        return { notes, tempo };
     }
 
     /**
@@ -214,7 +229,7 @@ class V4RelationshipsGenerator {
         }));
     }
 
-    mapSyllablesToNotes(notes, lyricsData) {
+    mapSyllablesToNotes(notes, lyricsData, tempo = null) {
         const wordToNoteMap = [];
         const noteToWordMap = {};
 
@@ -374,6 +389,7 @@ class V4RelationshipsGenerator {
                 graceNotes: notes.filter(n => n.isGrace).length,
                 totalSyllables: wordToNoteMap.length,
                 melismaCount: wordToNoteMap.filter(m => m.isMelisma).length,
+                tempo: tempo,  // BPM from MusicXML (null if not found)
                 generatedDate: new Date().toISOString()
             },
             wordToNoteMap,

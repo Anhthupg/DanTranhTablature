@@ -631,21 +631,27 @@ ${this.generateLyrics(notes)}
     /**
      * Find string number for a note based on Y position
      * V4.2.20: Used for label mode switching
+     * UPDATED: Returns visual position (1, 2, 3...) not absolute string number
      */
     findStringNumberForNote(strings, noteY) {
+        // Sort strings by Y position (top to bottom) to get visual order
+        const sortedStrings = [...strings].sort((a, b) => a.y - b.y);
+
         // Find the string closest to this Y position
-        let closestString = null;
+        let closestStringIndex = -1;
         let minDistance = Infinity;
 
-        strings.forEach(string => {
+        sortedStrings.forEach((string, index) => {
             const distance = Math.abs(string.y - noteY);
             if (distance < minDistance) {
                 minDistance = distance;
-                closestString = string;
+                closestStringIndex = index;
             }
         });
 
-        return closestString ? closestString.string : '';
+        // Return 1-based visual position (index + 1)
+        // String 1 = first string drawn (top), String 2 = second, etc.
+        return closestStringIndex >= 0 ? (closestStringIndex + 1) : '';
     }
 
     /**

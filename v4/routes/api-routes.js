@@ -283,13 +283,38 @@ module.exports = function(app, baseDir, tablatureGen) {
     });
 
     // Library API
+    // V4.4.1: Added pagination support for scalability (10k+ songs)
     app.get('/api/library', (req, res) => {
         const V4LibraryManager = require('../auto-import-library');
         const libraryManager = new V4LibraryManager();
 
         try {
             const library = libraryManager.scanAndUpdateLibrary();
-            res.json(library);
+
+            // V4.4.1: Parse pagination parameters
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 0; // 0 = no limit (default)
+
+            // Apply pagination if limit specified
+            if (limit > 0) {
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const paginatedLibrary = library.slice(startIndex, endIndex);
+
+                res.json({
+                    songs: paginatedLibrary,
+                    pagination: {
+                        page,
+                        limit,
+                        total: library.length,
+                        totalPages: Math.ceil(library.length / limit),
+                        hasMore: endIndex < library.length
+                    }
+                });
+            } else {
+                // No pagination - return all songs (backward compatible)
+                res.json(library);
+            }
         } catch (error) {
             console.error('Library API error:', error);
             res.json([
